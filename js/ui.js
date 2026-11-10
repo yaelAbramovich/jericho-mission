@@ -78,7 +78,7 @@ export function richText(str) {
   let last = 0, m;
   while ((m = re.exec(str))) {
     if (m.index > last) frag.append(str.slice(last, m.index));
-    if (m[1]) frag.append(h('button', { class: 'hard', onclick: () => termPopup(m[2]) }, m[1]));
+    if (m[1]) { const key = m[2]; frag.append(h('button', { class: 'hard', onclick: () => termPopup(key) }, m[1])); }
     else frag.append(h('span', { class: 'lead' }, m[3]));
     last = re.lastIndex;
   }
