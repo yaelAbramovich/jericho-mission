@@ -271,3 +271,4 @@ body.immersive #screen { padding-bottom: var(--sab); }
 .turn { text-align: center; font-weight: 900; font-size: 20px; padding: 8px; border-radius: 12px; } .turn.kid { background: #0f5a4966; color: var(--neon); } .turn.par { background: #4d1a4a66; color: #ff8fc0; }
 .opt { display: flex; align-items: center; gap: 12px; text-align: right; font-size: 17px; line-height: 1.4; } .opt .let { flex: none; width: 32px; height: 32px; border-radius: 50%; background: #1a2447; display: grid; place-items: center; font-weight: 900; color: var(--neon); }
 .why { display: block; color: #cfd9f5; font-size: 15px; line-height: 1.5; margin-top: 6px; }
+.doc-table { display: grid; gap: 6px; } .doc-table .tr { display: grid; grid-template-columns: 38% 1fr; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 16px; line-height: 1.45; } .doc-table .tr b { color: var(--neon); } 

@@ -1,12 +1,10 @@
 // דו-קרב משפחתי: נושאי המבחן כרטיסים + מאגר שאלות לכל נושא. כדי להוסיף פרק: מוסיפים אובייקט ל-DUELS.
 // שאלה: { q, a (נכונה), w:[3 לא נכונות], why }. loc() בונה שאלת "איפה כתוב?".
-import { refText } from './content.js';
-
-const loc = (quote, c, v, wrong) => ({
-  q: `באיזה פסוק כתוב: "${quote}"?`, a: refText(c, v), w: wrong.map(([c2, v2]) => refText(c2, v2)), why: `${refText(c, v)} – ${quote}`,
-});
+import { loc } from './duel-util.js';
+import { J2_DUEL } from './duel-j2.js';
 
 export const DUELS = {
+  j2: J2_DUEL,
   j1: {
     title: 'פרק א׳ – מינוי יהושע למנהיג',
     ideas: [

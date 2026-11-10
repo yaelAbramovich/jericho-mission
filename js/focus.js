@@ -1,5 +1,6 @@
 // מסכי "למבחן": רשימת נושאים, ודף קריאה לנושא (טקסט ממוקד למבחן).
 import { TOPICS } from './focus-content.js';
+import { DUELS } from './duel-content.js';
 import { h } from './ui.js';
 import { sfx } from './audio.js';
 import { go, startGame } from './app.js';
@@ -19,8 +20,11 @@ export function list(v) {
     h('button', { class: 'topic-btn', onclick: () => { sfx.pick(); go('topic', { id: t.id }); } },
       h('small', {}, t.label), h('b', {}, t.title), h('span', {}, '◀'))));
   v.append(box);
-  v.append(h('button', { class: 'duel-cta', onclick: () => { sfx.pick(); startGame('duel', { topic: 'j1' }); } },
-    h('span', { class: 'ti' }, '⚔️'), h('span', { class: 'ov-t' }, h('b', {}, 'דו-קרב משפחתי'), h('small', {}, 'ילד נגד הורה · פרק א׳ · 14 שאלות')), h('em', {}, 'חדש')));
+  TOPICS.filter(t => t.duel).forEach(t => {
+    const n = DUELS[t.duel].ideas.length * 2;
+    v.append(h('button', { class: 'duel-cta', onclick: () => { sfx.pick(); startGame('duel', { topic: t.duel }); } },
+      h('span', { class: 'ti' }, '⚔️'), h('span', { class: 'ov-t' }, h('b', {}, `דו-קרב משפחתי – ${t.label}`), h('small', {}, `ילד נגד הורה · ${n} שאלות`)), h('em', {}, 'חדש')));
+  });
 }
 
 export function topic(v, { id }) {
@@ -37,7 +41,7 @@ export function topic(v, { id }) {
     if (b.h) {
       const el = h('h3', { class: 'doc-h' }, b.h.replace(/^(\d+)\./, '$1\u200E.'));
       doc.append(el);
-      toc.append(h('button', { class: 'chip', onclick: () => { sfx.tap(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, b.h.replace(/^\d+\.\s*/, '').replace(/[🎯📜🤝🔍🗺️🎬]/gu, '').trim().slice(0, 22)));
+      toc.append(h('button', { class: 'chip', onclick: () => { sfx.tap(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, b.h.replace(/^\d+\.\s*/, '').replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').trim().slice(0, 22)));
     }
     else if (b.sh) doc.append(h('h4', { class: 'doc-sh' }, b.sh));
     else if (b.p) doc.append(h('p', { class: 'doc-p' }, bold(b.p)));
@@ -46,8 +50,9 @@ export function topic(v, { id }) {
     else if (b.big) doc.append(h('div', { class: 'doc-big' }, b.big));
     else if (b.note) doc.append(h('div', { class: 'doc-note' }, bold(b.note)));
     else if (b.answer) doc.append(h('div', { class: 'doc-answer' }, h('b', {}, '✅ התשובה למבחן:'), h('span', {}, b.answer)));
+    else if (b.table) doc.append(h('div', { class: 'doc-table' }, b.table.map(([k, v2]) => h('div', { class: 'tr' }, h('b', {}, k), h('span', {}, v2)))));
     else if (b.ul || b.ol) doc.append(h(b.ul ? 'ul' : 'ol', { class: 'doc-list' }, (b.ul || b.ol).map(x => h('li', {}, bold(x)))));
   });
-  doc.append(h('button', { class: 'duel-cta', onclick: () => { sfx.pick(); startGame('duel', { topic: 'j1' }); } },
+  if (t.duel) doc.append(h('button', { class: 'duel-cta', onclick: () => { sfx.pick(); startGame('duel', { topic: t.duel }); } },
     h('span', { class: 'ti' }, '⚔️'), h('span', { class: 'ov-t' }, h('b', {}, 'מוכנים לדו-קרב?'), h('small', {}, 'ילד נגד הורה על כל מה שקראתם'))));
 }
