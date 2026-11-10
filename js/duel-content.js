@@ -3,10 +3,12 @@
 import { loc } from './duel-util.js';
 import { J2_DUEL } from './duel-j2.js';
 import { J34_DUEL } from './duel-j34.js';
+import { J5_DUEL } from './duel-j5.js';
 
 export const DUELS = {
   j2: J2_DUEL,
   j34: J34_DUEL,
+  j5: J5_DUEL,
   j1: {
     title: 'פרק א׳ – מינוי יהושע למנהיג',
     ideas: [
