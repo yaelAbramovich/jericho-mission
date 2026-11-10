@@ -2,9 +2,11 @@
 // שאלה: { q, a (נכונה), w:[3 לא נכונות], why }. loc() בונה שאלת "איפה כתוב?".
 import { loc } from './duel-util.js';
 import { J2_DUEL } from './duel-j2.js';
+import { J34_DUEL } from './duel-j34.js';
 
 export const DUELS = {
   j2: J2_DUEL,
+  j34: J34_DUEL,
   j1: {
     title: 'פרק א׳ – מינוי יהושע למנהיג',
     ideas: [

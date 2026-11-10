@@ -2,6 +2,7 @@
 // סוגי בלוקים: h (כותרת פרק), sh (כותרת משנה), p (פסקה, **מודגש**), q (פסוק), say (מחשבה/ציטוט חופשי),
 // ul / ol (רשימות), big (מילה בולטת), note (קופסה מודגשת), answer (התשובה למבחן).
 import { J2 } from './focus-j2.js';
+import { J34 } from './focus-j34.js';
 export const TOPICS = [
   {
     id: 'j1-appointment', label: 'פרק א׳', title: 'מינוי יהושע למנהיג', duel: 'j1',
@@ -111,4 +112,5 @@ export const TOPICS = [
     ],
   },
   J2,
+  J34,
 ];
