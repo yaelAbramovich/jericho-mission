@@ -9,7 +9,7 @@ const fresh = () => ({
   storySeen: {},          // { "1": [0,1,2] }
   best: { swipe: 0 },
   eq: { avatar: 'a0', banner: 'b0', jersey: 'j0', emote: null },
-  muted: false, pinHash: null, examDone: false,
+  muted: false, pinHash: null, examDone: false, overviewDone: false,
 });
 
 let S = fresh();
@@ -72,7 +72,8 @@ export function markStoryScreen(ch, i, total) {
   const a = (S.storySeen[ch] = S.storySeen[ch] || []);
   if (!a.includes(i)) a.push(i);
   let first = false;
-  if (a.length >= total) first = setObjective(ch, 'story');
+  if (ch === 0) { if (a.length >= total && !S.overviewDone) { S.overviewDone = true; first = true; } }
+  else if (a.length >= total) first = setObjective(ch, 'story');
   save();
   return first;
 }

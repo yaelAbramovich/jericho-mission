@@ -227,3 +227,11 @@ body.immersive #screen { padding-bottom: var(--sab); }
 @media (prefers-reduced-motion: reduce) { * { animation-duration: .01ms !important; } }
 @media (max-height: 700px) { .pitch { height: 150px; } .sw-stage { height: 200px; } .story-text { font-size: 21px; } }
 .xp-num, .float-text { direction: ltr; unicode-bidi: isolate; }
+
+/* ---- הסיפור בקצרה ---- */
+.overview-card { width: 100%; display: flex; align-items: center; gap: 12px; text-align: right; background: linear-gradient(135deg, #1a2a66, #0f1730); border: 1px solid var(--line); border-radius: 18px; padding: 12px 14px; margin-bottom: 10px; position: relative; }
+.overview-card.new { border-color: var(--neon); box-shadow: 0 0 22px #2effd255; animation: pulseglow 1.8s infinite; }
+.overview-card .ti { font-size: 32px; } .ov-t { display: grid; flex: 1; } .ov-t b { font-size: 19px; } .ov-t small { color: var(--dim); }
+.overview-card em { background: var(--neon); color: #022; font-style: normal; font-weight: 800; font-size: 12px; border-radius: 8px; padding: 3px 8px; }
+.cast { display: grid; gap: 6px; } .cast-row { display: grid; grid-template-columns: 110px 1fr; gap: 8px; align-items: center; background: #08102a; border-radius: 10px; padding: 8px 10px; }
+.cast-row b { color: var(--neon); font-size: 16px; } .cast-row span { font-size: 15px; line-height: 1.35; }

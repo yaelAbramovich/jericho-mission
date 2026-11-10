@@ -1,6 +1,6 @@
 // "תדריך משימה": מסכי סיפור עם החלקה, מילים קשות, והקלטות משפחתיות.
 import * as State from './state.js';
-import { CHAPTERS, refText, hebNum } from './content.js';
+import { CHAPTERS, OVERVIEW, refText, hebNum } from './content.js';
 import { h, richText, termPopup, toast } from './ui.js';
 import { sfx, playBlob, stopPlayback } from './audio.js';
 import { getRec } from './db.js';
@@ -9,17 +9,17 @@ import { go } from './app.js';
 export const recKey = (ch, i) => `ch${ch}-${i}`;
 
 export async function render(v, { ch, start = 0 }, sc) {
-  const c = CHAPTERS[ch - 1], total = c.story.length;
+  const c = ch === 0 ? OVERVIEW : CHAPTERS[ch - 1], total = c.story.length;
   let i = Math.min(start, total - 1), dir = 1, userTapped = false, playing = false;
   sc.onDispose(stopPlayback);
 
   const top = h('div', { class: 'story-top' },
-    h('button', { class: 'back', onclick: () => go('zone', { ch }) }, '✕'),
+    h('button', { class: 'back', onclick: () => back() }, '✕'),
     h('div', { class: 'dots' }),
     c.leading && h('button', { class: 'lead-chip', onclick: () => termPopup('leading') }, 'מילה מנחה: ', h('b', {}, c.leading)));
   const stage = h('div', { class: 'story-stage' });
   const ctrl = h('div', { class: 'story-ctrl' });
-  v.append(h('div', { class: 'story-head' }, h('small', {}, `פרק ${hebNum(ch)}׳ · ${c.zone}`), h('h2', {}, c.title)), top, stage, ctrl);
+  v.append(h('div', { class: 'story-head' }, h('small', {}, ch === 0 ? 'התחילו כאן' : `פרק ${hebNum(ch)}׳ · ${c.zone}`), h('h2', {}, c.title)), top, stage, ctrl);
 
   // swipe: אצבע שזזה שמאלה→ימינה = הבא (כיוון קריאה בעברית)
   let sx = null, sy = null;
@@ -34,8 +34,9 @@ export async function render(v, { ch, start = 0 }, sc) {
   function prev() { userTapped = true; if (i > 0) { dir = -1; i--; show(); } }
   function finish() {
     sfx.correct();
-    go('zone', { ch });
+    back();
   }
+  function back() { go(ch === 0 ? 'map' : 'zone', { ch }); }
 
   async function show() {
     stopPlayback(); playing = false;
@@ -43,6 +44,7 @@ export async function render(v, { ch, start = 0 }, sc) {
     sfx.swipe();
     const card = h('div', { class: 'story-card ' + (dir > 0 ? 'in-next' : 'in-prev') },
       h('p', { class: 'story-text' }, richText(s.text)),
+      s.cast && h('div', { class: 'cast' }, s.cast.map(([n, d]) => h('div', { class: 'cast-row' }, h('b', {}, n), h('span', {}, d)))),
       s.verse && h('blockquote', { class: 'verse-box' }, h('q', {}, s.verse.t), h('cite', {}, refText(s.verse.c, s.verse.v))));
     stage.innerHTML = ''; stage.append(card);
     top.querySelector('.dots').replaceChildren(...c.story.map((_, k) => h('i', { class: k === i ? 'on' : k < i ? 'done' : '' })));

@@ -1,6 +1,9 @@
 // מצב הורה: קוד PIN, הקלטת קריינות לכל מסך סיפור, גיבוי וייבוא, ותסריט להדפסה.
 import * as State from './state.js';
-import { CHAPTERS, hebNum } from './content.js';
+import { CHAPTERS, OVERVIEW, hebNum } from './content.js';
+const ALL = [OVERVIEW, ...CHAPTERS];
+const chapterOf = n => ALL.find(c => c.n === n);
+const chLabel = n => n === 0 ? 'הסיפור בקצרה' : `פרק ${hebNum(n)}׳`;
 import { h, modal, toast, plain } from './ui.js';
 import { sfx, playBlob, stopPlayback } from './audio.js';
 import { putRec, getRec, delRec, recIds, exportAll, importAll } from './db.js';
@@ -50,10 +53,10 @@ function pinPad(root, title, onDone) {
 
 async function dash(root, sc) {
   root.innerHTML = '';
-  let ch = 1, ids = new Set();
+  let ch = 0, ids = new Set();
   try { ids = await recIds(); } catch (e) { root.append(h('p', { class: 'warn' }, 'לא ניתן לגשת לאחסון ההקלטות במכשיר הזה.')); }
   let recording = null; // { stop }
-  const total = CHAPTERS.reduce((a, c) => a + c.story.length, 0);
+  const total = ALL.reduce((a, c) => a + c.story.length, 0);
 
   const head = h('div', { class: 'p-head' });
   const tabs = h('div', { class: 'chips' });
@@ -78,12 +81,12 @@ async function dash(root, sc) {
     const missing = total - [...ids].filter(id => /^ch\d-\d+$/.test(id)).length;
     head.append(h('div', { class: 'p-stat' }, missing ? `חסרות הקלטות ל-${missing} מסכים (מתוך ${total})` : '✓ כל המסכים מוקלטים!'));
     tabs.innerHTML = '';
-    CHAPTERS.forEach(c => {
+    ALL.forEach(c => {
       const done = c.story.filter((_, i) => ids.has(recKey(c.n, i))).length;
-      tabs.append(h('button', { class: 'chip' + (c.n === ch ? ' on' : ''), onclick: () => { ch = c.n; paint(); } }, `פרק ${hebNum(c.n)}׳ `, h('small', {}, `${done}/${c.story.length}`)));
+      tabs.append(h('button', { class: 'chip' + (c.n === ch ? ' on' : ''), onclick: () => { ch = c.n; paint(); } }, chLabel(c.n) + ' ', h('small', {}, `${done}/${c.story.length}`)));
     });
     list.innerHTML = '';
-    CHAPTERS[ch - 1].story.forEach((s, i) => {
+    chapterOf(ch).story.forEach((s, i) => {
       const id = recKey(ch, i), has = ids.has(id), isRec = recording && recording.id === id;
       const row = h('div', { class: 'p-row' + (has ? ' has' : '') },
         h('div', { class: 'p-num' }, String(i + 1), h('small', {}, has ? '✓' : 'חסר')),
@@ -149,9 +152,9 @@ async function dash(root, sc) {
     const area = document.getElementById('print-area');
     area.innerHTML = '';
     area.append(h('h1', {}, 'תסריט הקראה – מבצע יריחו'));
-    CHAPTERS.forEach(c => {
-      area.append(h('h2', {}, `פרק ${hebNum(c.n)}׳ – ${c.title}`));
-      c.story.forEach((s, i) => area.append(h('p', {}, h('b', {}, `${i + 1}. `), plain(s.text), s.verse ? ` (פסוק: ${s.verse.t})` : '')));
+    ALL.forEach(c => {
+      area.append(h('h2', {}, `${c.n === 0 ? '' : 'פרק ' + hebNum(c.n) + '׳ – '}${c.title}`));
+      c.story.forEach((s, i) => area.append(h('p', {}, h('b', {}, `${i + 1}. `), plain(s.text), s.cast ? ' ' + s.cast.map(([n, d]) => `${n}: ${d}.`).join(' ') : '', s.verse ? ` (פסוק: ${s.verse.t})` : '')));
     });
     document.body.classList.add('printing');
     setTimeout(() => { window.print(); setTimeout(() => document.body.classList.remove('printing'), 500); }, 100);

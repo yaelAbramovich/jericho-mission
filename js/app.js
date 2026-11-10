@@ -2,7 +2,7 @@
 import * as State from './state.js';
 import { sfx, unlock } from './audio.js';
 import { h, $, createScope, modal, toast, burst } from './ui.js';
-import { CHAPTERS, TEST_DATE, hebNum } from './content.js';
+import { CHAPTERS, OVERVIEW, TEST_DATE, hebNum } from './content.js';
 import { TIER_XP, MAX_TIER, ITEMS, art, itemById, isUnlocked, unlockedAt } from './rewards.js';
 
 const screenEl = () => $('#screen');
@@ -64,6 +64,11 @@ function mapScreen(v) {
   const dl = daysLeft();
   v.append(h('div', { class: 'test-count' },
     dl > 0 ? [h('b', {}, String(dl)), ' ימים למבחן'] : dl === 0 ? 'המבחן היום! בהצלחה 💪' : 'המבחן עבר – כל הכבוד!'));
+  const ovDone = State.get().overviewDone;
+  v.append(h('button', { class: 'overview-card' + (ovDone ? '' : ' new'), onclick: () => { sfx.pick(); go('story', { ch: 0 }); } },
+    h('span', { class: 'ti' }, '📖'),
+    h('span', { class: 'ov-t' }, h('b', {}, 'הסיפור בקצרה'), h('small', {}, ovDone ? 'לקרוא שוב את כל הסיפור' : 'לא מכירים את הסיפור? מתחילים כאן')),
+    !ovDone && h('em', {}, 'התחל כאן')));
   const cap = State.capturedCount();
   const zones = [1, 2, 3, 4, 5].map(n => {
     const [x, y] = ZONE_POS[n], o = State.objectives(n), c = State.captured(n);
