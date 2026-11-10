@@ -1,6 +1,6 @@
 // Service Worker: שומר את כל הקבצים כדי שהאפליקציה תעבוד בלי אינטרנט.
 // כשמשנים קבצים – מעלים את מספר הגרסה כאן.
-const VERSION = 'jericho-v3';
+const VERSION = 'jericho-v4';
 const FILES = [
   './', 'index.html', 'manifest.json', 'css/app.css',
   'fonts/rubik-hebrew.woff2', 'fonts/rubik-latin.woff2',

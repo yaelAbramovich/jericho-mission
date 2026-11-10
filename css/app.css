@@ -235,3 +235,4 @@ body.immersive #screen { padding-bottom: var(--sab); }
 .overview-card em { background: var(--neon); color: #022; font-style: normal; font-weight: 800; font-size: 12px; border-radius: 8px; padding: 3px 8px; }
 .cast { display: grid; gap: 6px; } .cast-row { display: grid; grid-template-columns: 110px 1fr; gap: 8px; align-items: center; background: #08102a; border-radius: 10px; padding: 8px 10px; }
 .cast-row b { color: var(--neon); font-size: 16px; } .cast-row span { font-size: 15px; line-height: 1.35; }
+.ctag { color: var(--neon); font-weight: 800; font-size: 14px; letter-spacing: .3px; }

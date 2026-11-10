@@ -43,9 +43,10 @@ export async function render(v, { ch, start = 0 }, sc) {
     const s = c.story[i];
     sfx.swipe();
     const card = h('div', { class: 'story-card ' + (dir > 0 ? 'in-next' : 'in-prev') },
+      s.tag && h('div', { class: 'ctag' }, s.tag),
       h('p', { class: 'story-text' }, richText(s.text)),
       s.cast && h('div', { class: 'cast' }, s.cast.map(([n, d]) => h('div', { class: 'cast-row' }, h('b', {}, n), h('span', {}, d)))),
-      s.verse && h('blockquote', { class: 'verse-box' }, h('q', {}, s.verse.t), h('cite', {}, refText(s.verse.c, s.verse.v))));
+      s.verse && h('blockquote', { class: 'verse-box' }, h('q', {}, s.verse.t), h('cite', {}, s.verse.ref || refText(s.verse.c, s.verse.v))));
     stage.innerHTML = ''; stage.append(card);
     top.querySelector('.dots').replaceChildren(...c.story.map((_, k) => h('i', { class: k === i ? 'on' : k < i ? 'done' : '' })));
 
