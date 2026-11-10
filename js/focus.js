@@ -2,7 +2,7 @@
 import { TOPICS } from './focus-content.js';
 import { h } from './ui.js';
 import { sfx } from './audio.js';
-import { go } from './app.js';
+import { go, startGame } from './app.js';
 
 const bold = s => {           // **מודגש** -> <b>
   const frag = document.createDocumentFragment();
@@ -19,6 +19,8 @@ export function list(v) {
     h('button', { class: 'topic-btn', onclick: () => { sfx.pick(); go('topic', { id: t.id }); } },
       h('small', {}, t.label), h('b', {}, t.title), h('span', {}, '◀'))));
   v.append(box);
+  v.append(h('button', { class: 'duel-cta', onclick: () => { sfx.pick(); startGame('duel', { topic: 'j1' }); } },
+    h('span', { class: 'ti' }, '⚔️'), h('span', { class: 'ov-t' }, h('b', {}, 'דו-קרב משפחתי'), h('small', {}, 'ילד נגד הורה · פרק א׳ · 14 שאלות')), h('em', {}, 'חדש')));
 }
 
 export function topic(v, { id }) {
@@ -46,4 +48,6 @@ export function topic(v, { id }) {
     else if (b.answer) doc.append(h('div', { class: 'doc-answer' }, h('b', {}, '✅ התשובה למבחן:'), h('span', {}, b.answer)));
     else if (b.ul || b.ol) doc.append(h(b.ul ? 'ul' : 'ol', { class: 'doc-list' }, (b.ul || b.ol).map(x => h('li', {}, bold(x)))));
   });
+  doc.append(h('button', { class: 'duel-cta', onclick: () => { sfx.pick(); startGame('duel', { topic: 'j1' }); } },
+    h('span', { class: 'ti' }, '⚔️'), h('span', { class: 'ov-t' }, h('b', {}, 'מוכנים לדו-קרב?'), h('small', {}, 'ילד נגד הורה על כל מה שקראתם'))));
 }

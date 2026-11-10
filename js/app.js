@@ -231,8 +231,8 @@ export function startGame(key, opts) {
 }
 async function playScreen(v, { key, opts }, sc) {
   const bar = h('div', { class: 'game-bar' },
-    h('button', { class: 'back', onclick: () => { sfx.tap(); go(opts.chapter ? 'zone' : 'games', { ch: opts.chapter }); } }, '✕ יציאה'),
-    h('span', { class: 'gname' }, key === 'exam' ? 'מבחן הסיכום' : GAMES[key].name));
+    h('button', { class: 'back', onclick: () => { sfx.tap(); go(key === 'duel' ? 'focus' : opts.chapter ? 'zone' : 'games', { ch: opts.chapter }); } }, '✕ יציאה'),
+    h('span', { class: 'gname' }, key === 'exam' ? 'מבחן הסיכום' : key === 'duel' ? 'דו-קרב משפחתי' : GAMES[key].name));
   const box = h('div', { class: 'game' });
   v.append(bar, box);
   try {
@@ -271,8 +271,8 @@ function endScreen(v, { key, opts, res, tb, ta, justCaptured, nowAll }, sc) {
     h('h3', { class: 'again' }, 'עוד סבב?'),
     h('div', { class: 'end-btns' },
       h('button', { class: 'btn primary glow', onclick: () => startGame(key, opts) }, 'עוד סבב ▶'),
-      h('button', { class: 'btn', onclick: () => go('games') }, 'בחירת משחק'),
-      h('button', { class: 'btn ghost', onclick: () => go(opts.chapter ? 'zone' : 'map', { ch: opts.chapter }) }, opts.chapter ? 'לאזור' : 'למפה'),
+      key === 'duel' ? h('button', { class: 'btn', onclick: () => go('focus') }, 'חזרה ללמבחן') : h('button', { class: 'btn', onclick: () => go('games') }, 'בחירת משחק'),
+      key !== 'duel' && h('button', { class: 'btn ghost', onclick: () => go(opts.chapter ? 'zone' : 'map', { ch: opts.chapter }) }, opts.chapter ? 'לאזור' : 'למפה'),
     ));
   burst(v, 26);
   // ספירת XP

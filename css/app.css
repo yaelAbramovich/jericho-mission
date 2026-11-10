@@ -255,3 +255,19 @@ body.immersive #screen { padding-bottom: var(--sab); }
 .doc-note { background: #ffe14a14; border: 1px solid #ffe14a77; border-radius: 14px; padding: 12px 14px; font-size: 17px; line-height: 1.6; }
 .doc-answer { background: #0f5a4966; border: 2px solid var(--neon); border-radius: 16px; padding: 14px; display: grid; gap: 6px; font-size: 18px; line-height: 1.6; } .doc-answer b { color: var(--neon); font-size: 19px; }
 .doc-list { margin: 0; padding-inline-start: 24px; font-size: 18px; line-height: 1.7; display: grid; gap: 4px; }
+
+/* ---- דו-קרב משפחתי ---- */
+.duel-cta { width: 100%; display: flex; align-items: center; gap: 12px; text-align: right; background: linear-gradient(135deg, #4d1a4a, #1a1440); border: 1px solid var(--pink); border-radius: 18px; padding: 14px; margin-top: 12px; position: relative; box-shadow: 0 0 20px #ff3d8b33; }
+.duel-cta .ti { font-size: 32px; } .duel-cta em { background: var(--pink); color: #fff; font-style: normal; font-weight: 800; font-size: 12px; border-radius: 8px; padding: 3px 8px; }
+.doc .duel-cta { margin-top: 18px; }
+.duel-setup { display: grid; gap: 12px; padding-top: 6px; } .duel-setup h2 { font-size: 30px; font-weight: 900; }
+.rules { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; display: grid; gap: 8px; font-size: 16px; line-height: 1.5; }
+.inp { width: 100%; min-height: 54px; border-radius: 14px; background: var(--panel2); border: 2px solid var(--line); color: var(--txt); font: inherit; font-size: 19px; padding: 0 16px; text-align: right; user-select: text; -webkit-user-select: text; } .inp:focus { outline: none; border-color: var(--neon); }
+.duel-score { display: flex; align-items: center; justify-content: space-between; background: linear-gradient(90deg, #0f5a4966, #0b1330, #4d1a4a66); border: 1px solid var(--line); border-radius: 16px; padding: 8px 16px; margin: 4px 0 10px; }
+.ds { display: grid; text-align: center; min-width: 80px; } .ds small { color: var(--dim); font-size: 12px; } .ds b { font-size: 34px; font-weight: 900; font-variant-numeric: tabular-nums; } .ds.kid b { color: var(--neon); } .ds.par b { color: var(--pink); } .dvs { font-size: 22px; }
+.duel-stage { position: relative; display: grid; gap: 10px; }
+.idea-card { background: linear-gradient(170deg, #17235a, var(--panel)); border: 1px solid var(--line); border-radius: 22px; padding: 18px; display: grid; gap: 10px; } .idea-card small { color: var(--neon); font-weight: 800; } .idea-card h2 { font-size: 26px; font-weight: 900; }
+.idea-text { font-size: 19px; line-height: 1.6; } .tip { color: var(--yel); font-size: 14px; font-weight: 600; } .tip.big { font-size: 15px; line-height: 1.5; background: #ffe14a14; border: 1px solid #ffe14a66; border-radius: 12px; padding: 8px 12px; }
+.turn { text-align: center; font-weight: 900; font-size: 20px; padding: 8px; border-radius: 12px; } .turn.kid { background: #0f5a4966; color: var(--neon); } .turn.par { background: #4d1a4a66; color: #ff8fc0; }
+.opt { display: flex; align-items: center; gap: 12px; text-align: right; font-size: 17px; line-height: 1.4; } .opt .let { flex: none; width: 32px; height: 32px; border-radius: 50%; background: #1a2447; display: grid; place-items: center; font-weight: 900; color: var(--neon); }
+.why { display: block; color: #cfd9f5; font-size: 15px; line-height: 1.5; margin-top: 6px; }

@@ -9,7 +9,7 @@ const fresh = () => ({
   storySeen: {},          // { "1": [0,1,2] }
   best: { swipe: 0 },
   eq: { avatar: 'a0', banner: 'b0', jersey: 'j0', emote: null },
-  muted: false, pinHash: null, examDone: false, overviewDone: false,
+  muted: false, pinHash: null, examDone: false, overviewDone: false, names: { kid: '', parent: '' },
 });
 
 let S = fresh();
