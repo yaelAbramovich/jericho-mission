@@ -34,7 +34,7 @@ export function go(name, params = {}) {
 }
 
 function setNav(name) {
-  const tab = { map: 'map', zone: 'map', games: 'games', pass: 'pass', profile: 'profile' }[name];
+  const tab = { map: 'map', zone: 'map', focus: 'focus', topic: 'focus', games: 'games', pass: 'pass', profile: 'profile' }[name];
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.go === tab));
 }
 
@@ -301,7 +301,10 @@ function showTierUp(from, to) {
   renderTop();
 }
 
-const ROUTES = { map: mapScreen, zone: zoneScreen, games: gamesScreen, pass: passScreen, profile: profileScreen, story: storyScreen, parent: parentScreen, play: playScreen, end: endScreen };
+async function focusScreen(v, p, sc) { (await import('./focus.js')).list(v, p, sc); }
+async function topicScreen(v, p, sc) { (await import('./focus.js')).topic(v, p, sc); }
+
+const ROUTES = { focus: focusScreen, topic: topicScreen, map: mapScreen, zone: zoneScreen, games: gamesScreen, pass: passScreen, profile: profileScreen, story: storyScreen, parent: parentScreen, play: playScreen, end: endScreen };
 
 // ---------- אתחול ----------
 export function boot() {
