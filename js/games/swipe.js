@@ -8,8 +8,8 @@ const mult = c => Math.min(5, 1 + Math.floor(c / 3));
 
 export function run(el, { chapter = 0, duration = 60 }, sc) {
   return new Promise(resolve => {
-    const own = STATEMENTS.filter(s => !chapter || s[0] === chapter);
-    const base = own.length >= 10 ? own : STATEMENTS;
+    // נבחר פרק – רק משפטים מהפרק הזה
+    const base = STATEMENTS.filter(s => !chapter || s[0] === chapter);
     let queue = [];
     const nextStatement = () => { if (!queue.length) queue = shuffle(base); return queue.pop(); };
 

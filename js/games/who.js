@@ -17,7 +17,10 @@ export async function run(el, { chapter = 0, count = 5 }, sc) {
   for (let i = 0; i < items.length; i++) {
     const q = items[i];
     head.querySelector('b').textContent = `שאלה ${i + 1} מתוך ${items.length}`;
-    const opts = shuffle([q.who, ...sample(ALL.filter(k => k !== q.who), 3)]);
+    // דוברים מהפרק קודם; משלימים משאר הדוברים רק אם אין מספיק בפרק
+    const here = ALL.filter(k => k !== q.who && POOL.some(x => x.who === k && (!chapter || x.c === chapter)));
+    const fill = sample(ALL.filter(k => k !== q.who && !here.includes(k)), 3);
+    const opts = shuffle([q.who, ...[...sample(here, 3), ...fill].slice(0, 3)]);
     const btns = opts.map(k => h('button', { class: 'opt', 'data-k': k }, WHO[k]));
     stage.innerHTML = '';
     stage.append(h('div', { class: 'quote-card big' }, h('small', {}, 'מי אמר?'), h('q', {}, q.t)), h('div', { class: 'opts' }, btns));

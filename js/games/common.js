@@ -4,12 +4,17 @@ import { sfx } from '../audio.js';
 
 export const waitClick = (btn, sc) => new Promise(res => btn.addEventListener('click', () => res(), { once: true }));
 
-// פריטי סבב: קודם מהפרק שנבחר, ואם אין מספיק – משלימים מפרקים אחרים
+// פריטי סבב: אם נבחר פרק – רק מהפרק הזה (בלי להשלים מפרקים אחרים). בלי פרק – מכל הפרקים.
 export function pickRound(all, chapter, count, chOf = x => x.c) {
-  const own = shuffle(all.filter(x => !chapter || chOf(x) === chapter));
-  if (own.length >= count) return own.slice(0, count);
-  const rest = shuffle(all.filter(x => !own.includes(x)));
-  return shuffle([...own, ...rest.slice(0, count - own.length)]);
+  return shuffle(all.filter(x => !chapter || chOf(x) === chapter)).slice(0, count);
+}
+
+// מסיחים (תשובות שגויות): קודם מאותו פרק, ורק אם אין מספיק בפרק – משלימים מהשאר
+export function pickDistractors(all, correct, n, chapter, chOf = x => x.c) {
+  const others = all.filter(x => x !== correct);
+  const own = shuffle(others.filter(x => !chapter || chOf(x) === chapter)).slice(0, n);
+  if (own.length >= n) return own;
+  return [...own, ...shuffle(others.filter(x => !own.includes(x))).slice(0, n - own.length)];
 }
 
 // מגרש + שוער + כדור. kick(outcome): 'goal' | 'almost' | 'save'

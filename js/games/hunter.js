@@ -1,8 +1,8 @@
 // דו-קרב פנדלים: מוצאים ציטוט בתנ"ך (פרק+פסוק) או מתאימים משמעות לציטוט.
 import { QUOTES, hebNum, refText } from '../content.js';
-import { h, shuffle, sample } from '../ui.js';
+import { h, shuffle } from '../ui.js';
 import { sfx } from '../audio.js';
-import { makePitch, waitClick, pickRound, tally } from './common.js';
+import { makePitch, waitClick, pickRound, pickDistractors, tally } from './common.js';
 
 const FAST_FIND = 35;   // שניות – מהר = גול נקי
 const FAST_MATCH = 9;
@@ -42,7 +42,7 @@ export async function run(el, { chapter = 0, mode = 'find', count = 5 }, sc) {
       ok = ch === q.c && vs === q.v; fast = secs <= FAST_FIND;
       lock(stage);
     } else {
-      const wrong = sample(POOL.filter(x => x.id !== q.id), 3);
+      const wrong = pickDistractors(POOL, q, 3, chapter);
       const opts = shuffle([q, ...wrong]);
       stage.append(h('div', { class: 'quote-card' }, h('small', {}, 'איזה ציטוט מתאים?'), h('p', { class: 'meaning' }, q.m)));
       const btns = opts.map(o => h('button', { class: 'opt', 'data-id': o.id }, o.t));

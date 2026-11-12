@@ -6,11 +6,8 @@ import { waitClick } from './common.js';
 
 function pickSeqs(chapter, count, ids) {
   if (ids) return ids.map(id => SEQUENCES.find(s => s.id === id));
-  const cross = SEQUENCES.find(s => s.id === 'sx');
-  if (chapter) {
-    const own = shuffle(SEQUENCES.filter(s => s.ch === chapter));
-    return [own[0], cross].slice(0, count);
-  }
+  // נבחר פרק – רק סדרות מהפרק הזה (בלי סדרת "כל הפרקים")
+  if (chapter) return shuffle(SEQUENCES.filter(s => s.ch === chapter)).slice(0, count);
   return shuffle(SEQUENCES).slice(0, count + 1);
 }
 
