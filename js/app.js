@@ -3,7 +3,10 @@ import * as State from './state.js';
 import { sfx, unlock } from './audio.js';
 import { h, $, createScope, modal, toast, burst } from './ui.js';
 import { CHAPTERS, OVERVIEW, TEST_DATE, hebNum } from './content.js';
-import { TIER_XP, MAX_TIER, ITEMS, art, itemById, isUnlocked, unlockedAt } from './rewards.js';
+import { TIER_XP, MAX_TIER, ITEMS, TYPE_LABEL, art, itemById, unlockedAt, setCustomJersey } from './rewards.js';
+import { isOpen, openIds, howText } from './locker.js';
+import * as Ach from './achievements.js';
+import * as Quests from './quests.js';
 
 const screenEl = () => $('#screen');
 let scope = createScope();
@@ -69,6 +72,7 @@ function mapScreen(v) {
     h('span', { class: 'ti' }, '📖'),
     h('span', { class: 'ov-t' }, h('b', {}, 'הסיפור בקצרה'), h('small', {}, ovDone ? 'לקרוא שוב את כל הסיפור' : 'לא מכירים את הסיפור? מתחילים כאן')),
     !ovDone && h('em', {}, 'התחל כאן')));
+  v.append(questsCard());
   const cap = State.capturedCount();
   const zones = [1, 2, 3, 4, 5].map(n => {
     const [x, y] = ZONE_POS[n], o = State.objectives(n), c = State.captured(n);
@@ -112,6 +116,17 @@ function mapScreen(v) {
     h('div', { class: 'cap-count' }, `אזורים שנכבשו: `, h('b', {}, `${cap}/5`)),
     h('button', { class: 'btn ' + (examOpen ? 'primary glow' : 'ghost'), disabled: !examOpen, onclick: () => startGame('exam', {}) },
       examOpen ? '🏆 מבחן הסיכום' : '🔒 מבחן הסיכום – כבוש את כל האזורים')));
+}
+
+const plus = n => '\u200E+' + n;   // סימן כיוון (LRM): בעברית ה-+ היה מוצג אחרי המספר
+function questsCard() {
+  const list = Quests.todays(), nd = list.filter(q => q.done).length;
+  return h('div', { class: 'quests' + (nd === 3 ? ' all' : '') },
+    h('div', { class: 'q-head' }, h('b', {}, '📋 משימות היום'), h('span', {}, `${nd}/3`)),
+    ...list.map(q => h('div', { class: 'q-row' + (q.done ? ' ok' : '') },
+      h('span', { class: 'q-m' }, q.done ? '✓' : '○'), h('span', { class: 'q-t' }, q.text),
+      q.goal > 1 && !q.done && h('small', {}, `${q.cur}/${q.goal}`), h('em', {}, plus(q.xp)))),
+    h('small', { class: 'q-foot' }, nd === 3 ? `כל המשימות הושלמו! קיבלת בונוס ${Quests.DAILY_BONUS} XP 🎉` : `להשלים את שלושתן = בונוס ${Quests.DAILY_BONUS} XP`));
 }
 
 // ---------- מסך אזור ----------
@@ -170,11 +185,16 @@ function modeChips(modes, onSel) {
   return row;
 }
 
-// ---------- פס קרב ----------
+// ---------- פס קרב / ארון / הישגים ----------
+let passTab = 'pass';
 function passScreen(v) {
   const s = State.get(), tier = State.tierOf();
-  v.append(h('h2', { class: 'sec' }, 'פס קרב – העונה של יריחו'),
-    h('p', { class: 'sub' }, tier >= MAX_TIER ? 'פתחת הכול! אלוף.' : `עוד ${TIER_XP - (s.xp % TIER_XP)} XP לדרגה ${tier + 1}`));
+  const tabs = h('div', { class: 'chips tabs' }, [['pass', 'פס קרב'], ['locker', 'הארון'], ['ach', 'הישגים']].map(([k, l]) =>
+    h('button', { class: 'chip' + (passTab === k ? ' on' : ''), onclick: () => { sfx.tap(); passTab = k; go('pass'); } }, l)));
+  v.append(h('h2', { class: 'sec' }, 'פס קרב – העונה של יריחו'), tabs);
+  if (passTab === 'locker') return lockerView(v);
+  if (passTab === 'ach') return achView(v, s);
+  v.append(h('p', { class: 'sub' }, tier >= MAX_TIER ? 'פתחת הכול! אלוף.' : `עוד ${TIER_XP - (s.xp % TIER_XP)} XP לדרגה ${tier + 1}`));
   const list = h('div', { class: 'pass' });
   for (let t = 1; t <= MAX_TIER; t++) {
     const its = unlockedAt(t), open = t <= tier;
@@ -188,7 +208,7 @@ function passScreen(v) {
 }
 function itemCard(it, open, lockNote) {
   const eq = State.get().eq[it.type] === it.id;
-  return h('button', { class: 'item ' + it.type + (open ? '' : ' locked') + (eq ? ' eq' : ''), onclick: () => equip(it, open) },
+  return h('button', { class: 'item t-' + it.type + (open ? '' : ' locked') + (eq ? ' eq' : ''), onclick: () => equip(it, open) },
     h('div', { class: 'ia', html: art(it, 64) }),
     h('div', { class: 'iname' }, it.name),
     h('small', {}, open ? (eq ? 'לבוש' : 'לחץ ללבוש') : (lockNote || '🔒')));
@@ -198,6 +218,61 @@ function equip(it, open) {
   const s = State.get();
   s.eq[it.type] = (it.type === 'emote' && s.eq.emote === it.id) ? null : it.id;
   State.save(); sfx.pick(); toast(`${it.name} – עודכן`); go(current.name, current.params);
+}
+function lockerView(v) {
+  v.append(h('p', { class: 'sub' }, 'כל מה שפתחת – ומה שעוד אפשר לפתוח. לחץ על פריט פתוח כדי ללבוש אותו.'));
+  for (const type of Object.keys(TYPE_LABEL)) {
+    const its = ITEMS.filter(i => i.type === type), got = its.filter(i => isOpen(i)).length;
+    v.append(h('h3', { class: 'lk-h' }, TYPE_LABEL[type], h('small', {}, ` ${got}/${its.length}`),
+      type === 'jersey' && h('button', { class: 'mini', onclick: designer }, '🎨 עיצוב')));
+    v.append(h('div', { class: 'lgrid' }, its.map(it => itemCard(it, isOpen(it), howText(it, Ach.achName)))));
+  }
+}
+function achView(v, s) {
+  const got = Ach.ACH.filter(a => s.ach[a.id]).length;
+  v.append(h('p', { class: 'sub' }, `הישגים שנפתחו: ${got}/${Ach.ACH.length}. חלקם נותנים XP בונוס ופריט מיוחד בארון.`));
+  const list = h('div', { class: 'achs' });
+  Ach.ACH.forEach(a => {
+    const ok = !!s.ach[a.id], [cur, goal] = a.prog(s), reward = ITEMS.find(i => i.how && i.how.ach === a.id);
+    list.append(h('div', { class: 'ach' + (ok ? ' got' : '') },
+      h('div', { class: 'ai' }, a.icon),
+      h('div', { class: 'at' }, h('b', {}, a.name), h('small', {}, a.desc),
+        !ok && goal > 1 && h('div', { class: 'abar' }, h('i', { style: { width: (cur / goal * 100) + '%' } }))),
+      h('div', { class: 'ar' }, h('span', {}, ok ? '✓' : plus(a.xp) + ' XP'), reward && h('span', { class: 'ra', title: reward.name, html: art(reward, 34) }))));
+  });
+  v.append(list);
+}
+
+// עיצוב החולצה: צבעים, דוגמה, מספר ושם
+const DZ_COLORS = ['#1b4bd6', '#e63946', '#2effd2', '#ffe14a', '#ffffff', '#111827', '#8e5bff', '#ff7a18', '#16a34a', '#ff3d8b'];
+const DZ_PATS = [['plain', 'חלק'], ['stripes', 'פסים'], ['diag', 'אלכסון'], ['halves', 'חצאים'], ['chevron', 'חץ'], ['sash', 'כתפייה']];
+function designer() {
+  const s = State.get(), c = { ...s.custom };
+  let saved = false;
+  const body = h('div', { class: 'dz' });
+  const m = modal(body, { onClose: () => { if (!saved) setCustomJersey(s.custom); } });
+  function draw() {
+    setCustomJersey(c);
+    const swatches = key => h('div', { class: 'swatches' }, DZ_COLORS.map(col =>
+      h('button', { class: 'sw' + (c[key] === col ? ' on' : ''), style: { background: col }, 'aria-label': col, onclick: () => { sfx.pick(); c[key] = col; draw(); } })));
+    const num = h('input', { class: 'inp', value: c.n, inputmode: 'numeric', maxlength: 2, 'aria-label': 'מספר' });
+    const nm = h('input', { class: 'inp', value: c.name, maxlength: 10, placeholder: 'השם שלך על החולצה' });
+    num.addEventListener('input', () => { c.n = num.value.replace(/\D/g, '').slice(0, 2) || '7'; setCustomJersey(c); prev.innerHTML = art(itemById('jmy'), 130); });
+    nm.addEventListener('input', () => { c.name = nm.value.slice(0, 10); setCustomJersey(c); prev.innerHTML = art(itemById('jmy'), 130); });
+    const prev = h('div', { class: 'dz-prev', html: art(itemById('jmy'), 130) });
+    body.replaceChildren(
+      h('div', { class: 'tag' }, 'סטודיו'), h('h3', {}, 'עיצוב החולצה שלי'), prev,
+      h('p', { class: 'sub' }, 'צבע ראשי'), swatches('c1'),
+      h('p', { class: 'sub' }, 'צבע משני'), swatches('c2'),
+      h('p', { class: 'sub' }, 'דוגמה'),
+      h('div', { class: 'chips' }, DZ_PATS.map(([k, l]) => h('button', { class: 'chip' + (c.pat === k ? ' on' : ''), onclick: () => { sfx.pick(); c.pat = k; draw(); } }, l))),
+      h('div', { class: 'dz-row' }, h('label', {}, 'מספר', num), h('label', {}, 'שם', nm)),
+      h('button', { class: 'btn primary', onclick: () => {
+        Object.assign(s.custom, c); s.eq.jersey = 'jmy'; saved = true; State.save(); sfx.goal();
+        m.close(); toast('החולצה החדשה שלך נשמרה ולבושה!'); go(current.name, current.params);
+      } }, 'שמור והלבש'));
+  }
+  draw();
 }
 
 // ---------- פרופיל ----------
@@ -214,9 +289,19 @@ function profileScreen(v) {
     h('div', { class: 'stats' },
       stat('XP', s.xp), stat('דרגה', Math.min(State.tierOf(), MAX_TIER)), stat('רצף ימים', State.streakNow()),
       stat('סבבים', s.rounds), stat('שיא הסערה', s.best.swipe), stat('אזורים', State.capturedCount() + '/5')),
-    h('p', { class: 'sub' }, 'אפשר להחליף פריטים בפס הקרב (לחיצה על פריט פתוח).'),
-    State.isMemoryOnly() && h('p', { class: 'warn' }, 'שימו לב: ההתקדמות לא נשמרת במכשיר הזה.'),
+    trophyCard(s),
+    h('button', { class: 'btn', onclick: designer }, '🎨 עיצוב החולצה שלי'),
+    h('p', { class: 'sub' }, `הישגים: ${Ach.ACH.filter(a => s.ach[a.id]).length}/${Ach.ACH.length} · אפשר להחליף פריטים בפס הקרב ובארון.`),
+    ...(State.isMemoryOnly() ? [h('p', { class: 'warn' }, 'שימו לב: ההתקדמות לא נשמרת במכשיר הזה.')] : []),
     h('button', { class: 'btn ghost', onclick: () => go('parent') }, '🔒 מצב הורה'));
+}
+function trophyCard(s) {
+  const t = s.trophy, kid = (s.names && s.names.kid) || 'אלוף', par = (s.names && s.names.parent) || 'הורה';
+  return h('div', { class: 'trophy' },
+    h('div', { class: 'tr-h' }, '🏆 גביע המשפחה'),
+    h('div', { class: 'tr-s' }, h('div', {}, h('b', {}, String(t.w)), h('small', {}, kid)), h('div', { class: 'tr-vs' }, '–'), h('div', {}, h('b', {}, String(t.l)), h('small', {}, par))),
+    h('small', { class: 'tr-t' }, t.w + t.l + t.t ? `תיקו: ${t.t} · דו-קרבות: ${t.w + t.l + t.t}` : 'עוד לא היה דו-קרב. מחכים למי שינצח ראשון!'),
+    t.hist.length > 0 && h('div', { class: 'tr-hist' }, t.hist.slice(0, 5).map(x => h('span', { class: x.kg > x.pg ? 'w' : x.kg < x.pg ? 'l' : 't' }, `${x.kg}–${x.pg}`))));
 }
 const stat = (l, n) => h('div', { class: 'stat' }, h('b', {}, String(n)), h('small', {}, l));
 
@@ -248,17 +333,43 @@ async function playScreen(v, { key, opts }, sc) {
 async function finishRound(key, opts, res) {
   const s = State.get(), ch = opts.chapter || 0;
   const before = { cap: ch ? State.captured(ch) : false, all: State.allCaptured() };
+  const openBefore = openIds(), tb = State.tierOf();
   s.rounds++;
   if (key === 'swipe' && res.score > s.best.swipe) s.best.swipe = res.score;
   if (key === 'exam') s.examDone = true;
   if (ch && key === 'hunter' && res.correct >= 3) State.setObjective(ch, 'hunter');
   if (ch && key !== 'hunter' && key !== 'exam' && res.completed !== false) State.setObjective(ch, 'other');
-  const { before: tb, after: ta } = State.addXP(res.xp);
+  // סטטיסטיקות להישגים, גביע המשפחה ומשימות היום
+  State.maxStat('bestRun', res.run || 0);
+  if (key === 'swipe') State.maxStat('bestCombo', res.bestCombo || 0);
+  if (key === 'hunter' && res.total >= 3 && res.correct === res.total) s.stats.perfectPen++;
+  if (key === 'order' && res.allPerfect) s.stats.perfectLine++;
+  if (key === 'who' && res.total >= 3 && res.correct === res.total) s.stats.perfectWho++;
+  if (key === 'duel') { State.recordDuel(res.kg, res.pg, res.topic); if (res.kidPerfect) s.stats.perfectDuel++; }
+  Quests.record(key, opts, res);
+  const quests = Quests.claim();
+  State.addXP(res.xp + quests.xp);
+  const ach = Ach.evaluate(), achXp = ach.reduce((a, x) => a + x.xp, 0);
+  if (achXp) State.addXP(achXp);
+  const ta = State.tierOf();
+  // פריטים חדשים שלא מדרגות הפס (אזורים והישגים) – דרגות מוצגות בחלון הדרגה
+  const items = ITEMS.filter(i => typeof i.tier !== 'number' && !openBefore.has(i.id) && isOpen(i));
   const justCaptured = ch && !before.cap && State.captured(ch);
-  go('end', { key, opts, res, tb, ta, justCaptured, nowAll: !before.all && State.allCaptured() });
+  // דרגות מעל המקסימום לא נחגגות שוב (אחרת חלון "דרגה 20!" היה קופץ אחרי כל סבב)
+  go('end', { key, opts, res, tb: Math.min(tb, MAX_TIER), ta: Math.min(ta, MAX_TIER), justCaptured, nowAll: !before.all && State.allCaptured(),
+    xpTotal: Math.round(res.xp) + quests.xp + achXp, extra: { quests, ach, items } });
 }
 
-function endScreen(v, { key, opts, res, tb, ta, justCaptured, nowAll }, sc) {
+function extraBlock({ quests, ach, items }) {
+  const rows = [];
+  quests.done.forEach(q => rows.push(h('div', { class: 'xrow' }, h('span', { class: 'xi' }, '📋'), h('b', {}, `משימה: ${q.text}`), h('em', {}, plus(q.xp) + ' XP'))));
+  if (quests.bonus) rows.push(h('div', { class: 'xrow' }, h('span', { class: 'xi' }, '🎉'), h('b', {}, 'כל המשימות של היום!'), h('em', {}, plus(quests.bonus) + ' XP')));
+  ach.forEach(a => rows.push(h('div', { class: 'xrow ach' }, h('span', { class: 'xi' }, a.icon), h('b', {}, `הישג: ${a.name}`), h('em', {}, a.xp ? plus(a.xp) + ' XP' : ''))));
+  items.forEach(it => rows.push(h('div', { class: 'xrow item' }, h('span', { class: 'xart', html: art(it, 40) }), h('b', {}, `פריט חדש: ${it.name}`), h('small', {}, TYPE_LABEL[it.type]))));
+  return rows.length ? h('div', { class: 'xtras' }, h('h4', {}, 'מה חדש 🎉'), ...rows) : null;
+}
+
+function endScreen(v, { key, opts, res, tb, ta, justCaptured, nowAll, xpTotal, extra }, sc) {
   v.classList.add('end');
   const lines = res.lines || [];
   const xpEl = h('b', { class: 'xp-num' }, '+0');
@@ -267,7 +378,8 @@ function endScreen(v, { key, opts, res, tb, ta, justCaptured, nowAll }, sc) {
       h('div', { class: 'end-title' }, res.title || 'סבב הסתיים!'),
       h('div', { class: 'end-big' }, res.big || ''),
       ...lines.map(l => h('p', {}, l)),
-      h('div', { class: 'end-xp' }, xpEl, ' XP')),
+      h('div', { class: 'end-xp' }, xpEl, ' XP'),
+      extra && extraBlock(extra)),
     h('h3', { class: 'again' }, 'עוד סבב?'),
     h('div', { class: 'end-btns' },
       h('button', { class: 'btn primary glow', onclick: () => startGame(key, opts) }, 'עוד סבב ▶'),
@@ -276,12 +388,13 @@ function endScreen(v, { key, opts, res, tb, ta, justCaptured, nowAll }, sc) {
     ));
   burst(v, 26);
   // ספירת XP
-  let n = 0; const target = Math.round(res.xp), step = Math.max(1, Math.ceil(target / 20));
+  let n = 0; const target = Math.round(xpTotal != null ? xpTotal : res.xp), step = Math.max(1, Math.ceil(target / 20));
   sc.every(() => { if (n < target) { n = Math.min(target, n + step); xpEl.textContent = '+' + n; if (n % 3 === 0) sfx.tick(); } }, 40);
   sc.later(() => {
     if (justCaptured) { sfx.capture(); showCapture(opts.chapter, nowAll); }
     else if (ta > tb) showTierUp(tb, ta);
     if (justCaptured && ta > tb) setTimeout(() => showTierUp(tb, ta), 400);
+    if (!justCaptured && !(ta > tb) && extra && (extra.ach.length || extra.items.length)) sfx.tierUp();
   }, 900);
 }
 function showCapture(ch, nowAll) {
@@ -309,6 +422,7 @@ const ROUTES = { focus: focusScreen, topic: topicScreen, map: mapScreen, zone: z
 // ---------- אתחול ----------
 export function boot() {
   State.load();
+  setCustomJersey(State.get().custom);
   document.addEventListener('pointerdown', unlock, { passive: true });
   $('#nav').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;

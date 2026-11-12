@@ -3,6 +3,7 @@ import { QUOTES, hebNum, refText } from '../content.js';
 import { h, shuffle } from '../ui.js';
 import { sfx } from '../audio.js';
 import { makePitch, waitClick, pickRound, pickDistractors, tally } from './common.js';
+import { reactor } from '../react.js';
 
 const FAST_FIND = 35;   // שניות – מהר = גול נקי
 const FAST_MATCH = 9;
@@ -14,6 +15,7 @@ export async function run(el, { chapter = 0, mode = 'find', count = 5 }, sc) {
   const stage = h('div', { class: 'hunter' });
   const head = h('div', { class: 'h-head' }, h('b', {}, ''), tl.el);
   el.append(head, pitch.el, stage);
+  const R = reactor(el, sc);
   let goals = 0, xp = 5, missed = [];
   const counter = head.querySelector('b');
 
@@ -54,7 +56,7 @@ export async function run(el, { chapter = 0, mode = 'find', count = 5 }, sc) {
 
     await pitch.kick(ok ? (fast ? 'goal' : 'almost') : 'save', sc);
     tl.mark(i, ok);
-    if (ok) { goals++; xp += fast ? 10 : 7; sfx.correct(); } else { xp += 2; missed.push(q); }
+    if (ok) { goals++; xp += fast ? 10 : 7; sfx.correct(); R.hit({ noBurst: true }); } else { xp += 2; missed.push(q); R.miss(); }
     stage.querySelectorAll('.pick-row,.pick-grid,.pick-label,.kick-btn,.clock,.opts').forEach(n => n.remove());
     const msg = ok ? (fast ? 'מהיר ונקי! 🔥' : 'גול! אבל השוער כמעט הציל – נסה מהר יותר') : 'נעצר – המקום הנכון:';
     const next = h('button', { class: 'btn primary', onclick: () => {} }, i === items.length - 1 ? 'לתוצאות' : 'הבא ▶');
@@ -63,7 +65,7 @@ export async function run(el, { chapter = 0, mode = 'find', count = 5 }, sc) {
   }
 
   return {
-    xp, correct: goals, total: items.length,
+    xp, correct: goals, total: items.length, run: R.best,
     title: goals >= 4 ? 'שריקת סיום – ניצחון!' : goals >= 2 ? 'שריקת סיום' : 'סיבוב אימון',
     big: `${goals} / ${items.length} גולים`,
     lines: missed.slice(0, 3).map(q => `${refText(q.c, q.v)} – ${q.t}`),

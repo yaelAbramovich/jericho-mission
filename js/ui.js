@@ -59,11 +59,14 @@ export function toast(msg, ms = 2200) {
 }
 
 // ---- אפקטים ----
-export function burst(parent, n = 22, colors = ['#2effd2', '#ffe14a', '#ff4d9d', '#6d7bff']) {
+export function burst(parent, n = 22, colors = ['#2effd2', '#ffe14a', '#ff4d9d', '#6d7bff'], glyph = null) {
   const box = h('div', { class: 'burst' });
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2, d = 90 + Math.random() * 140;
-    box.append(h('i', { style: { '--dx': Math.cos(a) * d + 'px', '--dy': Math.sin(a) * d + 'px', background: colors[i % colors.length], animationDelay: Math.random() * .1 + 's' } }));
+    const st = { '--dx': Math.cos(a) * d + 'px', '--dy': Math.sin(a) * d + 'px', animationDelay: Math.random() * .1 + 's' };
+    // חלק מהחלקיקים הם סמל (🔥 ⭐ ⚡), השאר קונפטי צבעוני
+    if (glyph && i % 3 === 0) box.append(h('i', { class: 'gl', style: st }, glyph));
+    else box.append(h('i', { style: { ...st, background: colors[i % colors.length] } }));
   }
   parent.append(box); setTimeout(() => box.remove(), 1400);
 }

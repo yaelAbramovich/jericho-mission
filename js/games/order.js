@@ -3,6 +3,7 @@ import { SEQUENCES } from '../content.js';
 import { h, shuffle } from '../ui.js';
 import { sfx } from '../audio.js';
 import { waitClick } from './common.js';
+import { reactor } from '../react.js';
 
 function pickSeqs(chapter, count, ids) {
   if (ids) return ids.map(id => SEQUENCES.find(s => s.id === id));
@@ -13,6 +14,7 @@ function pickSeqs(chapter, count, ids) {
 
 export async function run(el, { chapter = 0, count = 2, ids = null }, sc) {
   const seqs = pickSeqs(chapter, count, ids);
+  const R = reactor(el, sc);
   let xp = 0, perfect = 0, cards = 0, good = 0;
   for (let n = 0; n < seqs.length; n++) {
     const seq = seqs[n];
@@ -33,7 +35,7 @@ export async function run(el, { chapter = 0, count = 2, ids = null }, sc) {
     cs.forEach((c, j) => { const ok = +c.dataset.i === j; c.classList.add(ok ? 'right' : 'wrong'); if (ok) right++; });
     cards += cs.length; good += right;
     const all = right === cs.length;
-    if (all) { perfect++; sfx.goal(); } else { sfx.wrong(); }
+    if (all) { perfect++; sfx.goal(); R.hit(); } else { sfx.wrong(); R.miss(); }
     xp += right * 4 + (all ? 8 : 2);
     check.remove();
     const nxt = h('button', { class: 'btn primary' }, n === seqs.length - 1 ? 'לתוצאות' : 'הבא ▶');
@@ -42,7 +44,7 @@ export async function run(el, { chapter = 0, count = 2, ids = null }, sc) {
     list.classList.add('locked');
     await waitClick(nxt, sc);
   }
-  return { xp: xp + 5, correct: good, total: cards, title: perfect === seqs.length ? 'הקו מושלם!' : 'הקו נבנה', big: `${good} / ${cards}`,
+  return { xp: xp + 5, correct: good, total: cards, run: R.best, perfectSeqs: perfect, allPerfect: perfect === seqs.length, title: perfect === seqs.length ? 'הקו מושלם!' : 'הקו נבנה', big: `${good} / ${cards}`,
     lines: [`${perfect} מתוך ${seqs.length} סדרות מושלמות`] };
 }
 

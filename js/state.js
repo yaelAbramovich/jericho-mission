@@ -8,7 +8,12 @@ const fresh = () => ({
   zone: {},               // { "1": {story:true, hunter:true, other:true} }
   storySeen: {},          // { "1": [0,1,2] }
   best: { swipe: 0 },
-  eq: { avatar: 'a0', banner: 'b0', jersey: 'j0', emote: null },
+  eq: { avatar: 'a0', banner: 'b0', jersey: 'j0', emote: null, ball: 'ba0', fx: 'fx0', pitch: 'pt0', keeper: 'kp0' },
+  custom: { c1: '#1b4bd6', c2: '#ffe14a', pat: 'stripes', n: '7', name: '' },   // החולצה שלי
+  ach: {},                // הישגים שנפתחו: { id: timestamp }
+  stats: { bestRun: 0, bestCombo: 0, perfectPen: 0, perfectLine: 0, perfectWho: 0, perfectDuel: 0, questDays: 0 },
+  daily: null,            // מונים יומיים למשימות
+  trophy: { w: 0, l: 0, t: 0, hist: [] },   // גביע המשפחה
   muted: false, pinHash: null, examDone: false, overviewDone: false, names: { kid: '', parent: '' },
 });
 
@@ -18,7 +23,12 @@ let memoryOnly = false;
 export function load() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) S = Object.assign(fresh(), JSON.parse(raw));
+    if (raw) {
+      const saved = JSON.parse(raw), base = fresh();
+      S = Object.assign(base, saved);
+      // שדות מקוננים: משלימים מה שחסר בשמירות ישנות
+      for (const k of ['eq', 'custom', 'stats', 'trophy', 'ach']) S[k] = Object.assign(base[k], saved[k]);
+    }
   } catch (e) { memoryOnly = true; }
 }
 export function save() {
@@ -76,6 +86,22 @@ export function markStoryScreen(ch, i, total) {
   else if (a.length >= total) first = setObjective(ch, 'story');
   save();
   return first;
+}
+// ---------- מונים יומיים (למשימות היום) ----------
+export function daily() {
+  const d = dayStr();
+  if (!S.daily || S.daily.day !== d) S.daily = { day: d, rounds: 0, goals: 0, swipeRight: 0, whoRight: 0, perfectLines: 0, duels: 0, chapters: [], bestRun: 0, claimed: [], bonus: false };
+  return S.daily;
+}
+export function maxStat(k, v) { if (v > (S.stats[k] || 0)) S.stats[k] = v; }
+
+// ---------- גביע המשפחה ----------
+export function recordDuel(kg, pg, topic) {
+  const t = S.trophy;
+  if (kg > pg) t.w++; else if (pg > kg) t.l++; else t.t++;
+  t.hist.unshift({ d: dayStr(), kg, pg, topic });
+  t.hist.length = Math.min(t.hist.length, 8);
+  save();
 }
 export function setMuted(m) { S.muted = m; save(); }
 export function resetAll() { S = fresh(); save(); }

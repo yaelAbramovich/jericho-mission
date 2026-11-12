@@ -4,6 +4,7 @@ import { DUELS } from '../duel-content.js';
 import { h, shuffle, sample, floatText, burst } from '../ui.js';
 import { sfx } from '../audio.js';
 import { waitClick } from './common.js';
+import { reactor } from '../react.js';
 
 const LET = ['א', 'ב', 'ג', 'ד'];
 
@@ -29,6 +30,7 @@ export async function run(el, { topic = 'j1' }, sc) {
   names.kid = kidIn.value.trim(); names.parent = parIn.value.trim(); State.save();
 
   // ---- משחק ----
+  const R = reactor(el, sc);
   let kg = 0, pg = 0, xp = 10, kidRight = 0;
   const missed = [];
   const sb = h('div', { class: 'duel-score' });
@@ -67,8 +69,8 @@ export async function run(el, { topic = 'j1' }, sc) {
       const picked = await new Promise(res => btns.forEach(b => b.addEventListener('click', () => res(b.dataset.t), { once: true })));
       const right = picked === q.a;
       btns.forEach(b => { b.disabled = true; if (b.dataset.t === q.a) b.classList.add('right'); else if (b.dataset.t === picked) b.classList.add('wrong'); });
-      if (right) { isKid ? kg++ : pg++; if (isKid) { kidRight++; xp += 8; } sfx.goal(); burst(stage, 16); floatText(stage, 'גוווול!', 'good'); }
-      else { sfx.wrong(); missed.push(q); }
+      if (right) { isKid ? kg++ : pg++; if (isKid) { kidRight++; xp += 8; } sfx.goal(); if (isKid) R.hit(); else burst(stage, 16); floatText(stage, 'גוווול!', 'good'); }
+      else { sfx.wrong(); missed.push(q); if (isKid) R.miss(); }
       if (!isKid) xp += 3;
       paintScore();
       const next = h('button', { class: 'btn primary' }, 'הבא ▶');
@@ -85,7 +87,8 @@ export async function run(el, { topic = 'j1' }, sc) {
   const win = kg > pg ? kid : pg > kg ? par : null;
   const uniq = [...new Map(missed.map(q => [q.q, q])).values()].slice(0, 4);
   return {
-    xp, correct: kidRight, total: D.ideas.length * 2, completed: true,
+    xp, correct: kidRight, total: D.ideas.length * 2, completed: true, run: R.best,
+    kg, pg, topic, kidPerfect: kidRight === D.ideas.length,
     title: win ? `ניצחון ל${win}! 🏆` : 'תיקו! 🤝',
     big: `${kg} – ${pg}`,
     lines: [`${kid}: ${kg} גולים · ${par}: ${pg} גולים`, ...(uniq.length ? ['כדאי לחזור על:'] : ['אף טעות! מושלם 🔥']), ...uniq.map(q => `${q.q} ← ${q.a}`)],

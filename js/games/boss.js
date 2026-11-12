@@ -3,6 +3,7 @@ import { BOSS } from '../content.js';
 import { h, shuffle } from '../ui.js';
 import { sfx } from '../audio.js';
 import { waitClick } from './common.js';
+import { reactor } from '../react.js';
 
 export async function run(el, _opts, sc) {
   el.append(h('div', { class: 'boss-title' }, h('small', {}, 'שאלה פתוחה · מבחן אמיתי'), h('h2', {}, BOSS.title)));
@@ -45,6 +46,7 @@ export async function run(el, _opts, sc) {
     return h('div', { class: 'verdict ' + cls }, h('b', {}, c.t), h('small', {}, txt));
   });
   strong ? sfx.goal() : sfx.correct();
+  if (strong) reactor(area, sc).hit();
   area.append(h('p', { class: 'sub' }, 'התשובה שבנית:'), ...rows,
     h('div', { class: 'model' }, h('h3', {}, 'תשובה לדוגמה – מציגים שני צדדים'), BOSS.model.map(([t, p]) => h('p', {}, h('b', {}, t + ': '), p))));
   const done = h('button', { class: 'btn primary' }, 'סיום');

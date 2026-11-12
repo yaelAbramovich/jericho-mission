@@ -14,7 +14,7 @@ const STAGES = [
   ['🧩 בונים את הקו', order, { ids: ['sx'] }],
 ];
 export async function run(el, _o, sc) {
-  let xp = 30, correct = 0, total = 0;
+  let xp = 30, correct = 0, total = 0, run = 0;
   for (let i = 0; i < STAGES.length; i++) {
     const [name, mod, opts] = STAGES[i];
     el.innerHTML = '';
@@ -23,10 +23,10 @@ export async function run(el, _o, sc) {
     await waitClick(go, sc); sfx.whistle();
     el.innerHTML = '';
     const r = await mod.run(el, { chapter: 0, ...opts }, sc);
-    xp += r.xp; correct += r.correct; total += r.total;
+    xp += r.xp; correct += r.correct; total += r.total; run = Math.max(run, r.run || 0);
   }
   el.innerHTML = '';
   const { get, save } = await import('../state.js');
   get().examDone = true; save();
-  return { xp, correct, total, title: 'מבחן הסיכום הושלם! 🏆', big: `${correct} / ${total}`, lines: ['נפתח פריט מיוחד בפס הקרב: אלוף יריחו'] };
+  return { xp, correct, total, run, title: 'מבחן הסיכום הושלם! 🏆', big: `${correct} / ${total}`, lines: ['נפתח פריט מיוחד בפס הקרב: אלוף יריחו'] };
 }

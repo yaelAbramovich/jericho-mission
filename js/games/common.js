@@ -1,6 +1,9 @@
 // רכיבים משותפים למשחקים: מגרש פנדלים, המתנה ללחיצה, בחירת פריטים לסבב.
-import { h, shuffle, burst, floatText } from '../ui.js';
+import { h, shuffle, floatText } from '../ui.js';
 import { sfx } from '../audio.js';
+import { equipped } from '../locker.js';
+import { art } from '../rewards.js';
+import { celebrate } from '../react.js';
 
 export const waitClick = (btn, sc) => new Promise(res => btn.addEventListener('click', () => res(), { once: true }));
 
@@ -22,8 +25,14 @@ export function makePitch() {
   const keeper = h('div', { class: 'keeper' }, h('i', { class: 'k-head' }), h('i', { class: 'k-body' }), h('i', { class: 'k-glove l' }), h('i', { class: 'k-glove r' }));
   const net = h('div', { class: 'net' });
   const goal = h('div', { class: 'goal' }, net, keeper);
-  const ball = h('div', { class: 'ball' }, '⚽');
-  const el = h('div', { class: 'pitch' }, goal, ball, h('div', { class: 'spot' }));
+  // הפריטים שהשחקן לבש: כדור, מגרש, שוער וחולצה
+  const bi = equipped('ball'), pi = equipped('pitch'), ki = equipped('keeper'), ji = equipped('jersey');
+  const ball = h('div', { class: 'ball', html: bi.p.kind === 'classic' ? '⚽' : art(bi, 34) });
+  const kicker = h('div', { class: 'kicker', html: art(ji, 50) });
+  const el = h('div', { class: 'pitch' }, goal, ball, h('div', { class: 'spot' }), kicker);
+  el.style.setProperty('--sky', pi.p.sky); el.style.setProperty('--g1', pi.p.g1); el.style.setProperty('--g2', pi.p.g2);
+  // על המגרש עצמו (ולא על השוער): reset() מנקה את הסגנון של השוער בכל בעיטה
+  el.style.setProperty('--k1', ki.p.k1); el.style.setProperty('--k2', ki.p.k2); el.style.setProperty('--glove', ki.p.glove);
   function reset() {
     el.classList.remove('shoot');
     goal.classList.remove('shake');
@@ -42,7 +51,7 @@ export function makePitch() {
     else { sfx.save(); ball.style.left = (50 + side * 22) + '%'; ball.style.top = '31%'; }
     ball.style.transform = 'translate(-50%,-50%) scale(.55) rotate(540deg)';
     await sc.sleep(outcome === 'almost' ? 1000 : 700);
-    if (outcome !== 'save') { goal.classList.add('shake'); burst(el, outcome === 'goal' ? 24 : 12); }
+    if (outcome !== 'save') { goal.classList.add('shake'); celebrate(el, outcome === 'goal' ? 28 : 12); }
     else { ball.style.left = (50 + side * 40) + '%'; ball.style.top = '58%'; ball.style.transform = 'translate(-50%,-50%) scale(.7) rotate(-200deg)'; }
     floatText(el, outcome === 'goal' ? 'גוווול!' : outcome === 'almost' ? 'כמעט נעצר!' : 'נעצר!', outcome === 'save' ? 'bad' : 'good');
     await sc.sleep(550);
