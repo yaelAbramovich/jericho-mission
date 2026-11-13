@@ -4,6 +4,7 @@ import { h, shuffle, sample } from '../ui.js';
 import { sfx } from '../audio.js';
 import { pickRound, waitClick, tally } from './common.js';
 import { reactor } from '../react.js';
+import { powerBar, fiftyButton } from '../powerups.js';
 
 const POOL = QUOTES.filter(q => q.who);
 const ALL = Object.keys(WHO);
@@ -25,7 +26,8 @@ export async function run(el, { chapter = 0, count = 5 }, sc) {
     const opts = shuffle([q.who, ...[...sample(here, 3), ...fill].slice(0, 3)]);
     const btns = opts.map(k => h('button', { class: 'opt', 'data-k': k }, WHO[k]));
     stage.innerHTML = '';
-    stage.append(h('div', { class: 'quote-card big' }, h('small', {}, 'מי אמר?'), h('q', {}, q.t)), h('div', { class: 'opts' }, btns));
+    stage.append(h('div', { class: 'quote-card big' }, h('small', {}, 'מי אמר?'), h('q', {}, q.t)),
+      ...powerBar(fiftyButton(btns, b => b.dataset.k === q.who)), h('div', { class: 'opts' }, btns));
     const k = await new Promise(res => btns.forEach(b => b.addEventListener('click', () => res(b.dataset.k), { once: true })));
     const ok = k === q.who;
     btns.forEach(b => { b.disabled = true; if (b.dataset.k === q.who) b.classList.add('right'); else if (b.dataset.k === k) b.classList.add('wrong'); });

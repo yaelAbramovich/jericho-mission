@@ -13,6 +13,7 @@ const fresh = () => ({
   ach: {},                // הישגים שנפתחו: { id: timestamp }
   stats: { bestRun: 0, bestCombo: 0, perfectPen: 0, perfectLine: 0, perfectWho: 0, perfectDuel: 0, questDays: 0 },
   daily: null,            // מונים יומיים למשימות
+  pass: { claimed: {}, gold: false, power: { fifty: 0, time: 0, retry: 0 }, boxes: 0, owned: {} },   // פס הקרב: מה נאסף, כרטיס זהב, כוחות, קופסאות
   trophy: { w: 0, l: 0, t: 0, hist: [] },   // גביע המשפחה
   muted: false, pinHash: null, examDone: false, overviewDone: false, names: { kid: '', parent: '' },
 });
@@ -29,6 +30,10 @@ export function load() {
       // שדות מקוננים: משלימים מה שחסר בשמירות ישנות (base נפרד – אחרת הערכים ששמורים דורסים את ברירות המחדל)
       const base = fresh();
       for (const k of ['eq', 'custom', 'stats', 'trophy', 'ach']) S[k] = Object.assign({}, base[k], saved[k]);
+      S.pass = Object.assign({}, base.pass, saved.pass);
+      S.pass.power = Object.assign({}, base.pass.power, (saved.pass || {}).power);
+      // שמירה מלפני פס הקרב עם איסוף: כל פרסי החינם שכבר נפתחו נחשבים כנאספו (שלא יאבד כלום)
+      if (!saved.pass) { S.pass.claimed = {}; for (let t = 1; t <= tierOf(S.xp); t++) S.pass.claimed['f' + t] = true; }
     }
   } catch (e) { memoryOnly = true; }
 }
@@ -94,6 +99,9 @@ export function daily() {
   if (!S.daily || S.daily.day !== d) S.daily = { day: d, rounds: 0, goals: 0, swipeRight: 0, whoRight: 0, perfectLines: 0, duels: 0, chapters: [], bestRun: 0, claimed: [], bonus: false };
   return S.daily;
 }
+// ---------- כוחות (power-ups) וקופסאות ----------
+export const power = k => S.pass.power[k] || 0;
+export function usePower(k) { if (power(k) < 1) return false; S.pass.power[k]--; save(); return true; }
 export function maxStat(k, v) { if (v > (S.stats[k] || 0)) S.stats[k] = v; }
 
 // ---------- גביע המשפחה ----------

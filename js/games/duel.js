@@ -5,6 +5,7 @@ import { h, shuffle, sample, floatText, burst } from '../ui.js';
 import { sfx } from '../audio.js';
 import { waitClick } from './common.js';
 import { reactor } from '../react.js';
+import { powerBar, fiftyButton } from '../powerups.js';
 
 const LET = ['א', 'ב', 'ג', 'ד'];
 
@@ -65,6 +66,7 @@ export async function run(el, { topic = 'j1' }, sc) {
         h('div', { class: 'turn ' + who }, isKid ? `🎮 תור של ${kid}` : `🧑‍⚖️ תור של ${par}`),
         !isKid && h('p', { class: 'tip big' }, `${kid}: קרא את השאלה ואת התשובות ל${par}, ואז לחץ על מה ש${par} ענה/ענתה`),
         h('div', { class: 'quote-card' }, h('small', {}, idea.title), h('p', { class: 'meaning' }, q.q)),
+        ...(isKid ? powerBar(fiftyButton(btns, b => b.dataset.t === q.a)) : []),
         h('div', { class: 'opts' }, btns));
       const picked = await new Promise(res => btns.forEach(b => b.addEventListener('click', () => res(b.dataset.t), { once: true })));
       const right = picked === q.a;

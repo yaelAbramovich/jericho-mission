@@ -4,6 +4,8 @@ import { h, shuffle } from '../ui.js';
 import { sfx } from '../audio.js';
 import { makePitch, waitClick, pickRound, pickDistractors, tally } from './common.js';
 import { reactor } from '../react.js';
+import * as State from '../state.js';
+import { powerBar, fiftyButton, offerRetry } from '../powerups.js';
 
 const FAST_FIND = 35;   // שניות – מהר = גול נקי
 const FAST_MATCH = 9;
@@ -17,6 +19,7 @@ export async function run(el, { chapter = 0, mode = 'find', count = 5 }, sc) {
   el.append(head, pitch.el, stage);
   const R = reactor(el, sc);
   let goals = 0, xp = 5, missed = [];
+  const retried = new Set();   // שאלה שכבר השתמשו בה בבעיטה חוזרת
   const counter = head.querySelector('b');
 
   for (let i = 0; i < items.length; i++) {
@@ -42,15 +45,18 @@ export async function run(el, { chapter = 0, mode = 'find', count = 5 }, sc) {
       await waitClick(kickBtn, sc);
       const secs = (Date.now() - t0) / 1000;
       ok = ch === q.c && vs === q.v; fast = secs <= FAST_FIND;
+      if (!ok && State.power('retry') > 0 && !retried.has(i) && await offerRetry(stage)) { retried.add(i); i--; continue; }
       lock(stage);
     } else {
       const wrong = pickDistractors(POOL, q, 3, chapter);
       const opts = shuffle([q, ...wrong]);
       stage.append(h('div', { class: 'quote-card' }, h('small', {}, 'איזה ציטוט מתאים?'), h('p', { class: 'meaning' }, q.m)));
       const btns = opts.map(o => h('button', { class: 'opt', 'data-id': o.id }, o.t));
-      stage.append(h('div', { class: 'opts' }, btns));
+      stage.append(...powerBar(fiftyButton(btns, b => b.dataset.id === q.id)), h('div', { class: 'opts' }, btns));
       const pickedId = await new Promise(res => btns.forEach(b => b.addEventListener('click', () => res(b.dataset.id), { once: true })));
       ok = pickedId === q.id; fast = (Date.now() - t0) / 1000 <= FAST_MATCH;
+      // בעיטה חוזרת: לפני שחושפים את התשובה הנכונה
+      if (!ok && State.power('retry') > 0 && !retried.has(i) && await offerRetry(stage)) { retried.add(i); i--; continue; }
       btns.forEach(b => { b.disabled = true; if (b.dataset.id === q.id) b.classList.add('right'); else if (b.dataset.id === pickedId) b.classList.add('wrong'); });
     }
 

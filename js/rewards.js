@@ -61,6 +61,32 @@ export const ITEMS = [
   { id: 'kpa', type: 'keeper', name: 'שוער סגול', how: { ach: 'duelp' }, p: { k1: '#b47cff', k2: '#4a1fa8', glove: '#ffe14a' } },
   { id: 'pta', type: 'pitch', name: 'אצטדיון זהב', how: { ach: 'streak7' }, p: { sky: '#3b2a05', g1: '#1c6b3a', g2: '#124e2a' } },
   { id: 'bac', type: 'ball', name: 'כדור כובש יריחו', how: { ach: 'allzones' }, p: { c1: '#ffe27a', c2: '#3d2a00' } },
+  // פס הקרב הזהב (how.gold = הדרגה). נפתחים רק אחרי הפעלת כרטיס הזהב ואיסוף הפרס
+  { id: 'ge3', type: 'emote', name: 'תרועת שופר', how: { gold: 3 }, rarity: 'rare', p: { ch: '🎺' } },
+  { id: 'gj5', type: 'jersey', name: 'זהב יריחו', how: { gold: 5 }, rarity: 'legendary', p: { c1: '#3d2a00', c2: '#ffe27a', pat: 'sash', n: '5' } },
+  { id: 'ge8', type: 'emote', name: 'חומה', how: { gold: 8 }, rarity: 'rare', p: { ch: '🧱' } },
+  { id: 'ga10', type: 'avatar', name: 'יהושע בן נון', how: { gold: 10 }, rarity: 'legendary', p: { c1: '#7a4a1a', c2: '#ffe27a', shape: 'round', acc: 'headband' } },
+  { id: 'ge13', type: 'emote', name: 'יונה', how: { gold: 13 }, rarity: 'epic', p: { ch: '🕊️' } },
+  { id: 'gb15', type: 'banner', name: 'החומות נופלות', how: { gold: 15 }, rarity: 'epic', p: { g: ['#3a1c71', '#d76d77', '#ffaf7b'] } },
+  { id: 'gf18', type: 'fx', name: 'תרועה', how: { gold: 18 }, rarity: 'epic', p: { colors: ['#ffe27a', '#ffcf33', '#fff3b0'], glyph: '🎺' } },
+  { id: 'ga20', type: 'avatar', name: 'מלך יריחו', how: { gold: 20 }, rarity: 'legendary', p: { c1: '#3d2a00', c2: '#ffe27a', shape: 'horn', acc: 'crown' } },
+  // מאגר קופסאות המסתורין (how.box) – נפתחים רק מקופסה
+  { id: 'x1', type: 'avatar', name: 'חתלתול', how: { box: true }, rarity: 'rare', p: { c1: '#2a2a3a', c2: '#ff9ad5', shape: 'round', acc: 'ears' } },
+  { id: 'x2', type: 'avatar', name: 'מלאך', how: { box: true }, rarity: 'epic', p: { c1: '#e8f0ff', c2: '#ffe27a', shape: 'round', acc: 'halo' } },
+  { id: 'x3', type: 'avatar', name: 'רובוט', how: { box: true }, rarity: 'rare', p: { c1: '#46536f', c2: '#35e08a', shape: 'hex', acc: 'antenna' } },
+  { id: 'x4', type: 'avatar', name: 'נינג׳ה', how: { box: true }, rarity: 'epic', p: { c1: '#10131c', c2: '#ff4d6d', shape: 'mask', acc: 'headband' } },
+  { id: 'x5', type: 'jersey', name: 'ירוק זוהר', how: { box: true }, rarity: 'rare', p: { c1: '#0b3d1c', c2: '#b6ff3c', pat: 'stripes', n: '8' } },
+  { id: 'x6', type: 'jersey', name: 'שחור לבן', how: { box: true }, rarity: 'common', p: { c1: '#f2f2f2', c2: '#111827', pat: 'halves', n: '3' } },
+  { id: 'x7', type: 'jersey', name: 'להבה', how: { box: true }, rarity: 'epic', p: { c1: '#ff3d00', c2: '#ffcf33', pat: 'diag', n: '99' } },
+  { id: 'x8', type: 'banner', name: 'לילה כוכבים', how: { box: true }, rarity: 'rare', p: { g: ['#050b2a', '#26338f', '#7a5cff'] } },
+  { id: 'x9', type: 'banner', name: 'גלי ים', how: { box: true }, rarity: 'common', p: { g: ['#0a3d62', '#1e90ff', '#9eeaff'] } },
+  { id: 'x10', type: 'ball', name: 'כדור קשת', how: { box: true }, rarity: 'rare', p: { c1: '#ff3d8b', c2: '#2a0a3a' } },
+  { id: 'x11', type: 'ball', name: 'כדור אבן', how: { box: true }, rarity: 'common', p: { c1: '#8a8f99', c2: '#3a3f4a' } },
+  { id: 'x12', type: 'fx', name: 'לבבות', how: { box: true }, rarity: 'rare', p: { colors: ['#ff3d8b', '#ff9ad5', '#ffffff'], glyph: '💜' } },
+  { id: 'x13', type: 'keeper', name: 'שוער ירוק', how: { box: true }, rarity: 'common', p: { k1: '#35e08a', k2: '#0f7a45', glove: '#ffffff' } },
+  { id: 'x14', type: 'keeper', name: 'שוער זהב', how: { box: true }, rarity: 'epic', p: { k1: '#ffe27a', k2: '#c99a1f', glove: '#3d2a00' } },
+  { id: 'x15', type: 'pitch', name: 'חוף ים', how: { box: true }, rarity: 'rare', p: { sky: '#2a8fd6', g1: '#d9c27a', g2: '#c8aa5a' } },
+  { id: 'x16', type: 'emote', name: 'צחוק', how: { box: true }, rarity: 'common', p: { ch: '😂' } },
   // החולצה שלי – מעוצבת על ידי השחקן (p מתעדכן מ-setCustomJersey)
   { id: 'jmy', type: 'jersey', name: 'החולצה שלי', tier: 'custom', p: { c1: '#1b4bd6', c2: '#ffe14a', pat: 'stripes', n: '7', name: '' } },
   // נפתח במבחן הסיכום
@@ -115,15 +141,22 @@ function keeperArt({ k1, k2, glove }, s) {
   <circle cx="14" cy="33" r="7" fill="${glove}"/><circle cx="50" cy="33" r="7" fill="${glove}"/></svg>`;
 }
 
-function avatar({ c1, c2, shape }, s) {
+function avatar({ c1, c2, shape, acc }, s) {
   const head = {
     round: `<circle cx="32" cy="28" r="15" fill="${c1}"/>`,
     hex: `<path d="M32 11l15 8v18l-15 8-15-8V19z" fill="${c1}"/>`,
     horn: `<circle cx="32" cy="29" r="14" fill="${c1}"/><path d="M19 22l-6-12 12 7zM45 22l6-12-12 7z" fill="${c2}"/>`,
     mask: `<path d="M17 24q0-14 15-14t15 14v12q0 9-15 9t-15-9z" fill="${c1}"/><path d="M20 40h24v8H20z" fill="${c2}" opacity=".35"/>`,
   }[shape];
+  const extra = {
+    crown: `<path d="M19 15l4-9 5 6 4-8 4 8 5-6 4 9z" fill="${c2}" stroke="#0007" stroke-width=".8"/>`,
+    ears: `<path d="M19 20l-3-13 11 7zM45 20l3-13-11 7z" fill="${c1}"/><path d="M20 17l-1-6 5 3zM44 17l1-6-5 3z" fill="${c2}"/>`,
+    halo: `<ellipse cx="32" cy="8" rx="12" ry="3.5" fill="none" stroke="${c2}" stroke-width="2.5"/>`,
+    headband: `<rect x="17" y="19" width="30" height="5" rx="2.5" fill="${c2}"/><path d="M46 21l8-3-2 8z" fill="${c2}"/>`,
+    antenna: `<path d="M32 11V4" stroke="${c2}" stroke-width="2.5"/><circle cx="32" cy="4" r="3" fill="${c2}"/>`,
+  }[acc] || '';
   return `<svg viewBox="0 0 64 64" width="${s}" height="${s}"><rect width="64" height="64" rx="14" fill="#0c1220"/>
-  <path d="M8 64q0-17 24-17t24 17z" fill="${c1}"/>${head}
+  <path d="M8 64q0-17 24-17t24 17z" fill="${c1}"/>${head}${extra}
   <rect x="20" y="24" width="24" height="9" rx="4.5" fill="${c2}"/><rect x="20" y="24" width="24" height="9" rx="4.5" fill="none" stroke="#fff" stroke-opacity=".35"/></svg>`;
 }
 let jid = 0;

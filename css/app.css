@@ -350,3 +350,55 @@ body.immersive #screen { padding-bottom: var(--sab); }
 .tool { flex: 1; min-height: 44px; border-radius: 14px; background: var(--panel2); border: 1px solid var(--line); font-weight: 700; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--txt); }
 .tool:active { transform: scale(.97); } .tool span { font-size: 18px; }
 .copy-fallback { min-height: 220px; padding: 10px 12px; font-size: 14px; line-height: 1.5; resize: none; }
+
+/* ================= פס הקרב החדש: מסלול אנכי, חינם + זהב ================= */
+#nav button { position: relative; } #nav button.dot::after { content: ''; position: absolute; top: 5px; left: calc(50% + 8px); width: 11px; height: 11px; border-radius: 50%; background: var(--red); border: 2px solid #0a1124; }
+.rar-common { --rc: #cfd9f5; } .rar-rare { --rc: #35b8ff; } .rar-epic { --rc: #b47cff; } .rar-legendary { --rc: #ffcf33; }
+.season { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #3a1030, #1a2656); border: 1px solid #ff3d8b66; border-radius: 14px; padding: 10px 14px; margin-bottom: 10px; }
+.season small { color: var(--pink); font-weight: 800; display: block; font-size: 12px; } .season b { font-size: 20px; } .se-d { text-align: left; font-size: 13px; color: var(--dim); } .se-d b { color: var(--yel); font-size: 22px; }
+.hero { position: relative; border-radius: 18px; overflow: hidden; border: 1px solid var(--line); margin-bottom: 10px; background: var(--panel); }
+.hero-bg { position: absolute; inset: 0; } .hero-bg .banner-art { height: 100% !important; border-radius: 0; border: 0; }
+.hero-chars { position: relative; display: flex; gap: 12px; justify-content: center; align-items: flex-end; padding: 14px 0 6px; }
+.hav { border-radius: 16px; overflow: hidden; border: 2px solid var(--neon); background: #0c1220; } .hjr { filter: drop-shadow(0 4px 6px #0009); }
+.hero-info { position: relative; background: #0a1124dd; padding: 8px 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 56px; }
+.hero-info b { display: block; font-size: 16px; } .hero-info small { color: var(--dim); font-size: 12px; } .hero-info > div { flex: 1; min-width: 120px; } .hero-art { width: 56px; height: 56px; display: grid; place-items: center; overflow: hidden; flex: none; }
+.hero-btn { min-height: 40px; padding: 6px 16px; font-size: 15px; flex: none; } .hero-lock { color: var(--yel) !important; }
+.pprog { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; } .pprog .xpwrap { flex: 1; min-width: 0; }
+.claimall { min-height: 44px; padding: 6px 12px; font-size: 14px; flex: none; }
+.ticket { display: flex; align-items: center; gap: 10px; background: linear-gradient(160deg, #2a2010, var(--panel)); border: 1px solid #ffe14a44; border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; position: relative; flex-wrap: wrap; }
+.ticket > div:not(.tk-bar) { flex: 1; min-width: 150px; } .ticket b { display: block; } .ticket small { color: var(--dim); font-size: 12px; } .tk-i { font-size: 32px; }
+.ticket.ready { border-color: var(--yel); animation: glow 1.4s infinite alternate; } .ticket.on { border-color: var(--neon); } .ticket .btn { min-height: 44px; }
+.tk-bar { width: 100%; height: 6px; background: #1a2447; border-radius: 4px; overflow: hidden; } .tk-bar i { display: block; height: 100%; background: var(--yel); }
+.inv { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.pwchips { display: flex; gap: 6px; } .pwchip { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 6px 10px; font-size: 16px; } .pwchip.zero { opacity: .45; } .pwchip b { font-size: 15px; color: var(--yel); }
+.boxbtn { min-height: 44px; padding: 6px 12px; font-size: 14px; }
+.thead { display: grid; grid-template-columns: 1fr 44px 1fr; gap: 6px; text-align: center; font-weight: 800; margin: 8px 0 6px; } .thead .free { color: var(--neon); } .thead .gold { color: var(--yel); }
+.prow2 { position: relative; display: grid; grid-template-columns: 1fr 44px 1fr; gap: 6px; align-items: center; margin-bottom: 10px; }
+.prow2::before { content: ''; position: absolute; left: 50%; top: -10px; bottom: -10px; width: 4px; margin-left: -2px; background: #1a2447; z-index: 0; } .prow2.reached::before { background: var(--yel); }
+.dia { position: relative; z-index: 1; justify-self: center; width: 38px; height: 38px; border-radius: 50%; background: #1a2447; border: 2px solid var(--line); display: grid; place-items: center; font-weight: 900; color: var(--dim); }
+.prow2.reached .dia { background: linear-gradient(145deg, #ffe27a, #c99a1f); color: #3d2a00; border-color: #fff3b0; } .prow2.next .dia { border-color: var(--yel); color: var(--yel); animation: pulse2 .9s infinite alternate; }
+.prow2.ms .dia { width: 44px; height: 44px; font-size: 18px; box-shadow: 0 0 16px #ffcf3388; }
+.cell { position: relative; background: var(--panel); border: 2px solid var(--line); border-radius: 14px; padding: 8px 6px 6px; display: flex; flex-direction: column; align-items: center; gap: 5px; min-height: 112px; justify-content: center; }
+.cell.gold { background: linear-gradient(160deg, #3a2a05, var(--panel)); border-color: #ffe14a55; } .prow2.ms .cell { min-height: 132px; }
+.cell.can { border-color: var(--grn); animation: glow 1.4s infinite alternate; } .cell.claimed { opacity: .72; } .cell.future { opacity: .55; } .cell.glock .rtiles { filter: saturate(.55) brightness(.85); }
+@keyframes glow { from { box-shadow: 0 0 6px #35e08a44; } to { box-shadow: 0 0 20px #35e08a; } }
+.ticket.ready, .cell.gold.can { animation-name: glowg; } @keyframes glowg { from { box-shadow: 0 0 6px #ffe14a44; } to { box-shadow: 0 0 22px #ffe14a; } }
+.rtiles { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
+.rtile { width: 64px; display: flex; flex-direction: column; align-items: center; gap: 2px; background: #0f173a; border-radius: 10px; border: 2px solid var(--rc, #cfd9f5); padding: 3px; } .rtile.sel { box-shadow: 0 0 0 2px #fff, 0 0 14px var(--rc); }
+.rar-legendary.rtile, .rar-legendary.gain { box-shadow: 0 0 12px #ffcf3355; }
+.rtile .ra { width: 52px; height: 52px; display: grid; place-items: center; overflow: hidden; } .prow2.ms .rtile .ra { width: 56px; height: 56px; }
+.rtile .banner-art, .rtile .pitch-art { min-width: 0; width: 52px; } .rtile small { font-size: 10px; line-height: 1.15; text-align: center; color: var(--txt); max-height: 24px; overflow: hidden; }
+.pw-art { line-height: 1; } .claim { min-height: 34px; padding: 4px 18px; font-size: 14px; background: linear-gradient(135deg, #35e08a, #17a64f); color: #031a0e; border: 0; }
+.chk { color: var(--grn); font-weight: 900; font-size: 18px; line-height: 1; } .lk { font-size: 14px; line-height: 1; } .lk.dim { opacity: .5; }
+.ribbon { position: absolute; top: -9px; background: #e63946; color: #fff; font-size: 10px; font-weight: 800; padding: 1px 8px; border-radius: 6px; white-space: nowrap; }
+.exam-row { display: flex; align-items: center; gap: 12px; background: linear-gradient(160deg, #3a1030, var(--panel)); border: 1px solid var(--pink); border-radius: 14px; padding: 10px; margin-top: 4px; } .exam-row small { display: block; color: var(--dim); font-size: 12px; } .exam-row:not(.done) .rtile { filter: grayscale(.7) brightness(.7); }
+.gains { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; } .gain { width: 84px; display: grid; justify-items: center; gap: 3px; border: 2px solid var(--rc); border-radius: 12px; padding: 6px 2px; background: #0f173a; animation: pop .35s; } .gain small { font-size: 11px; text-align: center; }
+.boxreveal { display: grid; gap: 10px; justify-items: center; } .mbox { font-size: 96px; line-height: 1; animation: boxshake .45s infinite; } @keyframes boxshake { 0%, 100% { transform: rotate(-8deg) scale(1); } 50% { transform: rotate(8deg) scale(1.1); } }
+.boxitem { display: grid; place-items: center; border: 3px solid var(--rc); border-radius: 22px; padding: 12px; box-shadow: 0 0 32px var(--rc); animation: pop .45s; background: #0c1220; overflow: hidden; } .boxitem .banner-art, .boxitem .pitch-art { min-width: 110px; }
+.chal { display: grid; gap: 8px; } .chrow { display: flex; gap: 10px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; } .chrow.ok { border-color: var(--neon); background: linear-gradient(160deg, #0f5a4944, var(--panel)); }
+.chm { font-size: 22px; width: 28px; text-align: center; color: var(--neon); font-weight: 900; } .cht { flex: 1; display: grid; gap: 3px; } .cht small { color: var(--dim); font-size: 12px; } .chrow em { color: var(--yel); font-style: normal; font-weight: 800; font-size: 13px; }
+.chrow.bonus { border-style: dashed; }
+
+/* כוחות (power-ups) בתוך המשחקים */
+.powerbar { display: flex; gap: 8px; margin: 2px 0 8px; justify-content: center; } .pwbtn { background: #2a1a5a; border: 2px solid var(--vio); border-radius: 14px; padding: 6px 14px; font-weight: 800; font-size: 15px; color: var(--txt); min-height: 40px; } .pwbtn:disabled { opacity: .4; }
+.opt.gone { visibility: hidden; } .retry-box { border: 2px solid var(--vio); background: #1a1440; border-radius: 16px; padding: 12px; text-align: center; display: grid; gap: 8px; margin: 8px 0; } .retry-box p { font-weight: 800; font-size: 18px; }

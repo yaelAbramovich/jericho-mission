@@ -3,7 +3,9 @@ import * as State from './state.js';
 import { sfx, unlock } from './audio.js';
 import { h, $, createScope, modal, toast, burst } from './ui.js';
 import { CHAPTERS, OVERVIEW, TEST_DATE, hebNum } from './content.js';
-import { TIER_XP, MAX_TIER, ITEMS, TYPE_LABEL, art, itemById, unlockedAt, setCustomJersey } from './rewards.js';
+import { TIER_XP, MAX_TIER, ITEMS, TYPE_LABEL, art, itemById, setCustomJersey } from './rewards.js';
+import * as Pass from './pass.js';
+import { cellRewards } from './pass-data.js';
 import { isOpen, openIds, howText } from './locker.js';
 import * as Ach from './achievements.js';
 import * as Quests from './quests.js';
@@ -30,6 +32,7 @@ export function go(name, params = {}) {
   document.body.classList.toggle('immersive', inGame);
   setNav(name);
   renderTop();
+  Pass.dot();
   const view = h('div', { class: 'view' });
   el.append(view);
   const fn = ROUTES[name];
@@ -187,24 +190,14 @@ function modeChips(modes, onSel) {
 
 // ---------- פס קרב / ארון / הישגים ----------
 let passTab = 'pass';
-function passScreen(v) {
-  const s = State.get(), tier = State.tierOf();
-  const tabs = h('div', { class: 'chips tabs' }, [['pass', 'פס קרב'], ['locker', 'הארון'], ['ach', 'הישגים']].map(([k, l]) =>
+function passScreen(v, _p, sc) {
+  const tabs = h('div', { class: 'chips tabs' }, [['pass', 'פס קרב'], ['chal', 'אתגרים'], ['locker', 'הארון'], ['ach', 'הישגים']].map(([k, l]) =>
     h('button', { class: 'chip' + (passTab === k ? ' on' : ''), onclick: () => { sfx.tap(); passTab = k; go('pass'); } }, l)));
   v.append(h('h2', { class: 'sec' }, 'פס קרב – העונה של יריחו'), tabs);
   if (passTab === 'locker') return lockerView(v);
-  if (passTab === 'ach') return achView(v, s);
-  v.append(h('p', { class: 'sub' }, tier >= MAX_TIER ? 'פתחת הכול! אלוף.' : `עוד ${TIER_XP - (s.xp % TIER_XP)} XP לדרגה ${tier + 1}`));
-  const list = h('div', { class: 'pass' });
-  for (let t = 1; t <= MAX_TIER; t++) {
-    const its = unlockedAt(t), open = t <= tier;
-    list.append(h('div', { class: 'ptier' + (open ? ' open' : '') + (t === tier + 1 ? ' next' : '') },
-      h('div', { class: 'pn' }, String(t)),
-      ...its.map(it => itemCard(it, open))));
-  }
-  const ex = itemById('ax');
-  list.append(h('div', { class: 'ptier special' + (s.examDone ? ' open' : '') }, h('div', { class: 'pn' }, '🏆'), itemCard(ex, s.examDone, 'נפתח במבחן הסיכום')));
-  v.append(list);
+  if (passTab === 'ach') return achView(v, State.get());
+  if (passTab === 'chal') return Pass.renderChallenges(v);
+  Pass.renderTrack(v, sc);
 }
 function itemCard(it, open, lockNote) {
   const eq = State.get().eq[it.type] === it.id;
@@ -406,12 +399,14 @@ function showCapture(ch, nowAll) {
 }
 function showTierUp(from, to) {
   sfx.tierUp();
-  const items = []; for (let t = from + 1; t <= Math.min(to, MAX_TIER); t++) items.push(...unlockedAt(t));
+  const rs = []; for (let t = from + 1; t <= Math.min(to, MAX_TIER); t++) rs.push(...cellRewards('free', t));
   const m = modal([h('div', { class: 'tag' }, 'דרגה חדשה'), h('h3', {}, `דרגה ${Math.min(to, MAX_TIER)}!`),
-    h('div', { class: 'unlocks' }, items.map(it => h('div', { class: 'unlock' }, h('div', { html: art(it, 72) }), h('small', {}, it.name)))),
-    h('button', { class: 'btn primary', onclick: () => { m.close(); } }, 'מדהים')], { cls: 'celebrate' });
+    h('p', { class: 'sub' }, 'יש פרסים חדשים שמחכים לך בפס הקרב'),
+    h('div', { class: 'unlocks' }, rs.map(r => h('div', { class: 'unlock' }, h('div', { html: Pass.rewardArt(r, 64) }), h('small', {}, Pass.rewardName(r))))),
+    h('button', { class: 'btn primary', onclick: () => { m.close(); passTab = 'pass'; go('pass'); } }, 'לאסוף בפס הקרב'),
+    h('button', { class: 'btn ghost', onclick: () => m.close() }, 'אחר כך')], { cls: 'celebrate' });
   burst(m.box, 30);
-  renderTop();
+  renderTop(); Pass.dot();
 }
 
 async function focusScreen(v, p, sc) { (await import('./focus.js')).list(v, p, sc); }

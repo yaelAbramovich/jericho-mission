@@ -4,6 +4,7 @@ import * as State from '../state.js';
 import { h, shuffle, floatText } from '../ui.js';
 import { sfx } from '../audio.js';
 import { reactor } from '../react.js';
+import { powerBar, timeButton } from '../powerups.js';
 
 const mult = c => Math.min(5, 1 + Math.floor(c / 3));
 
@@ -29,7 +30,7 @@ export function run(el, { chapter = 0, duration = 60 }, sc) {
     const bT = h('button', { class: 'btn sw-true', onclick: () => answer(true) }, 'אמת ✓');
     const bF = h('button', { class: 'btn sw-false', onclick: () => answer(false) }, '✗ שקר');
     const btns = h('div', { class: 'sw-btns' }, bF, bT);
-    el.append(h('div', { class: 'sw-top' }, storm, info), hint, stage, btns,
+    el.append(h('div', { class: 'sw-top' }, storm, info), ...powerBar(timeButton(el, sec => { duration += sec; })), hint, stage, btns,
       h('p', { class: 'sw-tip' }, 'החלק ימינה = אמת · שמאלה = שקר'));
 
     function showCard() {
