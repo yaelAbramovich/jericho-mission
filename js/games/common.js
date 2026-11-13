@@ -9,8 +9,12 @@ import { startTrail } from '../effects.js';
 export const waitClick = (btn, sc) => new Promise(res => btn.addEventListener('click', () => res(), { once: true }));
 
 // פריטי סבב: אם נבחר פרק – רק מהפרק הזה (בלי להשלים מפרקים אחרים). בלי פרק – מכל הפרקים.
-export function pickRound(all, chapter, count, chOf = x => x.c) {
-  return shuffle(all.filter(x => !chapter || chOf(x) === chapter)).slice(0, count);
+// opts.exclude – מזהים שאסור לבחור (למשל שאלות שכבר הופיעו בשלב אחר של אותו מבחן)
+// opts.seen – קבוצת מזהים שנראו לאחרונה: מעדיפים שאלות שהשחקן עוד לא ראה
+export function pickRound(all, chapter, count, { exclude = [], seen = null, chOf = x => x.c, idOf = x => x.id } = {}) {
+  const ok = all.filter(x => (!chapter || chOf(x) === chapter) && !exclude.includes(idOf(x)));
+  if (!seen) return shuffle(ok).slice(0, count);
+  return [...shuffle(ok.filter(x => !seen.has(idOf(x)))), ...shuffle(ok.filter(x => seen.has(idOf(x))))].slice(0, count);
 }
 
 // מסיחים (תשובות שגויות): קודם מאותו פרק, ורק אם אין מספיק בפרק – משלימים מהשאר

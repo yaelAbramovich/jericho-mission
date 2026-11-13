@@ -4,13 +4,15 @@ import { h, shuffle, sample } from '../ui.js';
 import { sfx } from '../audio.js';
 import { pickRound, waitClick, tally } from './common.js';
 import { reactor } from '../react.js';
+import * as State from '../state.js';
 import { powerBar, fiftyButton } from '../powerups.js';
 
 const POOL = QUOTES.filter(q => q.who);
 const ALL = Object.keys(WHO);
 
-export async function run(el, { chapter = 0, count = 5 }, sc) {
-  const items = pickRound(POOL, chapter, count);
+export async function run(el, { chapter = 0, count = 5, exclude = [] }, sc) {
+  const items = pickRound(POOL, chapter, count, { exclude, seen: new Set(State.seenList('quotes')) });
+  State.markSeen('quotes', items.map(q => q.id));
   const tl = tally(items.length);
   const head = h('div', { class: 'h-head' }, h('b', {}), tl.el);
   const stage = h('div', { class: 'who' });
@@ -37,6 +39,6 @@ export async function run(el, { chapter = 0, count = 5 }, sc) {
     stage.append(h('div', { class: 'fb ' + (ok ? 'good' : 'bad') }, h('p', {}, ok ? 'נכון! 🎯' : `זה היה: ${WHO[q.who]}`), h('div', { class: 'loc small' }, refText(q.c, q.v))), next);
     await Promise.race([waitClick(next, sc), sc.sleep(ok ? 1800 : 3600)]);
   }
-  return { xp, correct: right, total: items.length, run: R.best, title: right >= 4 ? 'זיהוי מושלם!' : 'סבב הסתיים', big: `${right} / ${items.length}`,
+  return { xp, correct: right, total: items.length, run: R.best, ids: items.map(q => q.id), title: right >= 4 ? 'זיהוי מושלם!' : 'סבב הסתיים', big: `${right} / ${items.length}`,
     lines: wrongs.slice(0, 3).map(q => `„${q.t}" – ${WHO[q.who]}`) };
 }

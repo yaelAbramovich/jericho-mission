@@ -13,8 +13,19 @@ export function run(el, { chapter = 0, duration = 60 }, sc) {
     // נבחר פרק – רק משפטים מהפרק הזה
     const base = STATEMENTS.filter(s => !chapter || s[0] === chapter);
     const react = reactor(el, sc);   // (לא R – זה כבר רדיוס טבעת הסערה למטה)
-    let queue = [];
-    const nextStatement = () => { if (!queue.length) queue = shuffle(base); return queue.pop(); };
+    // חבילת קלפים: כל משפט מוצג פעם אחת לפני שמשפט כלשהו חוזר; אחרי ערבוב מחדש אף פעם לא אותו כרטיס פעמיים ברצף.
+    // משפטים שהשחקן ראה לאחרונה (בסבבים קודמים) מוצגים אחרונים.
+    const seen = new Set(State.seenList('stm')), shown = [];
+    let queue = [], last = null;
+    const nextStatement = () => {
+      if (!queue.length) {
+        queue = [...shuffle(base.filter(s => seen.has(s[1]))), ...shuffle(base.filter(s => !seen.has(s[1])))];   // pop() לוקח מהסוף = החדשים קודם
+        if (queue.length > 1 && queue[queue.length - 1] === last) [queue[0], queue[queue.length - 1]] = [queue[queue.length - 1], queue[0]];
+        seen.clear();   // אחרי הסיבוב הראשון בחבילה כל המשפטים שווים
+      }
+      last = queue.pop(); shown.push(last[1]);
+      return last;
+    };
 
     let score = 0, combo = 0, bestCombo = 0, answered = 0, right = 0, over = false, cur = null;
     const t0 = Date.now(), best = State.get().best.swipe;
@@ -92,6 +103,7 @@ export function run(el, { chapter = 0, duration = 60 }, sc) {
 
     function finish() {
       if (over) return; over = true;
+      State.markSeen('stm', shown, 120);
       sfx.storm();
       stage.innerHTML = ''; btns.remove(); hint.textContent = '';
       stage.append(h('div', { class: 'storm-over' }, 'הסערה סגרה!'));

@@ -56,7 +56,7 @@ async function withPage(fn, { storage, permissions, init } = {}) {
 const eq = (a, b, msg) => { if (a !== b) throw new Error(`${msg}: ציפינו ל-${b}, קיבלנו ${a}`); };
 const ok = (c, msg) => { if (!c) throw new Error(msg); };
 async function pool(items, n, fn) { const q = [...items]; await Promise.all(Array.from({ length: n }, async () => { while (q.length) await fn(q.shift()); })); }
-const jsFiles = [...fs.readdirSync(path.join(ROOT, 'js')).filter(f => f.endsWith('.js')).map(f => 'js/' + f), ...fs.readdirSync(path.join(ROOT, 'js/games')).filter(f => f.endsWith('.js')).map(f => 'js/games/' + f)];
+const jsFiles = ['js', 'js/games', 'js/bank'].flatMap(d => fs.readdirSync(path.join(ROOT, d)).filter(f => f.endsWith('.js')).map(f => d + '/' + f));
 
 console.log(`\nבדיקות מבצע יריחו ${FAST ? '(מהיר)' : ''}\n`);
 
@@ -88,11 +88,12 @@ await test('מספיק תוכן בכל פרק, ומבנה תקין', () => withP
     for (let c = 1; c <= 5; c++) {
       const hq = QUOTES.filter(q => q.c === c && !q.extra), wq = QUOTES.filter(q => q.c === c && q.who);
       const st = STATEMENTS.filter(s => s[0] === c), sq = SEQUENCES.filter(s => s.ch === c);
-      if (hq.length < 5) out.push(`פרק ${c}: רק ${hq.length} ציטוטים לפנדלים (צריך 5+)`);
-      if (wq.length < 4) out.push(`פרק ${c}: רק ${wq.length} ציטוטים ל"מי אמר" (צריך 4+)`);
-      if (st.length < 10) out.push(`פרק ${c}: רק ${st.length} משפטי אמת/שקר (צריך 10+)`);
-      if (!st.some(s => s[2]) || !st.some(s => !s[2])) out.push(`פרק ${c}: חייבים גם אמת וגם שקר`);
-      if (sq.length < 2) out.push(`פרק ${c}: רק ${sq.length} סדרות לסידור (צריך 2+)`);
+      if (hq.length < 12) out.push(`פרק ${c}: רק ${hq.length} ציטוטים לפנדלים (צריך 12+ כדי שסבבים לא יחזרו על עצמם)`);
+      if (wq.length < 10) out.push(`פרק ${c}: רק ${wq.length} ציטוטים ל"מי אמר" (צריך 10+)`);
+      if (st.length < 34) out.push(`פרק ${c}: רק ${st.length} משפטי אמת/שקר (צריך 34+: סבב הסערה של 60 שניות מציג ~30 כרטיסים בלי חזרה)`);
+      const tr = st.filter(s => s[2]).length; if (tr / st.length < 0.35 || tr / st.length > 0.65) out.push(`פרק ${c}: חוסר איזון אמת/שקר (${tr} אמת מתוך ${st.length})`);
+      if (sq.length < 4) out.push(`פרק ${c}: רק ${sq.length} סדרות לסידור (צריך 4+)`);
+      const sid = SEQUENCES.filter(s => s.ch === c).flatMap(s => s.items); if (new Set(sid).size !== sid.length) out.push(`פרק ${c}: פריט זהה מופיע בשתי סדרות`);
       const locs = hq.map(q => q.v); if (new Set(locs).size !== locs.length) out.push(`פרק ${c}: שני ציטוטים עם אותו פסוק`);
     }
     for (const q of QUOTES) if (q.who && !WHO[q.who]) out.push(`ציטוט ${q.id}: דובר לא מוכר "${q.who}"`);
@@ -451,6 +452,42 @@ await test('כוח בעיטה חוזרת: אחרי טעות אפשר לנסות 
   eq((await page.locator('.h-head b').innerText()).includes('בעיטה 1 מתוך 2'), true, 'חזרנו לשאלה הראשונה');
   eq(await page.evaluate(() => JSON.parse(localStorage.getItem('jericho.v1')).pass.power.retry), 0, 'כוחות שנשארו');
 }, { storage: seed({ pass: { claimed: {}, gold: false, power: { fifty: 0, time: 0, retry: 1 }, boxes: 0, owned: {} } }) }));
+
+// ===== 8. בלי שאלות שחוזרות באותו סבב =====
+console.log('שאלות שונות בכל סבב');
+await test('הסערה המתקרבת: כל משפט מוצג פעם אחת לפני שמשפט כלשהו חוזר, ואף פעם לא אותו כרטיס פעמיים ברצף', () => withPage(async page => {
+  const pool = await page.evaluate(() => import('/js/content.js').then(m => m.STATEMENTS.filter(s => s[0] === 4).length));
+  await page.evaluate(() => import('/js/app.js').then(m => m.startGame('swipe', { chapter: 4, duration: 240 })));
+  const seq = [], want = pool + 6;
+  for (let i = 0; i < want; i++) {
+    await page.waitForSelector('.sw-card p');
+    seq.push(await page.locator('.sw-card p').first().innerText());
+    await page.click('.sw-true'); await page.waitForTimeout(230);
+  }
+  const first = seq.slice(0, pool);
+  eq(new Set(first).size, pool, `מתוך ${pool} הכרטיסים הראשונים צריכים להיות ${pool} שונים (חזרו: ${first.filter((x, i) => first.indexOf(x) !== i).slice(0, 2).join(' | ')})`);
+  const back = seq.findIndex((x, i) => i && x === seq[i - 1]); ok(back === -1, 'אותו כרטיס הופיע פעמיים ברצף במקום ' + back);
+}));
+await test('מבחן הסיכום: אותה שאלה לא חוזרת בשלבים שונים של אותו מבחן', () => withPage(async page => {
+  await page.evaluate(() => { window.__seen = []; new MutationObserver(() => { const q = document.querySelector('.quote-card q'); if (q) { const t = q.innerText; if (window.__seen[window.__seen.length - 1] !== t) window.__seen.push(t); } }).observe(document.body, { subtree: true, childList: true, characterData: true }); });
+  await page.evaluate(() => import('/js/app.js').then(m => m.startGame('exam', { swipeSeconds: 2 })));
+  await playToEnd(page, 120000);
+  const seen = await page.evaluate(() => window.__seen);
+  ok(seen.length >= 6, 'צריך לראות לפחות 6 שאלות בפנדלים ובמי-אמר, ראינו ' + seen.length);
+  eq(new Set(seen).size, seen.length, 'שאלות שחזרו במבחן: ' + seen.filter((x, i) => seen.indexOf(x) !== i).join(' | '));
+}));
+await test('בחירת שאלות: מעדיפים שאלות שלא נראו לאחרונה, ומכבדים רשימת החרגה', () => withPage(async page => {
+  const r = await page.evaluate(async () => {
+    const { pickRound } = await import('/js/games/common.js'), pool = Array.from({ length: 10 }, (_, i) => ({ id: 'q' + i, c: 1 })), out = {};
+    const seen = new Set(['q0', 'q1', 'q2', 'q3', 'q4', 'q5', 'q6']);
+    out.fresh = [...Array(30)].every(() => pickRound(pool, 1, 3, { seen }).every(x => !seen.has(x.id)));
+    out.fill = pickRound(pool, 1, 5, { seen }).filter(x => seen.has(x.id)).length;    // יש רק 3 חדשים: 2 נראים משלימים
+    out.excl = [...Array(30)].every(() => pickRound(pool, 1, 5, { exclude: ['q0', 'q1'] }).every(x => x.id !== 'q0' && x.id !== 'q1'));
+    const S = await import('/js/state.js'); S.load(); for (let i = 0; i < 5; i++) S.markSeen('t', ['a' + i, 'b' + i], 6); out.cap = S.seenList('t').length; out.dup = new Set(S.seenList('t')).size === S.seenList('t').length;
+    return out;
+  });
+  ok(r.fresh, 'נבחרו שאלות שכבר נראו למרות שיש חדשות'); eq(r.fill, 2, 'השלמה משאלות שנראו'); ok(r.excl, 'שאלה מרשימת ההחרגה נבחרה'); eq(r.cap, 6, 'זיכרון השאלות לא נחתך'); ok(r.dup, 'כפילות בזיכרון');
+}));
 
 // ===== סיכום =====
 

@@ -11,8 +11,9 @@ const FAST_FIND = 35;   // שניות – מהר = גול נקי
 const FAST_MATCH = 9;
 const POOL = QUOTES.filter(q => !q.extra);
 
-export async function run(el, { chapter = 0, mode = 'find', count = 5 }, sc) {
-  const items = pickRound(POOL, chapter, count);
+export async function run(el, { chapter = 0, mode = 'find', count = 5, exclude = [] }, sc) {
+  const items = pickRound(POOL, chapter, count, { exclude, seen: new Set(State.seenList('quotes')) });
+  State.markSeen('quotes', items.map(q => q.id));
   const pitch = makePitch(), tl = tally(items.length);
   const stage = h('div', { class: 'hunter' });
   const head = h('div', { class: 'h-head' }, h('b', {}, ''), tl.el);
@@ -71,7 +72,7 @@ export async function run(el, { chapter = 0, mode = 'find', count = 5 }, sc) {
   }
 
   return {
-    xp, correct: goals, total: items.length, run: R.best,
+    xp, correct: goals, total: items.length, run: R.best, ids: items.map(q => q.id),
     title: goals >= 4 ? 'שריקת סיום – ניצחון!' : goals >= 2 ? 'שריקת סיום' : 'סיבוב אימון',
     big: `${goals} / ${items.length} גולים`,
     lines: missed.slice(0, 3).map(q => `${refText(q.c, q.v)} – ${q.t}`),

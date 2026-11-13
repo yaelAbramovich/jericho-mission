@@ -12,6 +12,7 @@ const fresh = () => ({
   custom: { c1: '#1b4bd6', c2: '#ffe14a', pat: 'stripes', n: '7', name: '' },   // החולצה שלי
   ach: {},                // הישגים שנפתחו: { id: timestamp }
   stats: { bestRun: 0, bestCombo: 0, perfectPen: 0, perfectLine: 0, perfectWho: 0, perfectDuel: 0, questDays: 0 },
+  seen: {},               // שאלות שנראו לאחרונה לכל משחק (כדי שסבב חדש יעדיף שאלות שלא ראה)
   daily: null,            // מונים יומיים למשימות
   pass: { claimed: {}, gold: false, power: { fifty: 0, time: 0, retry: 0 }, boxes: 0, owned: {} },   // פס הקרב: מה נאסף, כרטיס זהב, כוחות, קופסאות
   trophy: { w: 0, l: 0, t: 0, hist: [] },   // גביע המשפחה
@@ -102,6 +103,13 @@ export function daily() {
 // ---------- כוחות (power-ups) וקופסאות ----------
 export const power = k => S.pass.power[k] || 0;
 export function usePower(k) { if (power(k) < 1) return false; S.pass.power[k]--; save(); return true; }
+// ---------- זיכרון שאלות אחרונות ----------
+export const seenList = k => (S.seen && S.seen[k]) || [];
+export function markSeen(k, ids, max = 80) {
+  S.seen = S.seen || {};
+  const keep = seenList(k).filter(x => !ids.includes(x));
+  S.seen[k] = [...keep, ...ids].slice(-max); save();
+}
 export function maxStat(k, v) { if (v > (S.stats[k] || 0)) S.stats[k] = v; }
 
 // ---------- גביע המשפחה ----------
