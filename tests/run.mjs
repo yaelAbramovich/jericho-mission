@@ -408,6 +408,23 @@ await test('בהירות: לכל אריח תגית סוג ושם בעברית, �
   const chips = await page.locator('.pwchip').allInnerTexts(); ok(chips.length === 3 && chips.every(c => /[א-ת]/.test(c)), 'כפתורי הכוחות צריכים טקסט בעברית: ' + chips.join('|'));
   const locks = await page.locator('.lk').allInnerTexts(); ok(locks.every(l => /[א-ת]/.test(l)), 'מנעול בלי הסבר: ' + [...new Set(locks)].join('|'));
 }, { storage: seed({ xp: 330, pass: { claimed: {}, gold: false, power: { fifty: 3, time: 2, retry: 1 }, boxes: 1, owned: {} } }) }));
+await test('אפקטים: משתני CSS נקבעים באמת (אחרת החלקיקים לא מתפזרים), וכל הצגה מתנקה מהמסך', () => withPage(async page => {
+  const r = await page.evaluate(async () => {
+    const { h, burst } = await import('/js/ui.js'), E = await import('/js/effects.js'), R = await import('/js/rewards.js'), { sfx } = await import('/js/audio.js');
+    const out = { problems: [] };
+    if (h('i', { style: { '--dx': '55px', left: '10%' } }).style.getPropertyValue('--dx') !== '55px') out.problems.push('h() לא מחיל משתני CSS');
+    const host = document.createElement('div'); document.body.append(host); burst(host, 5);
+    if ([...host.querySelectorAll('i')].some(i => !i.style.getPropertyValue('--dx'))) out.problems.push('חלקיקי burst בלי --dx');
+    for (const it of R.ITEMS.filter(i => i.type === 'fx')) { if (!E.SHOWS[it.p.show]) out.problems.push(`${it.id}: הצגה לא קיימת "${it.p.show}"`); }
+    for (const it of R.ITEMS.filter(i => i.type === 'emote')) { if (it.p.snd && !sfx[it.p.snd]) out.problems.push(`${it.id}: צליל לא קיים "${it.p.snd}"`); }
+    for (const k of Object.keys(E.SHOWS)) E.playShow(k, { colors: ['#fff'] }, { force: true });
+    out.layers = document.querySelectorAll('.fxshow').length; out.bricks = document.querySelectorAll('.fxshow .brick').length;
+    return out;
+  });
+  ok(!r.problems.length, r.problems.join('\n')); ok(r.layers === Object.keys(r).length * 0 + 11, 'מספר שכבות ההצגה: ' + r.layers);
+  await page.waitForTimeout(3600);
+  eq(await page.locator('.fxshow').count(), 0, 'שכבות הצגה שנשארו על המסך'); eq(await page.evaluate(() => document.body.classList.contains('quake')), false, 'רעידת המסך נשארה');
+}));
 await test('כוח 50/50: מסתיר שתי תשובות שגויות ולא את הנכונה, ונצרך', () => withPage(async page => {
   await page.evaluate(() => import('/js/app.js').then(m => m.startGame('who', { chapter: 2, count: 1 })));
   await page.waitForSelector('.pwbtn'); await page.click('.pwbtn');

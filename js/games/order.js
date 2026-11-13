@@ -35,7 +35,7 @@ export async function run(el, { chapter = 0, count = 2, ids = null }, sc) {
     cs.forEach((c, j) => { const ok = +c.dataset.i === j; c.classList.add(ok ? 'right' : 'wrong'); if (ok) right++; });
     cards += cs.length; good += right;
     const all = right === cs.length;
-    if (all) { perfect++; sfx.goal(); R.hit(); } else { sfx.wrong(); R.miss(); }
+    if (all) { perfect++; sfx.goal(); R.hit({ big: true }); } else { sfx.wrong(); R.miss(); }
     xp += right * 4 + (all ? 8 : 2);
     check.remove();
     const nxt = h('button', { class: 'btn primary' }, n === seqs.length - 1 ? 'לתוצאות' : 'הבא ▶');

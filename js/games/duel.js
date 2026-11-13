@@ -6,6 +6,7 @@ import { sfx } from '../audio.js';
 import { waitClick } from './common.js';
 import { reactor } from '../react.js';
 import { powerBar, fiftyButton } from '../powerups.js';
+import { equipped } from '../locker.js';
 
 const LET = ['א', 'ב', 'ג', 'ד'];
 
@@ -35,7 +36,7 @@ export async function run(el, { topic = 'j1' }, sc) {
   let kg = 0, pg = 0, xp = 10, kidRight = 0;
   const missed = [];
   const sb = h('div', { class: 'duel-score' });
-  const paintScore = () => { sb.replaceChildren(h('div', { class: 'ds kid' }, h('small', {}, kid), h('b', {}, String(kg))), h('div', { class: 'dvs' }, '⚽'), h('div', { class: 'ds par' }, h('small', {}, par), h('b', {}, String(pg)))); };
+  const paintScore = () => { sb.replaceChildren(h('div', { class: 'ds kid' }, h('small', {}, kid), h('em', { class: 'ds-title title-art tf-' + equipped('title').p.fx }, equipped('title').name), h('b', {}, String(kg))), h('div', { class: 'dvs' }, '⚽'), h('div', { class: 'ds par' }, h('small', {}, par), h('b', {}, String(pg)))); };
   const stage = h('div', { class: 'duel-stage' });
   el.replaceChildren(sb, stage); paintScore();
 
@@ -71,7 +72,7 @@ export async function run(el, { topic = 'j1' }, sc) {
       const picked = await new Promise(res => btns.forEach(b => b.addEventListener('click', () => res(b.dataset.t), { once: true })));
       const right = picked === q.a;
       btns.forEach(b => { b.disabled = true; if (b.dataset.t === q.a) b.classList.add('right'); else if (b.dataset.t === picked) b.classList.add('wrong'); });
-      if (right) { isKid ? kg++ : pg++; if (isKid) { kidRight++; xp += 8; } sfx.goal(); if (isKid) R.hit(); else burst(stage, 16); floatText(stage, 'גוווול!', 'good'); }
+      if (right) { isKid ? kg++ : pg++; if (isKid) { kidRight++; xp += 8; } sfx.goal(); if (isKid) R.hit({ big: true }); else burst(stage, 16); floatText(stage, 'גוווול!', 'good'); }
       else { sfx.wrong(); missed.push(q); if (isKid) R.miss(); }
       if (!isKid) xp += 3;
       paintScore();

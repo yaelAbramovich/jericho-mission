@@ -56,6 +56,31 @@ export const sfx = {
   tierUp() { [392, 523, 659, 784, 1047].forEach((f, i) => tone(f, 0.3, { type: 'sawtooth', vol: 0.12, at: i * 0.1 })); },
   storm() { noise(0.9, { vol: 0.25, from: 200, to: 80, q: 0.3 }); },
   capture() { [330, 440, 554, 659, 880].forEach((f, i) => tone(f, 0.35, { type: 'triangle', vol: 0.25, at: i * 0.12 })); },
+
+  // ---- צלילי חגיגה "אפיים" (לתצוגות המסך המלא, לאימוג׳י המונפש ולפרסים) ----
+  // תקיעה בשופר: ציוץ קצר עולה ואז תקיעה ארוכה עם רטט, ובתוכה נשימה
+  shofar() {
+    tone(150, 0.35, { type: 'sawtooth', vol: 0.2, slide: 235 }); tone(300, 0.35, { type: 'square', vol: 0.05, slide: 470 });
+    tone(235, 1.4, { type: 'sawtooth', vol: 0.24, at: 0.38, slide: 250 }); tone(470, 1.4, { type: 'square', vol: 0.06, at: 0.38, slide: 500 });
+    tone(118, 1.4, { type: 'sine', vol: 0.2, at: 0.38 }); noise(1.6, { vol: 0.1, at: 0.3, from: 700, to: 1400, q: 0.3 });
+  },
+  fanfare() { [392, 392, 392, 523, 659, 784].forEach((f, i) => tone(f, i === 5 ? 0.7 : 0.16, { type: 'sawtooth', vol: 0.13, at: i * 0.13 })); tone(1047, 0.9, { type: 'triangle', vol: 0.1, at: 0.78 }); },
+  crowd() { noise(2, { vol: 0.32, from: 450, to: 1100, q: 0.35 }); noise(1.8, { vol: 0.2, at: 0.15, from: 1300, to: 700, q: 0.4 }); [0.2, 0.5, 0.75, 1.0, 1.2, 1.45].forEach(t => noise(0.05, { vol: 0.25, at: t, from: 2500, to: 1500, q: 0.6 })); },
+  // חומות נופלות: חבטה עמוקה, שאגת אבנים, ופירורים
+  crash() {
+    tone(85, 0.9, { type: 'sine', vol: 0.55, slide: 38 }); noise(1, { vol: 0.5, from: 1600, to: 180, q: 0.3 }); noise(1.6, { vol: 0.32, at: 0.2, from: 320, to: 80, q: 0.2 });
+    [0.5, 0.7, 0.85, 1.1, 1.3].forEach(t => noise(0.07, { vol: 0.22, at: t, from: 1200, to: 500, q: 0.7 }));
+  },
+  thunder() { noise(0.14, { vol: 0.5, from: 4200, to: 900, q: 0.6 }); noise(2, { vol: 0.42, at: 0.1, from: 260, to: 55, q: 0.25 }); tone(60, 1.4, { type: 'sine', vol: 0.4, at: 0.1, slide: 32 }); },
+  march() { [0, 0.32, 0.64, 0.96, 1.28, 1.6].forEach((t, i) => { tone(i % 2 ? 80 : 100, 0.14, { type: 'sine', vol: 0.5, at: t, slide: 45 }); noise(0.06, { vol: 0.18, at: t + 0.16, from: 1800, to: 900, q: 0.6 }); }); },
+  boom() { tone(70, 0.55, { type: 'sine', vol: 0.6, slide: 32 }); noise(0.35, { vol: 0.4, from: 900, to: 120, q: 0.3 }); },
+  whoosh() { noise(0.6, { vol: 0.28, from: 250, to: 3200, q: 0.5 }); },
+  sparkle() { [1319, 1568, 1976, 2349, 2637].forEach((f, i) => tone(f, 0.16, { type: 'triangle', vol: 0.13, at: i * 0.06 })); },
+  roar() { tone(105, 1, { type: 'sawtooth', vol: 0.3, slide: 62 }); tone(160, 1, { type: 'square', vol: 0.09, slide: 90 }); noise(1, { vol: 0.28, from: 300, to: 900, q: 0.4 }); },
+  ding() { tone(1568, 0.5, { type: 'sine', vol: 0.2 }); tone(2093, 0.6, { type: 'sine', vol: 0.14, at: 0.08 }); },
+  coin() { tone(1319, 0.07, { type: 'square', vol: 0.1 }); tone(1760, 0.2, { type: 'square', vol: 0.1, at: 0.07 }); },
+  flame() { noise(1.1, { vol: 0.28, from: 700, to: 220, q: 0.3 }); [0.2, 0.45, 0.7].forEach(t => noise(0.05, { vol: 0.2, at: t, from: 2000, to: 1000, q: 0.7 })); },
+  fireworks() { [0, 0.55, 1.1, 1.6].forEach(t => { tone(300, 0.35, { type: 'sine', vol: 0.12, at: t, slide: 1400 }); tone(70, 0.5, { type: 'sine', vol: 0.5, at: t + 0.32, slide: 32 }); noise(0.5, { vol: 0.3, at: t + 0.32, from: 3000, to: 800, q: 0.4 }); }); },
 };
 
 // ---- השמעת הקלטות סיפור: אלמנט Audio יחיד (כדי ש-iOS ישאיר אותו "פתוח" אחרי נגיעה ראשונה) ----

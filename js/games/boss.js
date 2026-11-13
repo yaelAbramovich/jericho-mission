@@ -46,7 +46,7 @@ export async function run(el, _opts, sc) {
     return h('div', { class: 'verdict ' + cls }, h('b', {}, c.t), h('small', {}, txt));
   });
   strong ? sfx.goal() : sfx.correct();
-  if (strong) reactor(area, sc).hit();
+  if (strong) reactor(area, sc).hit({ big: true });
   area.append(h('p', { class: 'sub' }, 'התשובה שבנית:'), ...rows,
     h('div', { class: 'model' }, h('h3', {}, 'תשובה לדוגמה – מציגים שני צדדים'), BOSS.model.map(([t, p]) => h('p', {}, h('b', {}, t + ': '), p))));
   const done = h('button', { class: 'btn primary' }, 'סיום');

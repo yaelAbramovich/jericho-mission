@@ -9,8 +9,9 @@ import { TEST_DATE } from './content.js';
 import * as Quests from './quests.js';
 import { achName } from './achievements.js';
 import { renderTop } from './app.js';
+import { demo } from './effects.js';
 
-const TYPE_ONE = { avatar: 'דמות', jersey: 'חולצה', banner: 'באנר', emote: 'אימוג׳י', ball: 'כדור', fx: 'חגיגת גול', pitch: 'מגרש', keeper: 'שוער' };
+const TYPE_ONE = { avatar: 'דמות', jersey: 'חולצה', banner: 'באנר', emote: 'אימוג׳י', ball: 'כדור', fx: 'חגיגת גול', pitch: 'מגרש', keeper: 'שוער', trail: 'זנב לכדור', title: 'תואר' };
 const key = (track, t) => (track === 'gold' ? 'g' : 'f') + t;
 
 // ================= לוגיקה =================
@@ -102,6 +103,7 @@ export function renderTrack(v, sc) {
         if (extra) info.append(extra);   // (append(null) היה מדפיס את המילה "null" על המסך)
         const what = pv ? TYPE_HELP[pv.type] : preview.power ? POWER[preview.power].desc : 'נפתחת בכפתור „קופסאות" ומגלה פריט חדש שעוד אין לך.';
         info.append(h('div', {}, h('b', { style: { color: r.color } }, rewardName(preview)), h('small', { class: 'hero-kind' }, `${rewardKind(preview)} · ${r.name}`), h('small', {}, what)));
+        if (pv && ['fx', 'emote', 'trail'].includes(pv.type)) info.append(h('button', { class: 'btn demo-btn', onclick: () => { sfx.pick(); demo(pv, document.querySelector('.passv .hero'), equipped('avatar')); } }, '▶ נסה עכשיו'));
         if (pv && isOpen(pv)) {
           const on = S.eq[pv.type] === pv.id;
           info.append(h('button', { class: 'btn primary hero-btn', disabled: on, onclick: () => { wear(pv); toast(`${pv.name} – עודכן`); refresh(); } }, on ? 'לבוש ✓' : 'ללבוש'));

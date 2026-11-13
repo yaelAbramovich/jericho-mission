@@ -6,7 +6,7 @@ import { CHAPTERS, OVERVIEW, TEST_DATE, hebNum } from './content.js';
 import { TIER_XP, MAX_TIER, ITEMS, TYPE_LABEL, art, itemById, setCustomJersey } from './rewards.js';
 import * as Pass from './pass.js';
 import { cellRewards } from './pass-data.js';
-import { isOpen, openIds, howText } from './locker.js';
+import { isOpen, openIds, howText, equipped } from './locker.js';
 import * as Ach from './achievements.js';
 import * as Quests from './quests.js';
 
@@ -226,12 +226,12 @@ function achView(v, s) {
   v.append(h('p', { class: 'sub' }, `הישגים שנפתחו: ${got}/${Ach.ACH.length}. חלקם נותנים XP בונוס ופריט מיוחד בארון.`));
   const list = h('div', { class: 'achs' });
   Ach.ACH.forEach(a => {
-    const ok = !!s.ach[a.id], [cur, goal] = a.prog(s), reward = ITEMS.find(i => i.how && i.how.ach === a.id);
+    const ok = !!s.ach[a.id], [cur, goal] = a.prog(s), rewards = ITEMS.filter(i => i.how && i.how.ach === a.id);
     list.append(h('div', { class: 'ach' + (ok ? ' got' : '') },
       h('div', { class: 'ai' }, a.icon),
       h('div', { class: 'at' }, h('b', {}, a.name), h('small', {}, a.desc),
         !ok && goal > 1 && h('div', { class: 'abar' }, h('i', { style: { width: (cur / goal * 100) + '%' } }))),
-      h('div', { class: 'ar' }, h('span', {}, ok ? '✓' : plus(a.xp) + ' XP'), reward && h('span', { class: 'ra', title: reward.name, html: art(reward, 34) }))));
+      h('div', { class: 'ar' }, h('span', {}, ok ? '✓' : plus(a.xp) + ' XP'), ...rewards.map(r => h('span', { class: 'ra' + (r.type === 'title' ? ' ratitle' : ''), title: r.name, html: art(r, 34) })))));
   });
   v.append(list);
 }
@@ -278,7 +278,9 @@ function profileScreen(v) {
       h('div', { class: 'prow' },
         h('div', { class: 'pav', html: art(av, 96) }),
         h('div', { class: 'pjr', html: art(jr, 96) }),
-        em && h('div', { class: 'pem' }, h('span', { html: art(em, 60) })))),
+        em && h('div', { class: 'pem' }, h('span', { html: art(em, 60) }))),
+      h('div', { class: 'pid' }, h('b', { class: 'pname' }, (s.names && s.names.kid) || 'אלוף'), h('span', { class: 'pti', html: art(equipped('title'), 84) }),
+        h('button', { class: 'mini', 'aria-label': 'שינוי שם', onclick: editName }, '✏️'))),
     h('div', { class: 'stats' },
       stat('XP', s.xp), stat('דרגה', Math.min(State.tierOf(), MAX_TIER)), stat('רצף ימים', State.streakNow()),
       stat('סבבים', s.rounds), stat('שיא הסערה', s.best.swipe), stat('אזורים', State.capturedCount() + '/5')),
@@ -287,6 +289,13 @@ function profileScreen(v) {
     h('p', { class: 'sub' }, `הישגים: ${Ach.ACH.filter(a => s.ach[a.id]).length}/${Ach.ACH.length} · אפשר להחליף פריטים בפס הקרב ובארון.`),
     ...(State.isMemoryOnly() ? [h('p', { class: 'warn' }, 'שימו לב: ההתקדמות לא נשמרת במכשיר הזה.')] : []),
     h('button', { class: 'btn ghost', onclick: () => go('parent') }, '🔒 מצב הורה'));
+}
+// שינוי השם שמוצג בפרופיל ובדו-קרב
+function editName() {
+  const s = State.get(); s.names = s.names || { kid: '', parent: '' };
+  const inp = h('input', { class: 'inp', value: s.names.kid || '', maxlength: 14, placeholder: 'איך קוראים לך?' });
+  const m = modal([h('h3', {}, 'השם שלי'), inp, h('button', { class: 'btn primary', onclick: () => { s.names.kid = inp.value.trim(); State.save(); m.close(); go(current.name, current.params); } }, 'שמור')]);
+  setTimeout(() => inp.focus(), 50);
 }
 function trophyCard(s) {
   const t = s.trophy, kid = (s.names && s.names.kid) || 'אלוף', par = (s.names && s.names.parent) || 'הורה';

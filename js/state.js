@@ -8,7 +8,7 @@ const fresh = () => ({
   zone: {},               // { "1": {story:true, hunter:true, other:true} }
   storySeen: {},          // { "1": [0,1,2] }
   best: { swipe: 0 },
-  eq: { avatar: 'a0', banner: 'b0', jersey: 'j0', emote: null, ball: 'ba0', fx: 'fx0', pitch: 'pt0', keeper: 'kp0' },
+  eq: { avatar: 'a0', banner: 'b0', jersey: 'j0', emote: null, ball: 'ba0', fx: 'fx0', pitch: 'pt0', keeper: 'kp0', trail: 'tr0', title: 'tt0' },
   custom: { c1: '#1b4bd6', c2: '#ffe14a', pat: 'stripes', n: '7', name: '' },   // החולצה שלי
   ach: {},                // הישגים שנפתחו: { id: timestamp }
   stats: { bestRun: 0, bestCombo: 0, perfectPen: 0, perfectLine: 0, perfectWho: 0, perfectDuel: 0, questDays: 0 },
