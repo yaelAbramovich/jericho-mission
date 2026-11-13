@@ -3,7 +3,7 @@ import * as State from './state.js';
 import { sfx, unlock } from './audio.js';
 import { h, $, createScope, modal, toast, burst } from './ui.js';
 import { CHAPTERS, OVERVIEW, TEST_DATE, hebNum } from './content.js';
-import { TIER_XP, MAX_TIER, ITEMS, TYPE_LABEL, art, itemById, setCustomJersey } from './rewards.js';
+import { TIER_XP, MAX_TIER, ITEMS, TYPE_LABEL, TYPE_ICON, art, itemById, setCustomJersey } from './rewards.js';
 import * as Pass from './pass.js';
 import { cellRewards } from './pass-data.js';
 import { isOpen, openIds, howText, equipped } from './locker.js';
@@ -16,7 +16,7 @@ let current = { name: null, params: null };
 
 // ---------- הגדרות משחקים ----------
 export const GAMES = {
-  hunter: { name: 'דו-קרב פנדלים', icon: '⚽', desc: 'מצא את המקום בתנ״ך וכבוש גולים', modes: [['find', 'חיפוש בתנ״ך'], ['match', 'התאמת ציטוט']] },
+  hunter: { name: 'דו-קרב פנדלים', icon: '⚽', desc: 'עונים נכון וכובשים גולים', modes: [['trivia', 'טריוויה'], ['find', 'מצא בתנ״ך'], ['match', 'התאמת ציטוט']] },
   swipe: { name: 'הסערה מתקרבת', icon: '🌀', desc: '60 שניות של אמת או שקר' },
   who: { name: 'מי אמר?', icon: '🎙️', desc: 'מי אמר את הציטוט?' },
   order: { name: 'בונים את הקו', icon: '🧩', desc: 'סדר את האירועים' },
@@ -149,14 +149,22 @@ function zoneScreen(v, { ch }) {
     h('span', { class: 'ti' }, icon), h('span', { class: 'tn' }, name), h('small', {}, desc), rec && h('em', {}, 'מומלץ'));
   const grid = h('div', { class: 'tiles' },
     tile('', '📖', 'תדריך משימה', 'הסיפור של הפרק', () => go('story', { ch }), next === 'story'),
-    tile('', '⚽', 'פנדלים – חיפוש', 'מצא בתנ״ך', () => startGame('hunter', { chapter: ch, mode: 'find' }), next === 'hunter'),
-    tile('', '🎯', 'פנדלים – התאמה', 'בחר ציטוט', () => startGame('hunter', { chapter: ch, mode: 'match' })),
+    tile('', '⚽', 'פנדלים', 'טריוויה או מצא בתנ״ך', () => penaltyPicker(ch), next === 'hunter'),
     tile('', '🌀', 'הסערה מתקרבת', 'אמת או שקר', () => startGame('swipe', { chapter: ch }), next === 'other'),
     tile('', '🎙️', 'מי אמר?', 'ציטוט ודובר', () => startGame('who', { chapter: ch })),
     tile('', '🧩', 'בונים את הקו', 'סדר אירועים', () => startGame('order', { chapter: ch })),
     ch === 2 && tile('boss', '👑', 'המעגל האחרון', 'האם רחב עשתה חסד?', () => startGame('boss', { chapter: 2 })),
   );
   v.append(grid);
+}
+
+// בחירת סוג הפנדלים: טריוויה / מצא בתנ"ך / התאמת ציטוט (זוכרים מה נבחר בפעם הקודמת)
+const PENALTY_KINDS = [['trivia', '🧠', 'טריוויה', 'שאלות על הפרק – עונים נכון וכובשים'], ['find', '📖', 'מצא בתנ״ך', 'מוצאים את הפרק והפסוק של ציטוט'], ['match', '🎯', 'התאמת ציטוט', 'בוחרים את הציטוט שמתאים לפירוש']];
+function penaltyPicker(ch) {
+  const s = State.get(), last = s.lastPenalty || 'trivia';
+  const m = modal([h('h3', {}, 'איזה פנדלים משחקים?'), h('div', { class: 'pkinds' }, PENALTY_KINDS.map(([k, icon, name, desc]) =>
+    h('button', { class: 'tile pkind' + (k === last ? ' rec' : ''), onclick: () => { sfx.pick(); s.lastPenalty = k; State.save(); m.close(); startGame('hunter', { chapter: ch, mode: k }); } },
+      h('span', { class: 'ti' }, icon), h('span', { class: 'tn' }, name), h('small', {}, desc), k === last && h('em', {}, 'האחרון'))))]);
 }
 
 // ---------- בחירת משחק ----------
@@ -212,14 +220,18 @@ function equip(it, open) {
   s.eq[it.type] = (it.type === 'emote' && s.eq.emote === it.id) ? null : it.id;
   State.save(); sfx.pick(); toast(`${it.name} – עודכן`); go(current.name, current.params);
 }
+let lockTab = 'avatar';
 function lockerView(v) {
-  v.append(h('p', { class: 'sub' }, 'כל מה שפתחת – ומה שעוד אפשר לפתוח. לחץ על פריט פתוח כדי ללבוש אותו.'));
-  for (const type of Object.keys(TYPE_LABEL)) {
-    const its = ITEMS.filter(i => i.type === type), got = its.filter(i => isOpen(i)).length;
-    v.append(h('h3', { class: 'lk-h' }, TYPE_LABEL[type], h('small', {}, ` ${got}/${its.length}`),
-      type === 'jersey' && h('button', { class: 'mini', onclick: designer }, '🎨 עיצוב')));
-    v.append(h('div', { class: 'lgrid' }, its.map(it => itemCard(it, isOpen(it), howText(it, Ach.achName)))));
-  }
+  v.append(h('p', { class: 'sub' }, 'בוחרים סוג פריט, ולוחצים על פריט פתוח כדי ללבוש אותו.'));
+  v.append(h('div', { class: 'typegrid' }, Object.keys(TYPE_LABEL).map(t => {
+    const its = ITEMS.filter(i => i.type === t), got = its.filter(i => isOpen(i)).length;
+    return h('button', { class: 'typebtn' + (lockTab === t ? ' on' : ''), onclick: () => { sfx.tap(); lockTab = t; go('pass'); } },
+      h('span', { class: 'tb-i' }, TYPE_ICON[t]), h('span', { class: 'tb-n' }, TYPE_LABEL[t]), h('small', {}, `${got}/${its.length}`));
+  })));
+  const its = ITEMS.filter(i => i.type === lockTab);
+  v.append(h('h3', { class: 'lk-h' }, TYPE_LABEL[lockTab], h('small', {}, ` ${its.filter(i => isOpen(i)).length}/${its.length}`),
+    lockTab === 'jersey' && h('button', { class: 'mini', onclick: designer }, '🎨 עיצוב')));
+  v.append(h('div', { class: 'lgrid' }, its.map(it => itemCard(it, isOpen(it), howText(it, Ach.achName)))));
 }
 function achView(v, s) {
   const got = Ach.ACH.filter(a => s.ach[a.id]).length;

@@ -12,6 +12,7 @@ const fresh = () => ({
   custom: { c1: '#1b4bd6', c2: '#ffe14a', pat: 'stripes', n: '7', name: '' },   // החולצה שלי
   ach: {},                // הישגים שנפתחו: { id: timestamp }
   stats: { bestRun: 0, bestCombo: 0, perfectPen: 0, perfectLine: 0, perfectWho: 0, perfectDuel: 0, questDays: 0 },
+  lastPenalty: 'trivia',  // סוג הפנדלים האחרון שנבחר
   seen: {},               // שאלות שנראו לאחרונה לכל משחק (כדי שסבב חדש יעדיף שאלות שלא ראה)
   daily: null,            // מונים יומיים למשימות
   pass: { claimed: {}, gold: false, power: { fifty: 0, time: 0, retry: 0 }, boxes: 0, owned: {} },   // פס הקרב: מה נאסף, כרטיס זהב, כוחות, קופסאות

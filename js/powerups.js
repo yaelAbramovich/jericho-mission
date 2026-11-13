@@ -1,6 +1,6 @@
 // כוחות (power-ups) שמרוויחים בפס הקרב ומשתמשים בהם בתוך המשחקים. כל כוח נצרך בשימוש (State.usePower).
 import * as State from './state.js';
-import { h, shuffle, floatText } from './ui.js';
+import { h, shuffle, floatText, modal } from './ui.js';
 import { sfx } from './audio.js';
 import { POWER } from './pass-data.js';
 
@@ -30,14 +30,14 @@ export function timeButton(host, onUse) {
   return b;
 }
 
-// בעיטה חוזרת: אחרי טעות בפנדל. מחזיר Promise<true אם השחקן בחר להשתמש>.
-export function offerRetry(stage) {
+// ניסיון נוסף: אחרי טעות בפנדל. חלון באמצע המסך – (פעם זה נוסף בתחתית מסך ארוך, ויצא מחוץ למסך: המשחק נראה "תקוע").
+// מחזיר Promise<true אם השחקן בחר להשתמש>. סגירה בלחיצה בחוץ = "לא תודה".
+export function offerRetry() {
   return new Promise(res => {
-    const yes = h('button', { class: 'btn primary' }, `${POWER.retry.icon} ${POWER.retry.name} (${State.power('retry')})`);
-    const no = h('button', { class: 'btn ghost' }, 'לא תודה');
-    const box = h('div', { class: 'retry-box' }, h('p', {}, 'אופס! אפשר לנסות את השאלה הזאת שוב'), yes, no);
-    stage.append(box);
-    yes.onclick = () => { State.usePower('retry'); sfx.combo(); box.remove(); res(true); };
-    no.onclick = () => { box.remove(); res(false); };
+    let done = false;
+    const finish = v => { if (done) return; done = true; m.close(); res(v); };
+    const yes = h('button', { class: 'btn primary', onclick: () => { State.usePower('retry'); sfx.combo(); finish(true); } }, `${POWER.retry.icon} ${POWER.retry.name} (${State.power('retry')})`);
+    const no = h('button', { class: 'btn ghost', onclick: () => finish(false) }, 'לא תודה');
+    const m = modal([h('div', { class: 'tag' }, 'כוח'), h('h3', {}, 'אופס, טעות!'), h('p', { class: 'sub' }, 'אפשר להשתמש ב„ניסיון נוסף" ולנסות את אותה שאלה שוב.'), yes, no], { cls: 'celebrate', onClose: () => finish(false) });
   });
 }

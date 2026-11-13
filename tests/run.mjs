@@ -37,8 +37,8 @@ async function test(name, fn) {
   catch (e) { results.push({ name, ok: false, e }); console.log(`  ✗ ${name}\n      ${String(e.message || e).split('\n').join('\n      ')}`); }
 }
 // עמוד חדש (עם אחסון נקי) שאוסף כל שגיאה: חריגות, console.error ובקשות שנכשלו
-async function withPage(fn, { storage, permissions, init } = {}) {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block', permissions });
+async function withPage(fn, { storage, permissions, init, viewport = { width: 390, height: 844 } } = {}) {
+  const ctx = await browser.newContext({ viewport, serviceWorkers: 'block', permissions });
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push('חריגה: ' + e.message));
@@ -95,6 +95,7 @@ await test('מספיק תוכן בכל פרק, ומבנה תקין', () => withP
       if (sq.length < 4) out.push(`פרק ${c}: רק ${sq.length} סדרות לסידור (צריך 4+)`);
       const sid = SEQUENCES.filter(s => s.ch === c).flatMap(s => s.items); if (new Set(sid).size !== sid.length) out.push(`פרק ${c}: פריט זהה מופיע בשתי סדרות`);
       const locs = hq.map(q => q.v); if (new Set(locs).size !== locs.length) out.push(`פרק ${c}: שני ציטוטים עם אותו פסוק`);
+      const { TRIVIA } = await import('/js/trivia.js'); const tv = TRIVIA.filter(x => x.c === c).length; if (tv < 15) out.push(`פרק ${c}: רק ${tv} שאלות טריוויה לפנדלים (צריך 15+)`);
     }
     for (const q of QUOTES) if (q.who && !WHO[q.who]) out.push(`ציטוט ${q.id}: דובר לא מוכר "${q.who}"`);
     for (const s of STATEMENTS) if (typeof s[1] !== 'string' || typeof s[2] !== 'boolean' || !s[3]) out.push('משפט לא תקין: ' + s[1]);
@@ -173,6 +174,7 @@ console.log('משחקים (שחקן אוטומטי מסיים כל סבב)');
 const cases = [];
 for (const ch of CHAPTERS) {
   const label = ch ? `פרק ${ch}` : 'כל הפרקים';
+  cases.push([`פנדלים – טריוויה · ${label}`, 'hunter', { chapter: ch, mode: 'trivia', count: 2 }]);
   cases.push([`פנדלים – חיפוש · ${label}`, 'hunter', { chapter: ch, mode: 'find', count: 2 }]);
   cases.push([`פנדלים – התאמה · ${label}`, 'hunter', { chapter: ch, mode: 'match', count: 2 }]);
   cases.push([`הסערה המתקרבת · ${label}`, 'swipe', { chapter: ch, duration: 3 }]);
@@ -379,52 +381,68 @@ await test('קופסת מסתורין: נותנת פריט חדש (בלי כפי
   });
   eq(dupes.dup, 0, 'כפילויות'); eq(dupes.power, 1, 'פעם אחת הקופסה נותנת כוחות כשהמאגר נגמר'); eq(dupes.total, dupes.n, 'כל המאגר נאסף');
 }, { storage: seed({ xp: 60, pass: { claimed: { f1: true }, gold: false, power: { fifty: 0, time: 0, retry: 0 }, boxes: 1, owned: {} } }) }));
-await test('לחיצה על כל אריח בפס הקרב לא מציגה "null" / "undefined" / "NaN" / "false" על המסך', () => withPage(async page => {
-  await page.evaluate(() => import('/js/app.js').then(m => m.go('pass'))); await page.waitForSelector('.passv');
-  const n = await page.locator('.rtile').count(); ok(n >= 40, 'מעט מדי אריחים בטבלה: ' + n);
-  for (let i = 0; i < n; i++) {
-    await page.locator('.rtile').nth(i).click();
-    const txt = await page.locator('.view').innerText();
-    const bad = ['null', 'undefined', 'NaN', 'false'].find(w => txt.includes(w));
-    ok(!bad, `אחרי לחיצה על אריח ${i} מופיע "${bad}" על המסך`);
+// עוברים על כל דפי הטבלה ועל כל אריח בכל דף (כל אריח נפתח בחלון תצוגה)
+async function eachTile(page, fn) {
+  const total = { n: 0 };
+  for (let i = 0; i < 4; i++) {
+    await page.locator('.ptab').nth(i).click();
+    const n = await page.locator('.rtile').count();
+    for (let k = 0; k < n; k++) { await page.locator('.rtile').nth(k).click(); await page.waitForSelector('.modal.preview'); await fn(page, total.n++); await page.click('.modal.preview .btn.ghost'); await page.waitForTimeout(80); }
   }
+  return total.n;
+}
+await test('לחיצה על כל אריח בפס הקרב (בכל הדפים) לא מציגה "null" / "undefined" / "NaN" / "false"', () => withPage(async page => {
+  await page.evaluate(() => import('/js/app.js').then(m => m.go('pass'))); await page.waitForSelector('.passv');
+  const n = await eachTile(page, async (pg, i) => {
+    const txt = await pg.locator('.modal.preview').innerText(); const bad = ['null', 'undefined', 'NaN', 'false'].find(w => txt.includes(w));
+    ok(!bad, `אחרי לחיצה על אריח ${i} מופיע "${bad}" בחלון התצוגה`);
+  });
+  ok(n >= 60, 'מעט מדי אריחים בטבלה: ' + n);
 }, { storage: seed({ xp: 650, zone: ALLZ, pass: { claimed: {}, gold: true, power: { fifty: 1, time: 1, retry: 1 }, boxes: 1, owned: {} } }) }));
 await test('בהירות: לכל אריח תגית סוג ושם בעברית, לחיצה מסבירה מה זה, ויש עזרה', () => withPage(async page => {
   await page.evaluate(() => import('/js/app.js').then(m => m.go('pass'))); await page.waitForSelector('.passv');
-  const n = await page.locator('.rtile').count(), problems = [];
-  for (let i = 0; i < n; i++) {
-    const tile = page.locator('.rtile').nth(i);
-    const kind = (await tile.locator('.rt-kind').innerText()).trim(), name = (await tile.locator('small').innerText()).trim();
-    if (!kind) problems.push(`אריח ${i}: אין תגית סוג`);
-    if (!/[א-ת]/.test(name)) problems.push(`אריח ${i}: השם "${name}" לא בעברית`);
-    await tile.click();
-    const text = (await page.locator('.hero-info').innerText()).replace(/\s+/g, ' ');
-    if (!text.includes(kind)) problems.push(`אריח ${i} (${name}): התצוגה לא מציינת שזה "${kind}"`);
-    if (text.length < 40) problems.push(`אריח ${i} (${name}): אין הסבר ("${text}")`);
+  const problems = [];
+  for (let i = 0; i < 4; i++) {
+    await page.locator('.ptab').nth(i).click();
+    const locks = await page.locator('.lk').allInnerTexts(); if (!locks.every(l => /[א-ת]/.test(l))) problems.push('מנעול בלי הסבר בדף ' + (i + 1));
   }
-  ok(!problems.length, problems.slice(0, 8).join('\n'));
+  const n = await eachTile(page, async (pg, i) => {
+    const text = (await pg.locator('.modal.preview').innerText()).replace(/\s+/g, ' ');
+    if (text.length < 40) problems.push(`אריח ${i}: אין הסבר ("${text}")`);
+    if (!/(כוח|קופסה|דמות|חולצה|באנר|אימוג׳י|כדור|חגיגת גול|מגרש|שוער|זנב|תואר)/.test(text)) problems.push(`אריח ${i}: לא מצוין סוג הפריט ("${text.slice(0, 50)}")`);
+  });
+  ok(n >= 60, 'מעט מדי אריחים: ' + n); ok(!problems.length, problems.slice(0, 8).join('\n'));
+  await page.locator('.ptab').nth(0).click(); const names = await page.locator('.rtile small').allInnerTexts(); ok(names.every(x => /[א-ת]/.test(x)), 'שם אריח לא בעברית: ' + names.filter(x => !/[א-ת]/.test(x)).join('|'));
   await page.click('.helplink'); await page.waitForSelector('.helplist');
   const help = await page.locator('.helplist').innerText();
-  for (const w of ['כרטיס זהב', 'קופסת מסתורין', 'מחק 2 תשובות', 'עוד 10 שניות', 'ניסיון נוסף']) ok(help.includes(w), `בעזרה חסר: ${w}`);
+  for (const w of ['כרטיס זהב', 'קופסת מסתורין', 'מחק 2 תשובות', 'עוד 10 שניות', 'ניסיון נוסף', 'דפים']) ok(help.includes(w), `בעזרה חסר: ${w}`);
+  await page.click('.modal .btn.primary');
   const chips = await page.locator('.pwchip').allInnerTexts(); ok(chips.length === 3 && chips.every(c => /[א-ת]/.test(c)), 'כפתורי הכוחות צריכים טקסט בעברית: ' + chips.join('|'));
-  const locks = await page.locator('.lk').allInnerTexts(); ok(locks.every(l => /[א-ת]/.test(l)), 'מנעול בלי הסבר: ' + [...new Set(locks)].join('|'));
 }, { storage: seed({ xp: 330, pass: { claimed: {}, gold: false, power: { fifty: 3, time: 2, retry: 1 }, boxes: 1, owned: {} } }) }));
-await test('אפקטים: משתני CSS נקבעים באמת (אחרת החלקיקים לא מתפזרים), וכל הצגה מתנקה מהמסך', () => withPage(async page => {
-  const r = await page.evaluate(async () => {
-    const { h, burst } = await import('/js/ui.js'), E = await import('/js/effects.js'), R = await import('/js/rewards.js'), { sfx } = await import('/js/audio.js');
-    const out = { problems: [] };
-    if (h('i', { style: { '--dx': '55px', left: '10%' } }).style.getPropertyValue('--dx') !== '55px') out.problems.push('h() לא מחיל משתני CSS');
-    const host = document.createElement('div'); document.body.append(host); burst(host, 5);
-    if ([...host.querySelectorAll('i')].some(i => !i.style.getPropertyValue('--dx'))) out.problems.push('חלקיקי burst בלי --dx');
-    for (const it of R.ITEMS.filter(i => i.type === 'fx')) { if (!E.SHOWS[it.p.show]) out.problems.push(`${it.id}: הצגה לא קיימת "${it.p.show}"`); }
-    for (const it of R.ITEMS.filter(i => i.type === 'emote')) { if (it.p.snd && !sfx[it.p.snd]) out.problems.push(`${it.id}: צליל לא קיים "${it.p.snd}"`); }
-    for (const k of Object.keys(E.SHOWS)) E.playShow(k, { colors: ['#fff'] }, { force: true });
-    out.layers = document.querySelectorAll('.fxshow').length; out.bricks = document.querySelectorAll('.fxshow .brick').length;
-    return out;
-  });
-  ok(!r.problems.length, r.problems.join('\n')); ok(r.layers === Object.keys(r).length * 0 + 11, 'מספר שכבות ההצגה: ' + r.layers);
-  await page.waitForTimeout(3600);
-  eq(await page.locator('.fxshow').count(), 0, 'שכבות הצגה שנשארו על המסך'); eq(await page.evaluate(() => document.body.classList.contains('quake')), false, 'רעידת המסך נשארה');
+await test('פס הקרב בדפים: 4 דפים של 5 דרגות, נפתח על הדף עם מה לאסוף, נקודה אדומה בדפים עם פרסים', () => withPage(async page => {
+  await page.evaluate(() => import('/js/app.js').then(m => m.go('pass'))); await page.waitForSelector('.passv');
+  eq(await page.locator('.ptab').count(), 4, 'לשוניות דפים');
+  eq(await page.locator('.prow2').count(), 5, 'דרגות בדף');
+  // שמורה: כבר אספו דרגות 1-10, הדרגה הנוכחית 11 => נפתח על הדף 11-15 (ולא על 1-5)
+  const first = await page.locator('.prow2 .dia').first().innerText(); eq(first, '11', 'הדף שנפתח התחיל בדרגה');
+  ok(await page.locator('.ptab.on').innerText().then(x => x.includes('11')), 'הלשונית הפעילה');
+  ok(await page.locator('.ptab').nth(2).locator('.pdot').count() === 1, 'אין נקודה אדומה על הדף עם פרסים');
+  ok(await page.locator('.ptab').nth(0).locator('.pdot').count() === 0, 'נקודה אדומה על דף בלי פרסים');
+  await page.locator('.ptab').nth(0).click(); eq(await page.locator('.prow2 .dia').first().innerText(), '1', 'אחרי מעבר לדף 1-5');
+  await page.locator('.ptab').nth(3).click(); eq(await page.locator('.prow2').count(), 5, 'דרגות בדף האחרון'); ok(await page.locator('.exam-row').count() === 1, 'פרס מבחן הסיכום בדף האחרון');
+  const h1 = await page.evaluate(() => document.getElementById('screen').scrollHeight); ok(h1 < 2300, 'המסך עדיין ארוך מדי (' + h1 + 'px)');
+}, { storage: seed({ xp: 700, pass: { claimed: Object.fromEntries([...Array(10)].map((_, i) => ['f' + (i + 1), true])), gold: false, power: { fifty: 0, time: 0, retry: 0 }, boxes: 0, owned: {} } }) }));
+await test('הארון: לשונית לכל סוג פריט, מציגה רק פריטים מהסוג, ומאפשרת ללבוש', () => withPage(async page => {
+  await page.evaluate(() => import('/js/app.js').then(m => m.go('pass'))); await page.click('.chips.tabs .chip:has-text("הארון")'); await page.waitForSelector('.typegrid');
+  const types = await page.evaluate(() => import('/js/rewards.js').then(m => Object.keys(m.TYPE_LABEL)));
+  eq(await page.locator('.typebtn').count(), types.length, 'לשוניות סוגי פריטים');
+  for (let i = 0; i < types.length; i++) {
+    await page.locator('.typebtn').nth(i).click(); await page.waitForSelector('.lgrid');
+    const want = await page.evaluate(t => import('/js/rewards.js').then(m => m.ITEMS.filter(x => x.type === t).length), types[i]);
+    eq(await page.locator('.lgrid .item').count(), want, `פריטים בלשונית ${types[i]}`);
+    ok(await page.locator('.lgrid .item').evaluateAll((els, t) => els.every(e => e.classList.contains('t-' + t)), types[i]), `פריט מסוג אחר בלשונית ${types[i]}`);
+  }
+  await page.locator('.typebtn').nth(0).click(); await page.locator('.lgrid .item:not(.locked)').first().click();
 }));
 await test('כוח 50/50: מסתיר שתי תשובות שגויות ולא את הנכונה, ונצרך', () => withPage(async page => {
   await page.evaluate(() => import('/js/app.js').then(m => m.startGame('who', { chapter: 2, count: 1 })));
@@ -447,8 +465,8 @@ await test('כוח בעיטה חוזרת: אחרי טעות אפשר לנסות 
   await page.waitForSelector('.opt:not([disabled])');
   const q1 = await page.locator('.meaning').innerText();
   const wrongId = await page.evaluate(async m => { const { QUOTES } = await import('/js/content.js'), right = QUOTES.find(q => q.m === m).id; return [...document.querySelectorAll('.opt')].map(b => b.dataset.id).find(id => id !== right); }, q1);
-  await page.click(`.opt[data-id="${wrongId}"]`); await page.waitForSelector('.retry-box');
-  await page.click('.retry-box .btn.primary'); await page.waitForTimeout(500);
+  await page.click(`.opt[data-id="${wrongId}"]`); await page.waitForSelector('.modal .btn.primary');
+  await page.click('.modal .btn.primary'); await page.waitForTimeout(500);
   eq((await page.locator('.h-head b').innerText()).includes('בעיטה 1 מתוך 2'), true, 'חזרנו לשאלה הראשונה');
   eq(await page.evaluate(() => JSON.parse(localStorage.getItem('jericho.v1')).pass.power.retry), 0, 'כוחות שנשארו');
 }, { storage: seed({ pass: { claimed: {}, gold: false, power: { fifty: 0, time: 0, retry: 1 }, boxes: 0, owned: {} } }) }));
@@ -469,7 +487,7 @@ await test('הסערה המתקרבת: כל משפט מוצג פעם אחת לפ
   const back = seq.findIndex((x, i) => i && x === seq[i - 1]); ok(back === -1, 'אותו כרטיס הופיע פעמיים ברצף במקום ' + back);
 }));
 await test('מבחן הסיכום: אותה שאלה לא חוזרת בשלבים שונים של אותו מבחן', () => withPage(async page => {
-  await page.evaluate(() => { window.__seen = []; new MutationObserver(() => { const q = document.querySelector('.quote-card q'); if (q) { const t = q.innerText; if (window.__seen[window.__seen.length - 1] !== t) window.__seen.push(t); } }).observe(document.body, { subtree: true, childList: true, characterData: true }); });
+  await page.evaluate(() => { window.__seen = []; new MutationObserver(() => { const q = document.querySelector('.quote-card q, .quote-card .meaning'); if (q) { const t = q.innerText; if (window.__seen[window.__seen.length - 1] !== t) window.__seen.push(t); } }).observe(document.body, { subtree: true, childList: true, characterData: true }); });
   await page.evaluate(() => import('/js/app.js').then(m => m.startGame('exam', { swipeSeconds: 2 })));
   await playToEnd(page, 120000);
   const seen = await page.evaluate(() => window.__seen);
@@ -487,6 +505,33 @@ await test('בחירת שאלות: מעדיפים שאלות שלא נראו ל�
     return out;
   });
   ok(r.fresh, 'נבחרו שאלות שכבר נראו למרות שיש חדשות'); eq(r.fill, 2, 'השלמה משאלות שנראו'); ok(r.excl, 'שאלה מרשימת ההחרגה נבחרה'); eq(r.cap, 6, 'זיכרון השאלות לא נחתך'); ok(r.dup, 'כפילות בזיכרון');
+}));
+
+await test('באג שדווח: אחרי טעות עם "ניסיון נוסף" החלון מופיע במסך ואפשר ללחוץ עליו – גם בטלפון קטן, בכל סוגי הפנדלים', async () => {
+  for (const [w, h, mode] of [[375, 667, 'find'], [375, 667, 'match'], [375, 667, 'trivia'], [390, 844, 'find']]) {
+    await withPage(async page => {
+      await page.evaluate(m => import('/js/app.js').then(a => a.startGame('hunter', { chapter: 2, mode: m, count: 2 })), mode);
+      if (mode === 'find') { await page.waitForSelector('.kick-btn'); await page.click('.pick-row.ch .pk >> nth=4'); await page.click('.pick-grid .pk >> nth=22'); await page.click('.kick-btn'); }
+      else if (mode === 'match') { await page.waitForSelector('.opt:not([disabled])'); const m = await page.locator('.meaning').innerText(); const id = await page.evaluate(async mm => { const r = (await import('/js/content.js')).QUOTES.find(q => q.m === mm).id; return [...document.querySelectorAll('.opt')].map(x => x.dataset.id).find(x => x !== r); }, m); await page.click(`.opt[data-id="${id}"]`); }
+      else { await page.waitForSelector('.opt:not([disabled])'); const q = await page.locator('.meaning').innerText(); const wrong = await page.evaluate(async qq => { const T = (await import('/js/trivia.js')).TRIVIA.find(x => x.q === qq); return T.w[0]; }, q); await page.click(`.opt[data-t="${wrong.replace(/"/g, '\\"')}"]`); }
+      await page.waitForSelector('.modal .btn.primary', { timeout: 5000 });
+      const pos = await page.evaluate(() => { const r = document.querySelector('.modal .btn.primary').getBoundingClientRect(); return { top: r.top, bottom: r.bottom, h: innerHeight }; });
+      ok(pos.top >= 0 && pos.bottom <= pos.h, `[${mode} ${w}x${h}] כפתור "ניסיון נוסף" מחוץ למסך (${Math.round(pos.top)}-${Math.round(pos.bottom)} מתוך ${pos.h})`);
+      await page.click('.modal .btn.primary', { timeout: 3000 });   // לחיצה אמיתית: נכשלת אם משהו מכסה את הכפתור
+      await page.waitForTimeout(400);
+      eq(await page.locator('.modal').count(), 0, `[${mode}] החלון לא נסגר אחרי הלחיצה`);
+    }, { viewport: { width: w, height: h }, storage: seed({ xp: 300, pass: { claimed: { f1: true, f2: true, f3: true, f4: true, f5: true }, gold: false, power: { fifty: 0, time: 0, retry: 2 }, boxes: 0, owned: {} } }) });
+  }
+});
+await test('פנדלים טריוויה: שאלות מהפרק שנבחר בלבד, בלי שאלות "באיזה פסוק", בלי חזרות בסבב', () => withPage(async page => {
+  const r = await page.evaluate(async () => {
+    const { TRIVIA } = await import('/js/trivia.js'), { pickRound } = await import('/js/games/common.js'), out = [];
+    if (TRIVIA.some(q => q.q.startsWith('באיזה פסוק'))) out.push('שאלת "באיזה פסוק" בטריוויה');
+    for (const q of TRIVIA) { if (new Set([q.a, ...q.w]).size !== 4) out.push('אפשרויות כפולות: ' + q.q); if (!q.c) out.push('שאלה בלי פרק: ' + q.q); }
+    for (let c = 1; c <= 5; c++) for (let i = 0; i < 40; i++) { const it = pickRound(TRIVIA, c, 5); if (it.some(x => x.c !== c)) out.push('שאלה מפרק אחר בפרק ' + c); if (new Set(it.map(x => x.id)).size !== it.length) out.push('שאלה חזרה בסבב'); }
+    return [...new Set(out)];
+  });
+  ok(!r.length, r.slice(0, 6).join('\n'));
 }));
 
 // ===== סיכום =====

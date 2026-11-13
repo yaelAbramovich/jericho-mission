@@ -75,44 +75,29 @@ export function rewardName(r) {
 }
 const wear = it => { State.get().eq[it.type] = it.id; State.save(); sfx.pick(); };
 
+// הטבלה מחולקת לדפים של 5 דרגות (במקום גלילה ארוכה): נפתחת על הדף שיש בו מה לאסוף, אחרת על הדרגה הנוכחית.
+const PAGES = [[1, 5], [6, 10], [11, 15], [16, 20]];
+const pageOf = t => Math.min(PAGES.length - 1, Math.floor((Math.max(1, t) - 1) / 5));
+let passPage = null;
+
 export function renderTrack(v, sc) {
   const root = h('div', { class: 'passv' });
   v.append(root);
   const scroller = document.getElementById('screen');
   const refresh = () => { const y = scroller.scrollTop; paint(); scroller.scrollTop = y; renderTop(); dot(); };
+  passPage = null;   // בכל כניסה למסך – בוחרים מחדש את הדף הרלוונטי
 
   function paint() {
     const S = State.get(), tier = State.tierOf(), P = S.pass, inTier = S.xp % TIER_XP;
-    root.replaceChildren(season(), helpLink(), hero(), progress(), ticket(), inventory(), trackHead(), ...rows(), examRow());
+    if (passPage === null) { const c = claimable(); passPage = c.length ? pageOf(c[0][1]) : pageOf(Math.min(tier, MAX_TIER)); }
+    root.replaceChildren(season(), progress(), ticket(), inventory(), pageTabs(), trackHead(), ...rows(), ...(passPage === PAGES.length - 1 ? [examRow()] : []));
 
     function season() {
       const d = daysLeft();
       return h('div', { class: 'season' },
         h('div', {}, h('small', {}, 'עונה 1'), h('b', {}, 'מבצע יריחו')),
-        h('div', { class: 'se-d' }, d > 0 ? [h('b', {}, String(d)), ' ימים לסוף העונה'] : d === 0 ? 'העונה מסתיימת היום! 💪' : 'העונה הסתיימה – אפשר להמשיך לאסוף'));
-    }
-    function helpLink() { return h('button', { class: 'helplink', onclick: showHelp }, '❓ איך פס הקרב עובד?'); }
-    function hero() {
-      const pv = preview && preview.item ? itemById(preview.item) : null;
-      const slot = type => (pv && pv.type === type) ? pv : equipped(type);
-      const info = h('div', { class: 'hero-info' });
-      if (!preview) info.append(h('b', {}, 'הדמות שלך'), h('small', {}, 'לחץ על פרס בטבלה כדי לראות איך הוא נראה'));
-      else {
-        const rar = rewardRarity(preview), r = RARITY[rar];
-        const extra = pv && !['avatar', 'jersey', 'banner'].includes(pv.type) ? h('div', { class: 'hero-art', html: art(pv, 56) }) : null;
-        if (extra) info.append(extra);   // (append(null) היה מדפיס את המילה "null" על המסך)
-        const what = pv ? TYPE_HELP[pv.type] : preview.power ? POWER[preview.power].desc : 'נפתחת בכפתור „קופסאות" ומגלה פריט חדש שעוד אין לך.';
-        info.append(h('div', {}, h('b', { style: { color: r.color } }, rewardName(preview)), h('small', { class: 'hero-kind' }, `${rewardKind(preview)} · ${r.name}`), h('small', {}, what)));
-        if (pv && ['fx', 'emote', 'trail'].includes(pv.type)) info.append(h('button', { class: 'btn demo-btn', onclick: () => { sfx.pick(); demo(pv, document.querySelector('.passv .hero'), equipped('avatar')); } }, '▶ נסה עכשיו'));
-        if (pv && isOpen(pv)) {
-          const on = S.eq[pv.type] === pv.id;
-          info.append(h('button', { class: 'btn primary hero-btn', disabled: on, onclick: () => { wear(pv); toast(`${pv.name} – עודכן`); refresh(); } }, on ? 'לבוש ✓' : 'ללבוש'));
-        } else if (pv) info.append(h('small', { class: 'hero-lock' }, '🔒 ' + howText(pv, achName)));
-      }
-      return h('div', { class: 'hero' },
-        h('div', { class: 'hero-bg', html: art(slot('banner'), 360) }),
-        h('div', { class: 'hero-chars' }, h('div', { class: 'hav', html: art(slot('avatar'), 96) }), h('div', { class: 'hjr', html: art(slot('jersey'), 96) })),
-        info);
+        h('div', { class: 'se-d' }, d > 0 ? [h('b', {}, String(d)), ' ימים לסוף העונה'] : d === 0 ? 'העונה מסתיימת היום! 💪' : 'העונה הסתיימה – אפשר להמשיך לאסוף'),
+        h('button', { class: 'helplink', 'aria-label': 'איך פס הקרב עובד', onclick: showHelp }, '❓'));
     }
     function progress() {
       const all = claimable();
@@ -124,25 +109,31 @@ export function renderTrack(v, sc) {
     }
     function ticket() {
       const caps = State.capturedCount();
-      if (P.gold) return h('div', { class: 'ticket on' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, 'כרטיס הזהב פעיל'), h('small', {}, 'כל פרסי הזהב נפתחים ככל שעולים בדרגה')));
+      if (P.gold) return h('div', { class: 'ticket on slim' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, 'כרטיס הזהב פעיל')));
       if (goldReady()) return h('div', { class: 'ticket ready' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, 'כבשת את כל האזורים!'), h('small', {}, 'הפעל את כרטיס הזהב וקבל את כל פרסי הזהב')),
         h('button', { class: 'btn primary glow', onclick: onActivate }, 'הפעל!'));
-      return h('div', { class: 'ticket' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, 'כרטיס הזהב'), h('small', {}, `כבוש את כל 5 האזורים כדי להפעיל (${caps}/5)`)),
+      return h('div', { class: 'ticket slim' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, 'כרטיס הזהב'), h('small', {}, `כבוש את כל 5 האזורים כדי להפעיל (${caps}/5)`)),
         h('div', { class: 'tk-bar' }, h('i', { style: { width: caps * 20 + '%' } })));
     }
     function inventory() {
       const chips = Object.entries(POWER).map(([k, p]) => h('button', { class: 'pwchip' + (State.power(k) ? '' : ' zero'), onclick: () => { sfx.tap(); toast(`${p.icon} ${p.name}: ${p.desc}`, 5000); } },
         h('span', { class: 'pwi' }, p.icon), h('span', { class: 'pwt' }, p.short), h('b', {}, String(State.power(k)))));
+      // כפתור הקופסאות מופיע רק כשיש קופסה לפתוח (חוסך שורה במסך)
       return h('div', { class: 'inv' }, h('div', { class: 'pwchips' }, chips),
-        h('button', { class: 'btn boxbtn' + (P.boxes ? ' primary' : ''), disabled: !P.boxes, onclick: () => openBoxUI(refresh) }, `🎁 קופסאות: ${P.boxes}${P.boxes ? ' – פתח!' : ''}`));
+        P.boxes > 0 && h('button', { class: 'btn boxbtn primary', onclick: () => openBoxUI(refresh) }, `🎁 קופסאות: ${P.boxes} – פתח!`));
     }
-    function examRow() { return h('div', { class: 'exam-row' + (S.examDone ? ' done' : '') },
-      h('button', { class: 'rtile rar-legendary', onclick: () => { sfx.tap(); preview = EXAM_R; refresh(); } }, h('span', { class: 'rt-kind' }, rewardKind(EXAM_R)), h('span', { class: 'ra', html: rewardArt(EXAM_R, 56) }), h('small', {}, itemById('ax').name)),
-      h('div', {}, h('b', {}, '🏆 פרס מבחן הסיכום'), h('small', {}, S.examDone ? 'נפתח! אפשר ללבוש בארון' : 'משחקים את מבחן הסיכום אחרי כיבוש כל האזורים'))); }
+    function pageTabs() {
+      const cl = claimable();
+      return h('div', { class: 'ptabs' }, PAGES.map(([a, z], i) => h('button', { class: 'ptab' + (passPage === i ? ' on' : '') + (tier >= a && tier <= z ? ' here' : ''), onclick: () => { sfx.tap(); passPage = i; refresh(); } },
+        `\u200E${a}–${z}`, cl.some(([, t]) => t >= a && t <= z) && h('i', { class: 'pdot' }))));
+    }
     function trackHead() { return h('div', { class: 'thead' }, h('span', { class: 'free' }, 'חינם'), h('span', {}), h('span', { class: 'gold' }, 'זהב ✨')); }
+    function examRow() { return h('div', { class: 'exam-row' + (S.examDone ? ' done' : '') },
+      h('button', { class: 'rtile rar-legendary', onclick: () => { sfx.tap(); openPreview(EXAM_R); } }, h('span', { class: 'rt-kind' }, rewardKind(EXAM_R)), h('span', { class: 'ra', html: rewardArt(EXAM_R, 56) }), h('small', {}, itemById('ax').name)),
+      h('div', {}, h('b', {}, '🏆 פרס מבחן הסיכום'), h('small', {}, S.examDone ? 'נפתח! אפשר ללבוש בארון' : 'משחקים את מבחן הסיכום אחרי כיבוש כל האזורים'))); }
     function rows() {
-      const out = [];
-      for (let t = 1; t <= MAX_TIER; t++) {
+      const [from, to] = PAGES[passPage], out = [];
+      for (let t = from; t <= to; t++) {
         out.push(h('div', { class: 'prow2' + (t <= tier ? ' reached' : '') + (t === tier + 1 ? ' next' : '') + (MILESTONES.includes(t) ? ' ms' : '') },
           cell('free', t), h('div', { class: 'dia' }, String(t)), cell('gold', t)));
       }
@@ -153,7 +144,7 @@ export function renderTrack(v, sc) {
       const lockedGold = track === 'gold' && !P.gold;
       const ms = MILESTONES.includes(t);
       return h('div', { class: `cell ${track}` + (claimed ? ' claimed' : '') + (can ? ' can' : '') + (t > tier ? ' future' : '') + (lockedGold ? ' glock' : '') },
-        h('div', { class: 'rtiles' }, rs.map(r => h('button', { class: 'rtile ' + rarClass(r) + (preview && preview === r ? ' sel' : ''), onclick: () => { sfx.tap(); preview = r; refresh(); } },
+        h('div', { class: 'rtiles' }, rs.map(r => h('button', { class: 'rtile ' + rarClass(r), onclick: () => { sfx.tap(); openPreview(r); } },
           h('span', { class: 'rt-kind' }, rewardKind(r)), h('span', { class: 'ra', html: rewardArt(r, ms ? 64 : 52) }), h('small', {}, rewardName(r))))),
         ms && !claimed && h('div', { class: 'ribbon' }, track === 'gold' ? 'אבן דרך זהב!' : 'אבן דרך!'),
         can ? h('button', { class: 'btn claim', onclick: () => doClaim(track, t) }, 'קבל')
@@ -162,11 +153,34 @@ export function renderTrack(v, sc) {
     }
   }
 
+  // תצוגה מקדימה: חלון מעל המסך (לא צריך לגלול למעלה כדי לראות מה נבחר)
+  function openPreview(r) {
+    const S = State.get(), pv = r.item ? itemById(r.item) : null, rc = RARITY[rewardRarity(r)];
+    const slot = type => (pv && pv.type === type) ? pv : equipped(type);
+    const hero = h('div', { class: 'hero' },
+      h('div', { class: 'hero-bg', html: art(slot('banner'), 360) }),
+      h('div', { class: 'hero-chars' }, h('div', { class: 'hav', html: art(slot('avatar'), 88) }), h('div', { class: 'hjr', html: art(slot('jersey'), 88) })));
+    const what = pv ? TYPE_HELP[pv.type] : r.power ? POWER[r.power].desc : 'נפתחת בכפתור „קופסאות" ומגלה פריט חדש שעוד אין לך.';
+    const showsArt = !pv || !['avatar', 'jersey', 'banner'].includes(pv.type);
+    const btns = [];
+    if (pv && ['fx', 'emote', 'trail'].includes(pv.type)) btns.push(h('button', { class: 'btn demo-btn', onclick: () => { sfx.pick(); demo(pv, hero, equipped('avatar')); } }, '▶ נסה עכשיו'));
+    if (pv && isOpen(pv)) {
+      const on = S.eq[pv.type] === pv.id;
+      btns.push(h('button', { class: 'btn primary', disabled: on, onclick: () => { wear(pv); toast(`${pv.name} – עודכן`); m.close(); } }, on ? 'לבוש ✓' : 'ללבוש'));
+    }
+    const m = modal([hero,
+      h('div', { class: 'pv-info' }, showsArt && h('div', { class: 'pv-art', html: rewardArt(r, 64) }),
+        h('div', {}, h('b', { style: { color: rc.color } }, rewardName(r)), h('small', { class: 'pv-kind' }, `${rewardKind(r)} · ${rc.name}`), h('small', {}, what),
+          pv && !isOpen(pv) && h('small', { class: 'hero-lock' }, '🔒 ' + howText(pv, achName)))),
+      h('div', { class: 'pv-btns' }, ...btns, h('button', { class: 'btn ghost', onclick: () => m.close() }, 'סגור'))], { cls: 'preview', onClose: refresh });
+  }
+
   function showHelp() {
     const row = (icon, title, text) => h('div', { class: 'hrow' }, h('span', { class: 'hi' }, icon), h('div', {}, h('b', {}, title), h('small', {}, text)));
     const m = modal([h('div', { class: 'tag' }, 'איך זה עובד'), h('h3', {}, 'פס הקרב'), h('div', { class: 'helplist' },
       row('⭐', 'דרגות', 'כל סבב נותן XP. כל 60 XP = דרגה חדשה, ובכל דרגה מחכה לך פרס.'),
       row('✅', 'לאסוף פרסים', 'כשפרס זוהר בירוק – לוחצים „קבל". רק פרס שנאסף אפשר ללבוש.'),
+      row('📄', 'דפים', 'הדרגות מחולקות לדפים של 5. הנקודה האדומה מראה באיזה דף מחכה לך פרס.'),
       row('🎫', 'כרטיס זהב', 'כובשים את כל 5 האזורים ומפעילים אותו – ואז נפתחים גם פרסי הזהב (הטור השמאלי).'),
       row('🎁', 'קופסת מסתורין', 'נפתחת ומגלה פריט שעוד אין לך.'),
       ...Object.values(POWER).map(p => row(p.icon, `כוח: ${p.name}`, p.desc)),

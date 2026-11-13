@@ -1,5 +1,6 @@
-// דו-קרב פנדלים: מוצאים ציטוט בתנ"ך (פרק+פסוק) או מתאימים משמעות לציטוט.
+// דו-קרב פנדלים בשלושה סוגים: טריוויה (שאלות על הפרק), מצא בתנ"ך (פרק+פסוק), התאמת ציטוט.
 import { QUOTES, hebNum, refText } from '../content.js';
+import { TRIVIA } from '../trivia.js';
 import { h, shuffle } from '../ui.js';
 import { sfx } from '../audio.js';
 import { makePitch, waitClick, pickRound, pickDistractors, tally } from './common.js';
@@ -9,11 +10,13 @@ import { powerBar, fiftyButton, offerRetry } from '../powerups.js';
 
 const FAST_FIND = 35;   // שניות – מהר = גול נקי
 const FAST_MATCH = 9;
+const FAST_TRIVIA = 12;
 const POOL = QUOTES.filter(q => !q.extra);
 
-export async function run(el, { chapter = 0, mode = 'find', count = 5, exclude = [] }, sc) {
-  const items = pickRound(POOL, chapter, count, { exclude, seen: new Set(State.seenList('quotes')) });
-  State.markSeen('quotes', items.map(q => q.id));
+export async function run(el, { chapter = 0, mode = 'trivia', count = 5, exclude = [] }, sc) {
+  const trivia = mode === 'trivia', seenKey = trivia ? 'trivia' : 'quotes';
+  const items = pickRound(trivia ? TRIVIA : POOL, chapter, count, { exclude, seen: new Set(State.seenList(seenKey)) });
+  State.markSeen(seenKey, items.map(q => q.id));
   const pitch = makePitch(), tl = tally(items.length);
   const stage = h('div', { class: 'hunter' });
   const head = h('div', { class: 'h-head' }, h('b', {}, ''), tl.el);
@@ -46,8 +49,17 @@ export async function run(el, { chapter = 0, mode = 'find', count = 5, exclude =
       await waitClick(kickBtn, sc);
       const secs = (Date.now() - t0) / 1000;
       ok = ch === q.c && vs === q.v; fast = secs <= FAST_FIND;
-      if (!ok && State.power('retry') > 0 && !retried.has(i) && await offerRetry(stage)) { retried.add(i); i--; continue; }
+      if (!ok && State.power('retry') > 0 && !retried.has(i) && await offerRetry()) { retried.add(i); i--; continue; }
       lock(stage);
+    } else if (trivia) {
+      const opts = shuffle([q.a, ...q.w]);
+      stage.append(h('div', { class: 'quote-card' }, h('small', {}, q.idea || 'שאלה'), h('p', { class: 'meaning' }, q.q)));
+      const btns = opts.map(t => h('button', { class: 'opt', 'data-t': t }, t));
+      stage.append(...powerBar(fiftyButton(btns, b => b.dataset.t === q.a)), h('div', { class: 'opts' }, btns));
+      const picked = await new Promise(res => btns.forEach(b => b.addEventListener('click', () => res(b.dataset.t), { once: true })));
+      ok = picked === q.a; fast = (Date.now() - t0) / 1000 <= FAST_TRIVIA;
+      if (!ok && State.power('retry') > 0 && !retried.has(i) && await offerRetry()) { retried.add(i); i--; continue; }
+      btns.forEach(b => { b.disabled = true; if (b.dataset.t === q.a) b.classList.add('right'); else if (b.dataset.t === picked) b.classList.add('wrong'); });
     } else {
       const wrong = pickDistractors(POOL, q, 3, chapter);
       const opts = shuffle([q, ...wrong]);
@@ -57,7 +69,7 @@ export async function run(el, { chapter = 0, mode = 'find', count = 5, exclude =
       const pickedId = await new Promise(res => btns.forEach(b => b.addEventListener('click', () => res(b.dataset.id), { once: true })));
       ok = pickedId === q.id; fast = (Date.now() - t0) / 1000 <= FAST_MATCH;
       // בעיטה חוזרת: לפני שחושפים את התשובה הנכונה
-      if (!ok && State.power('retry') > 0 && !retried.has(i) && await offerRetry(stage)) { retried.add(i); i--; continue; }
+      if (!ok && State.power('retry') > 0 && !retried.has(i) && await offerRetry()) { retried.add(i); i--; continue; }
       btns.forEach(b => { b.disabled = true; if (b.dataset.id === q.id) b.classList.add('right'); else if (b.dataset.id === pickedId) b.classList.add('wrong'); });
     }
 
@@ -65,9 +77,11 @@ export async function run(el, { chapter = 0, mode = 'find', count = 5, exclude =
     tl.mark(i, ok);
     if (ok) { goals++; xp += fast ? 10 : 7; sfx.correct(); R.hit({ noBurst: true }); } else { xp += 2; missed.push(q); R.miss(); }
     stage.querySelectorAll('.pick-row,.pick-grid,.pick-label,.kick-btn,.clock,.opts').forEach(n => n.remove());
-    const msg = ok ? (fast ? 'מהיר ונקי! 🔥' : 'גול! אבל השוער כמעט הציל – נסה מהר יותר') : 'נעצר – המקום הנכון:';
+    const msg = ok ? (fast ? 'מהיר ונקי! 🔥' : 'גול! אבל השוער כמעט הציל – נסה מהר יותר') : (trivia ? 'נעצר – התשובה הנכונה:' : 'נעצר – המקום הנכון:');
     const next = h('button', { class: 'btn primary', onclick: () => {} }, i === items.length - 1 ? 'לתוצאות' : 'הבא ▶');
-    stage.append(h('div', { class: 'fb ' + (ok ? 'good' : 'bad') }, h('p', {}, msg), !ok && h('div', { class: 'loc' }, refText(q.c, q.v), h('small', {}, `„${q.t}"`)), ok && h('div', { class: 'loc small' }, refText(q.c, q.v))), next);
+    stage.append(trivia
+      ? h('div', { class: 'fb ' + (ok ? 'good' : 'bad') }, h('p', {}, msg), !ok && h('div', { class: 'loc small' }, q.a), h('small', { class: 'why' }, q.why))
+      : h('div', { class: 'fb ' + (ok ? 'good' : 'bad') }, h('p', {}, msg), !ok && h('div', { class: 'loc' }, refText(q.c, q.v), h('small', {}, `„${q.t}"`)), ok && h('div', { class: 'loc small' }, refText(q.c, q.v))), next);
     await Promise.race([waitClick(next, sc), sc.sleep(ok ? 2600 : 4500)]);
   }
 
@@ -75,7 +89,7 @@ export async function run(el, { chapter = 0, mode = 'find', count = 5, exclude =
     xp, correct: goals, total: items.length, run: R.best, ids: items.map(q => q.id),
     title: goals >= 4 ? 'שריקת סיום – ניצחון!' : goals >= 2 ? 'שריקת סיום' : 'סיבוב אימון',
     big: `${goals} / ${items.length} גולים`,
-    lines: missed.slice(0, 3).map(q => `${refText(q.c, q.v)} – ${q.t}`),
+    lines: missed.slice(0, 3).map(q => trivia ? `${q.q} ← ${q.a}` : `${refText(q.c, q.v)} – ${q.t}`),
   };
 }
 function mark(row, btn) { row.querySelectorAll('.pk').forEach(b => b.classList.remove('on')); btn.classList.add('on'); }

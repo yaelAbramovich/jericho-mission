@@ -8,7 +8,7 @@ import * as swipe from './swipe.js';
 import * as order from './order.js';
 
 const STAGES = [
-  ['⚽ פנדלים', hunter, { mode: 'find', count: 3 }],
+  ['⚽ פנדלים (טריוויה)', hunter, { mode: 'trivia', count: 3 }],
   ['🎙️ מי אמר?', who, { count: 3 }],
   ['🌀 הסערה (30 שניות)', swipe, { duration: 30 }],
   ['🧩 בונים את הקו', order, { ids: ['sx'] }],

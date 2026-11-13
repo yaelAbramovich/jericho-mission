@@ -126,6 +126,7 @@ export const ITEMS = [
 ];
 export const MAX_TIER = 20;
 export const TYPE_LABEL = { avatar: 'דמויות', title: 'תארים', jersey: 'חולצות', banner: 'באנרים', emote: 'אימוג׳י ניצחון', fx: 'חגיגות גול', trail: 'זנבות לכדור', ball: 'כדורים', pitch: 'מגרשים', keeper: 'שוערים' };
+export const TYPE_ICON = { avatar: '🧑', title: '🏷️', jersey: '👕', banner: '🖼️', emote: '😀', fx: '🎆', trail: '☄️', ball: '⚽', pitch: '🏟️', keeper: '🧤' };
 export const DEFAULT_ID = { avatar: 'a0', banner: 'b0', jersey: 'j0', emote: null, ball: 'ba0', fx: 'fx0', pitch: 'pt0', keeper: 'kp0', trail: 'tr0', title: 'tt0' };
 export function setCustomJersey(c) { if (c) Object.assign(ITEMS.find(i => i.id === 'jmy').p, c); }
 export const itemById = id => ITEMS.find(i => i.id === id);
