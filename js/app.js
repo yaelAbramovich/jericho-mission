@@ -5,7 +5,7 @@ import { h, $, createScope, modal, toast, burst } from './ui.js';
 import { CHAPTERS, OVERVIEW, TEST_DATE, hebNum } from './content.js';
 import { TIER_XP, MAX_TIER, ITEMS, TYPE_LABEL, TYPE_ICON, art, itemById, setCustomJersey } from './rewards.js';
 import * as Pass from './pass.js';
-import { cellRewards } from './pass-data.js';
+import { cellRewards, GOLD_ZONES } from './pass-data.js';
 import { isOpen, openIds, howText, equipped } from './locker.js';
 import * as Ach from './achievements.js';
 import * as Quests from './quests.js';
@@ -415,6 +415,7 @@ function showCapture(ch, nowAll) {
   const c = CHAPTERS[ch - 1];
   const m = modal([h('div', { class: 'cap-big' }, '⚑'), h('h3', {}, `${c.zone} נכבש!`),
     h('p', {}, nowAll ? 'כל 5 האזורים בידיים שלך. מבחן הסיכום נפתח!' : `אזורים שנכבשו: ${State.capturedCount()}/5`),
+    State.capturedCount() === GOLD_ZONES && h('p', { class: 'gold-note' }, '🎫 כרטיס הזהב מוכן! מפעילים אותו בפס הקרב.'),
     h('button', { class: 'btn primary', onclick: () => m.close() }, 'יאללה')], { cls: 'celebrate' });
   burst(m.box, 30);
 }

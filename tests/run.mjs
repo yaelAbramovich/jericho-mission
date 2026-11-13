@@ -356,7 +356,7 @@ await test('איסוף: פריט נפתח רק אחרי "קבל", כוחות מ�
   await page.locator('.cell.free.can .claim').first().click(); await page.waitForTimeout(300);
   await page.click('.modal .btn.primary').catch(() => {});   // חלון הפרס (אם נפתח)
 }, { storage: seed({ xp: 330 }) }));
-await test('כרטיס זהב: נעול עד שכובשים את כל האזורים, מופעל בלחיצה, ואז פרסי הזהב נאספים', () => withPage(async page => {
+await test('כרטיס זהב: נפתח כשכובשים 60% מהאזורים (3 מתוך 5), לא לפני, ומופעל בלחיצה; ואז פרסי הזהב נאספים', () => withPage(async page => {
   await page.evaluate(() => import('/js/app.js').then(m => m.go('pass'))); await page.waitForSelector('.ticket');
   ok(await page.locator('.ticket.ready').count() === 1, 'כרטיס הזהב לא מוכן להפעלה אחרי כיבוש כל האזורים');
   await page.click('.ticket .btn.primary'); await page.waitForSelector('.modal .btn.primary'); await page.click('.modal .btn.primary');
@@ -368,6 +368,23 @@ await test('כרטיס זהב: נעול עד שכובשים את כל האזור
   });
   ok(r.gold && r.gj5 && r.ge3, 'פריטי זהב לא נפתחו אחרי "קבל הכול"'); eq(r.left, 0, 'פרסים שנשארו'); eq(r.boxes, 1, 'קופסאות מהזהב (דרגה 2 נותנת קופסה אחת; דרגה 10 עוד לא הושגה)');
 }, { storage: seed({ xp: 330, zone: ALLZ }) }));
+await test('כרטיס זהב: בדיוק בסף – 2 אזורים לא מספיקים, 3 מספיקים (ולא צריך את כולם)', async () => {
+  const two = { 1: { story: true, hunter: true, other: true }, 2: { story: true, hunter: true, other: true } };
+  await withPage(async page => {
+    const r = await page.evaluate(async () => { const P = await import('/js/pass.js'), D = await import('/js/pass-data.js'); return { ready: P.goldReady(), act: P.activateGold(), need: D.GOLD_ZONES }; });
+    eq(r.need, 3, 'סף כרטיס הזהב'); eq(r.ready, false, '2 אזורים: הכרטיס מוכן?'); eq(r.act, false, '2 אזורים: הצליח להפעיל?');
+    await page.evaluate(() => import('/js/app.js').then(m => m.go('pass'))); await page.waitForSelector('.ticket');
+    ok(await page.locator('.ticket.ready').count() === 0, 'כרטיס "מוכן" כבר עם 2 אזורים'); ok((await page.locator('.ticket').innerText()).includes('2/3'), 'ההתקדמות צריכה להראות 2/3');
+  }, { storage: seed({ xp: 330, zone: two }) });
+  await withPage(async page => {
+    ok(await page.evaluate(() => import('/js/pass.js').then(P => P.goldReady())), '3 אזורים: הכרטיס אמור להיות מוכן');
+    await page.evaluate(() => import('/js/app.js').then(m => m.go('pass'))); await page.waitForSelector('.ticket.ready');
+    eq(await page.evaluate(() => import('/js/state.js').then(S => S.allCaptured())), false, 'לא כל האזורים נכבשו');
+    ok(await page.locator('#nav button[data-go="pass"].dot').count() === 1, 'אין נקודה אדומה כשכרטיס הזהב מוכן');
+    await page.click('.ticket .btn.primary'); await page.click('.modal .btn.primary'); await page.waitForSelector('.ticket.on');
+    ok(await page.evaluate(() => import('/js/pass.js').then(P => P.canClaim('gold', 1))), 'אחרי ההפעלה פרס זהב אמור להיות זמין לאיסוף');
+  }, { storage: seed({ xp: 330, zone: { ...two, 3: { story: true, hunter: true, other: true } } }) });
+});
 await test('קופסת מסתורין: נותנת פריט חדש (בלי כפילות), ואם הכול כבר אצלו – נותנת כוחות', () => withPage(async page => {
   await page.evaluate(() => import('/js/app.js').then(m => m.go('pass'))); await page.waitForSelector('.boxbtn');
   await page.click('.boxbtn'); await page.waitForSelector('.boxitem', { timeout: 5000 });

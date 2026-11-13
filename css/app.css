@@ -487,3 +487,5 @@ body.quake #app { animation: fxquake .15s linear 11; } @keyframes fxquake { 25% 
 .typegrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 8px; }
 .typebtn { display: grid; justify-items: center; gap: 1px; padding: 7px 2px; border-radius: 14px; background: var(--panel2); border: 2px solid var(--line); color: var(--txt); }
 .typebtn.on { background: #0f5a49; border-color: var(--neon); } .typebtn .tb-i { font-size: 22px; line-height: 1.1; } .typebtn .tb-n { font-size: 11px; font-weight: 700; line-height: 1.1; text-align: center; } .typebtn small { font-size: 10px; color: var(--dim); }
+
+.gold-note { color: var(--yel); font-weight: 800; background: #ffe14a1a; border: 1px solid #ffe14a66; border-radius: 12px; padding: 6px 10px; }

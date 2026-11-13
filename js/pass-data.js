@@ -35,6 +35,8 @@ export const GOLD = {
   20: [{ item: 'ga20' }, { item: 'tg20' }, { box: 2 }],
 };
 export const MILESTONES = [5, 10, 15, 20];
+// כרטיס הזהב נפתח כשכובשים לפחות 60% מהאזורים: 3 מתוך 5 (לשנות כאן אם רוצים קל/קשה יותר)
+export const GOLD_ZONES = 3;
 
 export const cellRewards = (track, tier) => track === 'gold'
   ? (GOLD[tier] || [])

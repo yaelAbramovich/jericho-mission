@@ -4,7 +4,7 @@ import { h, modal, toast, burst } from './ui.js';
 import { sfx } from './audio.js';
 import { art, itemById, MAX_TIER, TIER_XP } from './rewards.js';
 import { isOpen, equipped, howText } from './locker.js';
-import { cellRewards, POWER, RARITY, TYPE_HELP, rewardRarity, rarityOf, MILESTONES, BOX_POOL } from './pass-data.js';
+import { cellRewards, POWER, RARITY, TYPE_HELP, rewardRarity, rarityOf, MILESTONES, BOX_POOL, GOLD_ZONES } from './pass-data.js';
 import { TEST_DATE } from './content.js';
 import * as Quests from './quests.js';
 import { achName } from './achievements.js';
@@ -17,7 +17,7 @@ const key = (track, t) => (track === 'gold' ? 'g' : 'f') + t;
 // ================= לוגיקה =================
 export const isClaimed = (track, t) => !!State.get().pass.claimed[key(track, t)];
 export const goldActive = () => State.get().pass.gold;
-export const goldReady = () => State.allCaptured() && !goldActive();
+export const goldReady = () => State.capturedCount() >= GOLD_ZONES && !goldActive();
 export const canClaim = (track, t) => t <= State.tierOf() && !isClaimed(track, t) && (track === 'free' || goldActive()) && cellRewards(track, t).length > 0;
 export function claimable() {
   const out = [];
@@ -110,10 +110,10 @@ export function renderTrack(v, sc) {
     function ticket() {
       const caps = State.capturedCount();
       if (P.gold) return h('div', { class: 'ticket on slim' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, 'כרטיס הזהב פעיל')));
-      if (goldReady()) return h('div', { class: 'ticket ready' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, 'כבשת את כל האזורים!'), h('small', {}, 'הפעל את כרטיס הזהב וקבל את כל פרסי הזהב')),
+      if (goldReady()) return h('div', { class: 'ticket ready' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, `כבשת ${GOLD_ZONES} אזורים!`), h('small', {}, 'הפעל את כרטיס הזהב וקבל את כל פרסי הזהב')),
         h('button', { class: 'btn primary glow', onclick: onActivate }, 'הפעל!'));
-      return h('div', { class: 'ticket slim' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, 'כרטיס הזהב'), h('small', {}, `כבוש את כל 5 האזורים כדי להפעיל (${caps}/5)`)),
-        h('div', { class: 'tk-bar' }, h('i', { style: { width: caps * 20 + '%' } })));
+      return h('div', { class: 'ticket slim' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, 'כרטיס הזהב'), h('small', {}, `כבוש ${GOLD_ZONES} מתוך 5 אזורים כדי להפעיל (${caps}/${GOLD_ZONES})`)),
+        h('div', { class: 'tk-bar' }, h('i', { style: { width: Math.min(100, caps / GOLD_ZONES * 100) + '%' } })));
     }
     function inventory() {
       const chips = Object.entries(POWER).map(([k, p]) => h('button', { class: 'pwchip' + (State.power(k) ? '' : ' zero'), onclick: () => { sfx.tap(); toast(`${p.icon} ${p.name}: ${p.desc}`, 5000); } },
@@ -181,7 +181,7 @@ export function renderTrack(v, sc) {
       row('⭐', 'דרגות', 'כל סבב נותן XP. כל 60 XP = דרגה חדשה, ובכל דרגה מחכה לך פרס.'),
       row('✅', 'לאסוף פרסים', 'כשפרס זוהר בירוק – לוחצים „קבל". רק פרס שנאסף אפשר ללבוש.'),
       row('📄', 'דפים', 'הדרגות מחולקות לדפים של 5. הנקודה האדומה מראה באיזה דף מחכה לך פרס.'),
-      row('🎫', 'כרטיס זהב', 'כובשים את כל 5 האזורים ומפעילים אותו – ואז נפתחים גם פרסי הזהב (הטור השמאלי).'),
+      row('🎫', 'כרטיס זהב', `כובשים ${GOLD_ZONES} מתוך 5 אזורים ומפעילים אותו – ואז נפתחים גם פרסי הזהב (הטור השמאלי).`),
       row('🎁', 'קופסת מסתורין', 'נפתחת ומגלה פריט שעוד אין לך.'),
       ...Object.values(POWER).map(p => row(p.icon, `כוח: ${p.name}`, p.desc)),
       row('😀', 'אימוג׳י, חולצה, כדור...', 'פריטים לעיצוב. לוחצים על אריח כדי לראות מה זה ואיך הוא נראה.')),
