@@ -13,7 +13,7 @@ const STAGES = [
   ['🌀 הסערה (30 שניות)', swipe, { duration: 30 }],
   ['🧩 בונים את הקו', order, { ids: ['sx'] }],
 ];
-export async function run(el, _o, sc) {
+export async function run(el, o, sc) {   // o.swipeSeconds – לבדיקות אוטומטיות (קיצור שלב הסערה)
   let xp = 30, correct = 0, total = 0, run = 0;
   for (let i = 0; i < STAGES.length; i++) {
     const [name, mod, opts] = STAGES[i];
@@ -22,7 +22,7 @@ export async function run(el, _o, sc) {
     el.append(h('div', { class: 'stage-splash' }, h('small', {}, `שלב ${i + 1} מתוך ${STAGES.length}`), h('h2', {}, name), go));
     await waitClick(go, sc); sfx.whistle();
     el.innerHTML = '';
-    const r = await mod.run(el, { chapter: 0, ...opts }, sc);
+    const r = await mod.run(el, { chapter: 0, ...opts, ...(mod === swipe && o && o.swipeSeconds ? { duration: o.swipeSeconds } : {}) }, sc);
     xp += r.xp; correct += r.correct; total += r.total; run = Math.max(run, r.run || 0);
   }
   el.innerHTML = '';

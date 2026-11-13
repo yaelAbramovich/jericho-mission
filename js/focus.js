@@ -1,7 +1,8 @@
 // מסכי "למבחן": רשימת נושאים, ודף קריאה לנושא (טקסט ממוקד למבחן).
 import { TOPICS } from './focus-content.js';
 import { DUELS } from './duel-content.js';
-import { h } from './ui.js';
+import { h, modal, toast } from './ui.js';
+import { topicToText, allToText, copyText, canShare, shareText } from './export.js';
 import { sfx } from './audio.js';
 import { go, startGame } from './app.js';
 
@@ -11,10 +12,23 @@ const bold = s => {           // **מודגש** -> <b>
   return frag;
 };
 
+// כפתור העתקה: מעתיק ללוח; אם הדפדפן חוסם – פותח חלון עם הטקסט מסומן להעתקה ידנית
+async function doCopy(text) {
+  if (await copyText(text)) { sfx.correct(); return toast('הועתק ללוח ✓'); }
+  const ta = h('textarea', { class: 'inp copy-fallback', readonly: true }, text);
+  const m = modal([h('h3', {}, 'העתקה ידנית'), h('p', { class: 'sub' }, 'הדפדפן לא אפשר להעתיק אוטומטית. לחצו על הטקסט, סמנו הכול והעתיקו.'), ta,
+    h('button', { class: 'btn primary', onclick: () => m.close() }, 'סגור')]);
+  setTimeout(() => { ta.focus(); ta.select(); }, 50);
+}
+const toolBtn = (icon, label, fn) => h('button', { class: 'tool', onclick: () => { sfx.pick(); fn(); } }, h('span', {}, icon), label);
+
 export function list(v) {
   v.append(
     h('h2', { class: 'sec' }, '🎯 למבחן'),
     h('p', { class: 'sub' }, 'כל מה שחשוב לדעת למבחן. לוחצים על נושא וקוראים.'));
+  v.append(h('div', { class: 'doc-tools' },
+    toolBtn('📋', 'העתק את כל החומר', () => doCopy(allToText())),
+    canShare() && toolBtn('📤', 'שתף', () => shareText('חומר למבחן – יהושע', allToText()))));
   const box = h('div', { class: 'topics' });
   TOPICS.forEach(t => box.append(
     h('button', { class: 'topic-btn', onclick: () => { sfx.pick(); go('topic', { id: t.id }); } },
@@ -35,6 +49,9 @@ export function topic(v, { id }) {
   v.append(
     h('button', { class: 'back', onclick: () => go('focus') }, '→ חזרה לנושאים'),
     h('div', { class: 'doc-head' }, h('small', {}, t.label), h('h2', {}, t.title)),
+    h('div', { class: 'doc-tools' },
+      toolBtn('📋', 'העתק', () => doCopy(topicToText(t))),
+      canShare() && toolBtn('📤', 'שתף', () => shareText(t.title, topicToText(t)))),
     toc, doc);
   let list = null;
   t.blocks.forEach((b, i) => {

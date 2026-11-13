@@ -11,7 +11,7 @@ export function run(el, { chapter = 0, duration = 60 }, sc) {
   return new Promise(resolve => {
     // נבחר פרק – רק משפטים מהפרק הזה
     const base = STATEMENTS.filter(s => !chapter || s[0] === chapter);
-    const R = reactor(el, sc);
+    const react = reactor(el, sc);   // (לא R – זה כבר רדיוס טבעת הסערה למטה)
     let queue = [];
     const nextStatement = () => { if (!queue.length) queue = shuffle(base); return queue.pop(); };
 
@@ -63,11 +63,11 @@ export function run(el, { chapter = 0, duration = 60 }, sc) {
         right++; combo++; bestCombo = Math.max(bestCombo, combo);
         const m = mult(combo), gain = 10 * m; score += gain;
         sfx.correct(); if (combo >= 3 && combo % 3 === 0) sfx.combo();
-        R.hit({ light: true });
+        react.hit({ light: true });
         floatText(el, `+${gain}`, 'good');
         hint.className = 'sw-hint good'; hint.textContent = combo >= 3 ? `קומבו ${combo}! 🔥` : 'נכון!';
       } else {
-        combo = 0; sfx.wrong(); R.miss();
+        combo = 0; sfx.wrong(); react.miss();
         hint.className = 'sw-hint bad'; hint.textContent = (st[2] ? 'זה היה אמת. ' : 'זה היה שקר. ') + st[3];
       }
       scoreEl.textContent = score; multEl.textContent = 'x' + mult(combo);
@@ -97,7 +97,7 @@ export function run(el, { chapter = 0, duration = 60 }, sc) {
       el.classList.add('closed');
       const isBest = score > best && score > 0;
       sc.later(() => resolve({
-        xp: Math.min(70, 8 + Math.round(score / 10)), score, answered, correct: right, total: answered, run: R.best, bestCombo,
+        xp: Math.min(70, 8 + Math.round(score / 10)), score, answered, correct: right, total: answered, run: react.best, bestCombo,
         completed: answered >= 5,
         title: isBest ? 'שיא אישי חדש! 🏅' : 'הסערה סגרה',
         big: `${score} נקודות`,

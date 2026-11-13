@@ -1,0 +1,13 @@
+{
+  "name": "jericho-mission",
+  "private": true,
+  "type": "module",
+  "description": "מבצע יריחו – PWA סטטי. אין build; ה-package.json רק בשביל הבדיקות.",
+  "scripts": {
+    "test": "node tests/run.mjs",
+    "test:fast": "node tests/run.mjs --fast"
+  },
+  "devDependencies": {
+    "playwright": "^1.50.0"
+  }
+}

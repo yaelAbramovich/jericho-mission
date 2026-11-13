@@ -245,7 +245,8 @@ body.immersive #screen { padding-bottom: var(--sab); }
 .doc-head small { color: var(--neon); font-weight: 800; } .doc-head h2 { font-size: 27px; font-weight: 900; margin-bottom: 4px; }
 .toc { position: sticky; top: 0; z-index: 5; background: #070b16ee; padding: 8px 0; margin: 4px 0 8px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .toc .chip { flex: none; font-size: 13px; padding: 7px 12px; }
-.doc { display: grid; gap: 10px; padding-bottom: 20px; user-select: text; -webkit-user-select: text; }
+.doc, .doc * { user-select: text; -webkit-user-select: text; -webkit-touch-callout: default; }   /* אפשר לסמן ולהעתיק בלחיצה ארוכה */
+.doc { display: grid; gap: 10px; padding-bottom: 20px; }
 .doc-h { font-size: 23px; font-weight: 900; margin: 22px 0 2px; padding-top: 6px; border-top: 1px solid var(--line); scroll-margin-top: 56px; }
 .doc-sh { font-size: 18px; font-weight: 800; color: var(--neon); margin: 8px 0 0; }
 .doc-p { font-size: 18px; line-height: 1.7; }
@@ -343,3 +344,9 @@ body.immersive #screen { padding-bottom: var(--sab); }
 .xrow.ach { border-color: var(--yel); } .xrow.item { border-color: var(--neon); animation: pop .4s; }
 .xrow b { flex: 1; } .xrow em { font-style: normal; color: var(--yel); font-weight: 800; font-size: 13px; } .xrow small { color: var(--dim); }
 .xi { font-size: 22px; width: 30px; text-align: center; } .xart { width: 40px; height: 40px; display: grid; place-items: center; overflow: hidden; flex: none; }
+
+/* העתקה ושיתוף של חומר הלימוד */
+.doc-tools { display: flex; gap: 8px; margin: 4px 0 12px; }
+.tool { flex: 1; min-height: 44px; border-radius: 14px; background: var(--panel2); border: 1px solid var(--line); font-weight: 700; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--txt); }
+.tool:active { transform: scale(.97); } .tool span { font-size: 18px; }
+.copy-fallback { min-height: 220px; padding: 10px 12px; font-size: 14px; line-height: 1.5; resize: none; }

@@ -24,10 +24,11 @@ export function load() {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
-      const saved = JSON.parse(raw), base = fresh();
-      S = Object.assign(base, saved);
-      // שדות מקוננים: משלימים מה שחסר בשמירות ישנות
-      for (const k of ['eq', 'custom', 'stats', 'trophy', 'ach']) S[k] = Object.assign(base[k], saved[k]);
+      const saved = JSON.parse(raw);
+      S = Object.assign(fresh(), saved);
+      // שדות מקוננים: משלימים מה שחסר בשמירות ישנות (base נפרד – אחרת הערכים ששמורים דורסים את ברירות המחדל)
+      const base = fresh();
+      for (const k of ['eq', 'custom', 'stats', 'trophy', 'ach']) S[k] = Object.assign({}, base[k], saved[k]);
     }
   } catch (e) { memoryOnly = true; }
 }
