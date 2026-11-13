@@ -402,3 +402,15 @@ body.immersive #screen { padding-bottom: var(--sab); }
 /* כוחות (power-ups) בתוך המשחקים */
 .powerbar { display: flex; gap: 8px; margin: 2px 0 8px; justify-content: center; } .pwbtn { background: #2a1a5a; border: 2px solid var(--vio); border-radius: 14px; padding: 6px 14px; font-weight: 800; font-size: 15px; color: var(--txt); min-height: 40px; } .pwbtn:disabled { opacity: .4; }
 .opt.gone { visibility: hidden; } .retry-box { border: 2px solid var(--vio); background: #1a1440; border-radius: 16px; padding: 12px; text-align: center; display: grid; gap: 8px; margin: 8px 0; } .retry-box p { font-weight: 800; font-size: 18px; }
+
+/* הבהרות בפס הקרב: תגית סוג, כוחות עם מילים, עזרה */
+.rt-kind { font-size: 9px; font-weight: 800; color: var(--rc, #cfd9f5); letter-spacing: .3px; line-height: 1; }
+.rtile { width: 68px; } .rtile small { font-size: 10px; max-height: 26px; }
+.pw-art.fifty { font-weight: 900; color: #fff; background: radial-gradient(circle, #6d3bd6, #2a1a5a); border: 2px solid var(--vio); border-radius: 50%; width: 1.3em; height: 1.3em; display: grid; place-items: center; line-height: 1; }
+.lk { font-size: 11px !important; color: var(--yel); font-weight: 700; } .lk.dim { color: var(--dim); }
+.pwchip { display: flex; align-items: center; gap: 5px; font-size: 12px !important; padding: 5px 8px !important; color: var(--txt); }
+.pwchip .pwi { font-size: 18px; font-weight: 900; } .pwchip .pwt { font-weight: 700; } .pwchip b { background: #0003; border-radius: 8px; padding: 0 6px; }
+.helplink { width: 100%; text-align: right; color: var(--neon); font-weight: 700; font-size: 14px; padding: 2px 4px 8px; }
+.hero-kind { color: var(--neon) !important; font-weight: 700; } .hero-info small { display: block; }
+.helplist { display: grid; gap: 8px; text-align: right; max-height: 60vh; overflow-y: auto; } .hrow { display: flex; gap: 10px; align-items: flex-start; background: #0f173a; border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; }
+.hrow .hi { font-size: 24px; width: 30px; text-align: center; font-weight: 900; } .hrow b { display: block; } .hrow small { color: var(--dim); font-size: 13px; line-height: 1.35; }

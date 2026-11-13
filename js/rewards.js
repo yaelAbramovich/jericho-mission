@@ -62,13 +62,13 @@ export const ITEMS = [
   { id: 'pta', type: 'pitch', name: 'אצטדיון זהב', how: { ach: 'streak7' }, p: { sky: '#3b2a05', g1: '#1c6b3a', g2: '#124e2a' } },
   { id: 'bac', type: 'ball', name: 'כדור כובש יריחו', how: { ach: 'allzones' }, p: { c1: '#ffe27a', c2: '#3d2a00' } },
   // פס הקרב הזהב (how.gold = הדרגה). נפתחים רק אחרי הפעלת כרטיס הזהב ואיסוף הפרס
-  { id: 'ge3', type: 'emote', name: 'תרועת שופר', how: { gold: 3 }, rarity: 'rare', p: { ch: '🎺' } },
+  { id: 'ge3', type: 'emote', name: 'חצוצרה', how: { gold: 3 }, rarity: 'rare', p: { ch: '🎺' } },
   { id: 'gj5', type: 'jersey', name: 'זהב יריחו', how: { gold: 5 }, rarity: 'legendary', p: { c1: '#3d2a00', c2: '#ffe27a', pat: 'sash', n: '5' } },
   { id: 'ge8', type: 'emote', name: 'חומה', how: { gold: 8 }, rarity: 'rare', p: { ch: '🧱' } },
   { id: 'ga10', type: 'avatar', name: 'יהושע בן נון', how: { gold: 10 }, rarity: 'legendary', p: { c1: '#7a4a1a', c2: '#ffe27a', shape: 'round', acc: 'headband' } },
   { id: 'ge13', type: 'emote', name: 'יונה', how: { gold: 13 }, rarity: 'epic', p: { ch: '🕊️' } },
   { id: 'gb15', type: 'banner', name: 'החומות נופלות', how: { gold: 15 }, rarity: 'epic', p: { g: ['#3a1c71', '#d76d77', '#ffaf7b'] } },
-  { id: 'gf18', type: 'fx', name: 'תרועה', how: { gold: 18 }, rarity: 'epic', p: { colors: ['#ffe27a', '#ffcf33', '#fff3b0'], glyph: '🎺' } },
+  { id: 'gf18', type: 'fx', name: 'חצוצרות יריחו', how: { gold: 18 }, rarity: 'epic', p: { colors: ['#ffe27a', '#ffcf33', '#fff3b0'], glyph: '🎺' } },
   { id: 'ga20', type: 'avatar', name: 'מלך יריחו', how: { gold: 20 }, rarity: 'legendary', p: { c1: '#3d2a00', c2: '#ffe27a', shape: 'horn', acc: 'crown' } },
   // מאגר קופסאות המסתורין (how.box) – נפתחים רק מקופסה
   { id: 'x1', type: 'avatar', name: 'חתלתול', how: { box: true }, rarity: 'rare', p: { c1: '#2a2a3a', c2: '#ff9ad5', shape: 'round', acc: 'ears' } },

@@ -14,11 +14,14 @@ const CLICKS = [
   '.btn.primary:has-text("הבא")', '.btn.primary:has-text("לתוצאות")', '.btn.primary:has-text("סיום")',
 ];
 
+// המסך משתנה כל הזמן (אנימציות, מעבר שאלה) – אלמנט יכול להיעלם בין הבדיקה ללחיצה. זה לא כשלון, פשוט מנסים שוב.
 async function tryClick(page, sel) {
-  const l = page.locator(sel).first();
-  if (!(await l.count()) || !(await l.isVisible()) || !(await l.isEnabled())) return false;
-  await l.click({ timeout: 2000 });
-  return true;
+  try {
+    const l = page.locator(sel).first();
+    if (!(await l.count()) || !(await l.isVisible({ timeout: 500 })) || !(await l.isEnabled({ timeout: 500 }))) return false;
+    await l.click({ timeout: 2000 });
+    return true;
+  } catch { return false; }
 }
 
 export async function playToEnd(page, timeoutMs = 90000) {

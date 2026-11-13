@@ -4,7 +4,7 @@ import { h, modal, toast, burst } from './ui.js';
 import { sfx } from './audio.js';
 import { art, itemById, MAX_TIER, TIER_XP } from './rewards.js';
 import { isOpen, equipped, howText } from './locker.js';
-import { cellRewards, POWER, RARITY, rewardRarity, rarityOf, MILESTONES, BOX_POOL } from './pass-data.js';
+import { cellRewards, POWER, RARITY, TYPE_HELP, rewardRarity, rarityOf, MILESTONES, BOX_POOL } from './pass-data.js';
 import { TEST_DATE } from './content.js';
 import * as Quests from './quests.js';
 import { achName } from './achievements.js';
@@ -63,9 +63,10 @@ const rarClass = r => 'rar-' + rewardRarity(r);
 
 export function rewardArt(r, size = 56) {
   if (r.item) return art(itemById(r.item), size);
-  if (r.power) return `<span class="pw-art" style="font-size:${size * 0.7}px">${POWER[r.power].icon}</span>`;
+  if (r.power) return `<span class="pw-art ${r.power}" style="font-size:${size * 0.7}px">${POWER[r.power].icon}</span>`;
   return `<span class="pw-art" style="font-size:${size * 0.75}px">🎁</span>`;
 }
+export const rewardKind = r => r.item ? TYPE_ONE[itemById(r.item).type] : r.power ? 'כוח' : 'קופסה';
 export function rewardName(r) {
   if (r.item) return itemById(r.item).name;
   if (r.power) return `${POWER[r.power].name} ×${r.n}`;
@@ -81,7 +82,7 @@ export function renderTrack(v, sc) {
 
   function paint() {
     const S = State.get(), tier = State.tierOf(), P = S.pass, inTier = S.xp % TIER_XP;
-    root.replaceChildren(season(), hero(), progress(), ticket(), inventory(), trackHead(), ...rows(), examRow());
+    root.replaceChildren(season(), helpLink(), hero(), progress(), ticket(), inventory(), trackHead(), ...rows(), examRow());
 
     function season() {
       const d = daysLeft();
@@ -89,6 +90,7 @@ export function renderTrack(v, sc) {
         h('div', {}, h('small', {}, 'עונה 1'), h('b', {}, 'מבצע יריחו')),
         h('div', { class: 'se-d' }, d > 0 ? [h('b', {}, String(d)), ' ימים לסוף העונה'] : d === 0 ? 'העונה מסתיימת היום! 💪' : 'העונה הסתיימה – אפשר להמשיך לאסוף'));
     }
+    function helpLink() { return h('button', { class: 'helplink', onclick: showHelp }, '❓ איך פס הקרב עובד?'); }
     function hero() {
       const pv = preview && preview.item ? itemById(preview.item) : null;
       const slot = type => (pv && pv.type === type) ? pv : equipped(type);
@@ -98,7 +100,8 @@ export function renderTrack(v, sc) {
         const rar = rewardRarity(preview), r = RARITY[rar];
         const extra = pv && !['avatar', 'jersey', 'banner'].includes(pv.type) ? h('div', { class: 'hero-art', html: art(pv, 56) }) : null;
         if (extra) info.append(extra);   // (append(null) היה מדפיס את המילה "null" על המסך)
-        info.append(h('div', {}, h('b', { style: { color: r.color } }, rewardName(preview)), h('small', {}, `${r.name}${pv ? ' · ' + TYPE_ONE[pv.type] : preview.power ? ' · ' + POWER[preview.power].desc : ' · פותחים ומקבלים פריט חדש'}`)));
+        const what = pv ? TYPE_HELP[pv.type] : preview.power ? POWER[preview.power].desc : 'נפתחת בכפתור „קופסאות" ומגלה פריט חדש שעוד אין לך.';
+        info.append(h('div', {}, h('b', { style: { color: r.color } }, rewardName(preview)), h('small', { class: 'hero-kind' }, `${rewardKind(preview)} · ${r.name}`), h('small', {}, what)));
         if (pv && isOpen(pv)) {
           const on = S.eq[pv.type] === pv.id;
           info.append(h('button', { class: 'btn primary hero-btn', disabled: on, onclick: () => { wear(pv); toast(`${pv.name} – עודכן`); refresh(); } }, on ? 'לבוש ✓' : 'ללבוש'));
@@ -126,12 +129,13 @@ export function renderTrack(v, sc) {
         h('div', { class: 'tk-bar' }, h('i', { style: { width: caps * 20 + '%' } })));
     }
     function inventory() {
-      const chips = Object.entries(POWER).map(([k, p]) => h('span', { class: 'pwchip' + (State.power(k) ? '' : ' zero'), title: p.desc }, p.icon, h('b', {}, ' ' + State.power(k))));
+      const chips = Object.entries(POWER).map(([k, p]) => h('button', { class: 'pwchip' + (State.power(k) ? '' : ' zero'), onclick: () => { sfx.tap(); toast(`${p.icon} ${p.name}: ${p.desc}`, 5000); } },
+        h('span', { class: 'pwi' }, p.icon), h('span', { class: 'pwt' }, p.short), h('b', {}, String(State.power(k)))));
       return h('div', { class: 'inv' }, h('div', { class: 'pwchips' }, chips),
         h('button', { class: 'btn boxbtn' + (P.boxes ? ' primary' : ''), disabled: !P.boxes, onclick: () => openBoxUI(refresh) }, `🎁 קופסאות: ${P.boxes}${P.boxes ? ' – פתח!' : ''}`));
     }
     function examRow() { return h('div', { class: 'exam-row' + (S.examDone ? ' done' : '') },
-      h('button', { class: 'rtile rar-legendary', onclick: () => { sfx.tap(); preview = EXAM_R; refresh(); } }, h('span', { class: 'ra', html: rewardArt(EXAM_R, 56) }), h('small', {}, itemById('ax').name)),
+      h('button', { class: 'rtile rar-legendary', onclick: () => { sfx.tap(); preview = EXAM_R; refresh(); } }, h('span', { class: 'rt-kind' }, rewardKind(EXAM_R)), h('span', { class: 'ra', html: rewardArt(EXAM_R, 56) }), h('small', {}, itemById('ax').name)),
       h('div', {}, h('b', {}, '🏆 פרס מבחן הסיכום'), h('small', {}, S.examDone ? 'נפתח! אפשר ללבוש בארון' : 'משחקים את מבחן הסיכום אחרי כיבוש כל האזורים'))); }
     function trackHead() { return h('div', { class: 'thead' }, h('span', { class: 'free' }, 'חינם'), h('span', {}), h('span', { class: 'gold' }, 'זהב ✨')); }
     function rows() {
@@ -148,14 +152,25 @@ export function renderTrack(v, sc) {
       const ms = MILESTONES.includes(t);
       return h('div', { class: `cell ${track}` + (claimed ? ' claimed' : '') + (can ? ' can' : '') + (t > tier ? ' future' : '') + (lockedGold ? ' glock' : '') },
         h('div', { class: 'rtiles' }, rs.map(r => h('button', { class: 'rtile ' + rarClass(r) + (preview && preview === r ? ' sel' : ''), onclick: () => { sfx.tap(); preview = r; refresh(); } },
-          h('span', { class: 'ra', html: rewardArt(r, ms ? 64 : 52) }), h('small', {}, rewardName(r))))),
+          h('span', { class: 'rt-kind' }, rewardKind(r)), h('span', { class: 'ra', html: rewardArt(r, ms ? 64 : 52) }), h('small', {}, rewardName(r))))),
         ms && !claimed && h('div', { class: 'ribbon' }, track === 'gold' ? 'אבן דרך זהב!' : 'אבן דרך!'),
         can ? h('button', { class: 'btn claim', onclick: () => doClaim(track, t) }, 'קבל')
           : claimed ? h('span', { class: 'chk' }, '✓')
-            : (lockedGold ? h('span', { class: 'lk' }, '🔒') : t > tier ? h('span', { class: 'lk dim' }, '🔒') : null));
+            : (lockedGold ? h('span', { class: 'lk' }, '🔒 צריך כרטיס זהב') : t > tier ? h('span', { class: 'lk dim' }, `🔒 דרגה ${t}`) : null));
     }
   }
 
+  function showHelp() {
+    const row = (icon, title, text) => h('div', { class: 'hrow' }, h('span', { class: 'hi' }, icon), h('div', {}, h('b', {}, title), h('small', {}, text)));
+    const m = modal([h('div', { class: 'tag' }, 'איך זה עובד'), h('h3', {}, 'פס הקרב'), h('div', { class: 'helplist' },
+      row('⭐', 'דרגות', 'כל סבב נותן XP. כל 60 XP = דרגה חדשה, ובכל דרגה מחכה לך פרס.'),
+      row('✅', 'לאסוף פרסים', 'כשפרס זוהר בירוק – לוחצים „קבל". רק פרס שנאסף אפשר ללבוש.'),
+      row('🎫', 'כרטיס זהב', 'כובשים את כל 5 האזורים ומפעילים אותו – ואז נפתחים גם פרסי הזהב (הטור השמאלי).'),
+      row('🎁', 'קופסת מסתורין', 'נפתחת ומגלה פריט שעוד אין לך.'),
+      ...Object.values(POWER).map(p => row(p.icon, `כוח: ${p.name}`, p.desc)),
+      row('😀', 'אימוג׳י, חולצה, כדור...', 'פריטים לעיצוב. לוחצים על אריח כדי לראות מה זה ואיך הוא נראה.')),
+      h('button', { class: 'btn primary', onclick: () => m.close() }, 'הבנתי')]);
+  }
   function showGain(title, lists) {
     const tiles = lists.flat().map(r => h('div', { class: 'gain ' + rarClass(r) }, h('span', { html: rewardArt(r, 56) }), h('small', {}, rewardName(r))));
     const m = modal([h('div', { class: 'tag' }, 'פרס חדש'), h('h3', {}, title), h('div', { class: 'gains' }, tiles), h('button', { class: 'btn primary', onclick: () => m.close() }, 'מדהים')], { cls: 'celebrate', onClose: refresh });

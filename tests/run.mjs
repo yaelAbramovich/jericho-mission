@@ -388,6 +388,26 @@ await test('לחיצה על כל אריח בפס הקרב לא מציגה "null"
     ok(!bad, `אחרי לחיצה על אריח ${i} מופיע "${bad}" על המסך`);
   }
 }, { storage: seed({ xp: 650, zone: ALLZ, pass: { claimed: {}, gold: true, power: { fifty: 1, time: 1, retry: 1 }, boxes: 1, owned: {} } }) }));
+await test('בהירות: לכל אריח תגית סוג ושם בעברית, לחיצה מסבירה מה זה, ויש עזרה', () => withPage(async page => {
+  await page.evaluate(() => import('/js/app.js').then(m => m.go('pass'))); await page.waitForSelector('.passv');
+  const n = await page.locator('.rtile').count(), problems = [];
+  for (let i = 0; i < n; i++) {
+    const tile = page.locator('.rtile').nth(i);
+    const kind = (await tile.locator('.rt-kind').innerText()).trim(), name = (await tile.locator('small').innerText()).trim();
+    if (!kind) problems.push(`אריח ${i}: אין תגית סוג`);
+    if (!/[א-ת]/.test(name)) problems.push(`אריח ${i}: השם "${name}" לא בעברית`);
+    await tile.click();
+    const text = (await page.locator('.hero-info').innerText()).replace(/\s+/g, ' ');
+    if (!text.includes(kind)) problems.push(`אריח ${i} (${name}): התצוגה לא מציינת שזה "${kind}"`);
+    if (text.length < 40) problems.push(`אריח ${i} (${name}): אין הסבר ("${text}")`);
+  }
+  ok(!problems.length, problems.slice(0, 8).join('\n'));
+  await page.click('.helplink'); await page.waitForSelector('.helplist');
+  const help = await page.locator('.helplist').innerText();
+  for (const w of ['כרטיס זהב', 'קופסת מסתורין', 'מחק 2 תשובות', 'עוד 10 שניות', 'ניסיון נוסף']) ok(help.includes(w), `בעזרה חסר: ${w}`);
+  const chips = await page.locator('.pwchip').allInnerTexts(); ok(chips.length === 3 && chips.every(c => /[א-ת]/.test(c)), 'כפתורי הכוחות צריכים טקסט בעברית: ' + chips.join('|'));
+  const locks = await page.locator('.lk').allInnerTexts(); ok(locks.every(l => /[א-ת]/.test(l)), 'מנעול בלי הסבר: ' + [...new Set(locks)].join('|'));
+}, { storage: seed({ xp: 330, pass: { claimed: {}, gold: false, power: { fifty: 3, time: 2, retry: 1 }, boxes: 1, owned: {} } }) }));
 await test('כוח 50/50: מסתיר שתי תשובות שגויות ולא את הנכונה, ונצרך', () => withPage(async page => {
   await page.evaluate(() => import('/js/app.js').then(m => m.startGame('who', { chapter: 2, count: 1 })));
   await page.waitForSelector('.pwbtn'); await page.click('.pwbtn');
