@@ -18,6 +18,19 @@ export function h(tag, attrs, ...kids) {
   for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid.nodeType ? kid : document.createTextNode(kid));
   return el;
 }
+// רשת ביטחון: append(false / null / undefined) מדפיס את המילה "false" / "null" על המסך (קרה כבר כמה פעמים:
+// למשל  append(!isKid && h(...))  בתור של הילד). כאן מתעלמים מערכים כאלה; בבדיקות האוטומטיות (window.__strictAppend)
+// זורקים שגיאה, כדי שהטעות בקוד תתגלה ולא תוסתר.
+if (typeof Element !== 'undefined') {
+  const bad = k => k === false || k == null;
+  for (const proto of [Element.prototype, DocumentFragment.prototype]) for (const fn of ['append', 'prepend', 'replaceChildren']) {
+    const orig = proto[fn];
+    proto[fn] = function (...kids) {
+      if (kids.some(bad)) { if (window.__strictAppend) throw new Error(`${fn}() קיבל ${String(kids.find(bad))} במקום אלמנט`); kids = kids.filter(k => !bad(k)); }
+      return orig.apply(this, kids);
+    };
+  }
+}
 export const $ = (s, r = document) => r.querySelector(s);
 export const shuffle = a => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 export const sample = (a, n) => shuffle(a).slice(0, n);

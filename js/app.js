@@ -5,6 +5,7 @@ import { h, $, createScope, modal, toast, burst } from './ui.js';
 import { CHAPTERS, OVERVIEW, TEST_DATE, hebNum } from './content.js';
 import { TIER_XP, MAX_TIER, ITEMS, TYPE_LABEL, TYPE_ICON, art, itemById, setCustomJersey } from './rewards.js';
 import * as Pass from './pass.js';
+import { ensureSeason } from './seasons.js';
 import { cellRewards, GOLD_ZONES } from './pass-data.js';
 import { isOpen, openIds, howText, equipped } from './locker.js';
 import * as Ach from './achievements.js';
@@ -323,6 +324,18 @@ const stat = (l, n) => h('div', { class: 'stat' }, h('b', {}, String(n)), h('sma
 async function storyScreen(v, p, sc) { (await import('./story.js')).render(v, p, sc); }
 async function parentScreen(v, p, sc) { (await import('./parent.js')).render(v, p, sc); }
 
+// ---------- איפה אנחנו משחקים: פרק + סוג המשחק (מוצג בראש המשחק ובכרטיס הסיום) ----------
+const chapLabel = n => `פרק ${hebNum(n)}׳ · ${CHAPTERS[n - 1].zone}`;
+const PENALTY_MODE = { trivia: '🧠 טריוויה', find: '📖 מצא בתנ״ך', match: '🎯 התאמת ציטוט' };
+export function playWhere(key, opts) {
+  if (key === 'duel') {
+    const chs = { j1: [1], j2: [2], j34: [3, 4], j5: [5] }[opts.topic] || [];
+    return chs.length === 1 ? chapLabel(chs[0]) : `פרקים ${chs.map(n => hebNum(n) + '׳').join('–')} · ${chs.map(n => CHAPTERS[n - 1].zone).join(' ו')}`;
+  }
+  return opts.chapter ? chapLabel(opts.chapter) : 'כל הפרקים';
+}
+const playChips = (key, opts) => [h('span', { class: 'gchip where' }, '📍 ' + playWhere(key, opts)), key === 'hunter' && h('span', { class: 'gchip' }, PENALTY_MODE[opts.mode || 'trivia'])].filter(Boolean);
+
 // ---------- הרצת משחק ----------
 export function startGame(key, opts) {
   unlock();
@@ -333,7 +346,7 @@ async function playScreen(v, { key, opts }, sc) {
     h('button', { class: 'back', onclick: () => { sfx.tap(); go(key === 'duel' ? 'focus' : opts.chapter ? 'zone' : 'games', { ch: opts.chapter }); } }, '✕ יציאה'),
     h('span', { class: 'gname' }, key === 'exam' ? 'מבחן הסיכום' : key === 'duel' ? 'דו-קרב משפחתי' : GAMES[key].name));
   const box = h('div', { class: 'game' });
-  v.append(bar, box);
+  v.append(bar, h('div', { class: 'gctx' }, playChips(key, opts)), box);
   try {
     const mod = await import(`./games/${key}.js`);
     const res = await mod.run(box, opts, sc);
@@ -348,7 +361,7 @@ async function finishRound(key, opts, res) {
   const s = State.get(), ch = opts.chapter || 0;
   const before = { cap: ch ? State.captured(ch) : false, all: State.allCaptured() };
   const openBefore = openIds(), tb = State.tierOf();
-  s.rounds++;
+  s.rounds++; s.pass.seasonRounds = (s.pass.seasonRounds || 0) + 1;   // סבבים בעונה (לכרטיס הזהב של עונה 2+)
   if (key === 'swipe' && res.score > s.best.swipe) s.best.swipe = res.score;
   if (key === 'exam') s.examDone = true;
   if (ch && key === 'hunter' && res.correct >= 3) State.setObjective(ch, 'hunter');
@@ -389,6 +402,7 @@ function endScreen(v, { key, opts, res, tb, ta, justCaptured, nowAll, xpTotal, e
   const xpEl = h('b', { class: 'xp-num' }, '+0');
   v.append(
     h('div', { class: 'end-card' },
+      h('div', { class: 'gctx end-ctx' }, playChips(key, opts)),
       h('div', { class: 'end-title' }, res.title || 'סבב הסתיים!'),
       h('div', { class: 'end-big' }, res.big || ''),
       ...lines.map(l => h('p', {}, l)),
@@ -421,9 +435,9 @@ function showCapture(ch, nowAll) {
 }
 function showTierUp(from, to) {
   sfx.tierUp();
-  const rs = []; for (let t = from + 1; t <= Math.min(to, MAX_TIER); t++) rs.push(...cellRewards('free', t));
+  const rs = []; for (let t = from + 1; t <= Math.min(to, MAX_TIER); t++) rs.push(...cellRewards('free', t, Pass.season()));
   const m = modal([h('div', { class: 'tag' }, 'דרגה חדשה'), h('h3', {}, `דרגה ${Math.min(to, MAX_TIER)}!`),
-    h('p', { class: 'sub' }, 'יש פרסים חדשים שמחכים לך בפס הקרב'),
+    h('p', { class: 'sub' }, to >= MAX_TIER ? '🏁 סיימת את העונה! מחכה לך הפתעה ענקית בפס הקרב' : 'יש פרסים חדשים שמחכים לך בפס הקרב'),
     h('div', { class: 'unlocks' }, rs.map(r => h('div', { class: 'unlock' }, h('div', { html: Pass.rewardArt(r, 64) }), h('small', {}, Pass.rewardName(r))))),
     h('button', { class: 'btn primary', onclick: () => { m.close(); passTab = 'pass'; go('pass'); } }, 'לאסוף בפס הקרב'),
     h('button', { class: 'btn ghost', onclick: () => m.close() }, 'אחר כך')], { cls: 'celebrate' });
@@ -439,6 +453,7 @@ const ROUTES = { focus: focusScreen, topic: topicScreen, map: mapScreen, zone: z
 // ---------- אתחול ----------
 export function boot() {
   State.load();
+  ensureSeason(State.get().season || 1);   // פריטים של עונות קודמות (נוצרים מתבנית) – חייבים להיות קיימים לפני ציור הדמות והארון
   setCustomJersey(State.get().custom);
   document.addEventListener('pointerdown', unlock, { passive: true });
   $('#nav').addEventListener('click', e => {

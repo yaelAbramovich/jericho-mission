@@ -4,32 +4,40 @@ import { h, modal, toast, burst } from './ui.js';
 import { sfx } from './audio.js';
 import { art, itemById, MAX_TIER, TIER_XP } from './rewards.js';
 import { isOpen, equipped, howText } from './locker.js';
-import { cellRewards, POWER, RARITY, TYPE_HELP, rewardRarity, rarityOf, MILESTONES, BOX_POOL, GOLD_ZONES } from './pass-data.js';
+import { cellRewards, POWER, RARITY, TYPE_HELP, rewardRarity, rarityOf, MILESTONES, BOX_POOL, GOLD_ZONES, GOLD_ROUNDS, S1_FINALE, claimKey } from './pass-data.js';
+import { buildSeason, ensureSeason, themeOf } from './seasons.js';
 import { TEST_DATE } from './content.js';
 import * as Quests from './quests.js';
 import { achName } from './achievements.js';
-import { renderTop } from './app.js';
-import { demo } from './effects.js';
+import { renderTop, go } from './app.js';
+import { demo, playShow } from './effects.js';
 
 const TYPE_ONE = { avatar: 'דמות', jersey: 'חולצה', banner: 'באנר', emote: 'אימוג׳י', ball: 'כדור', fx: 'חגיגת גול', pitch: 'מגרש', keeper: 'שוער', trail: 'זנב לכדור', title: 'תואר' };
-const key = (track, t) => (track === 'gold' ? 'g' : 'f') + t;
+export const season = () => State.get().season || 1;
+const key = (track, t) => claimKey(season(), track, t);
+const cells = (track, t) => cellRewards(track, t, season());
 
 // ================= לוגיקה =================
 export const isClaimed = (track, t) => !!State.get().pass.claimed[key(track, t)];
 export const goldActive = () => State.get().pass.gold;
-export const goldReady = () => State.capturedCount() >= GOLD_ZONES && !goldActive();
-export const canClaim = (track, t) => t <= State.tierOf() && !isClaimed(track, t) && (track === 'free' || goldActive()) && cellRewards(track, t).length > 0;
+// התקדמות לכרטיס הזהב: עונה 1 – כיבוש אזורים; עונה 2 ואילך – סבבים בעונה
+export function goldProgress() {
+  return season() === 1 ? { cur: State.capturedCount(), need: GOLD_ZONES, zones: true } : { cur: State.get().pass.seasonRounds || 0, need: GOLD_ROUNDS, zones: false };
+}
+export const goldReady = () => { const g = goldProgress(); return g.cur >= g.need && !goldActive(); };
+export const seasonDone = () => State.tierOf() >= MAX_TIER;
+export const canClaim = (track, t) => t <= State.tierOf() && !isClaimed(track, t) && (track === 'free' || goldActive()) && cells(track, t).length > 0;
 export function claimable() {
   const out = [];
   for (let t = 1; t <= MAX_TIER; t++) for (const tr of ['free', 'gold']) if (canClaim(tr, t)) out.push([tr, t]);
   return out;
 }
 // כמה דברים מחכים לשחקן (לנקודה האדומה בלשונית)
-export const pending = () => claimable().length + (goldReady() ? 1 : 0) + State.get().pass.boxes;
+export const pending = () => claimable().length + (goldReady() ? 1 : 0) + State.get().pass.boxes + (seasonDone() ? 1 : 0);
 
 export function claim(track, t) {
   if (!canClaim(track, t)) return null;
-  const P = State.get().pass, rs = cellRewards(track, t);
+  const P = State.get().pass, rs = cells(track, t);
   P.claimed[key(track, t)] = true;
   for (const r of rs) {
     if (r.power) P.power[r.power] += r.n;
@@ -42,6 +50,23 @@ export function activateGold() {
   if (!goldReady()) return false;
   State.get().pass.gold = true; State.save(); return true;
 }
+// סיום עונה: אוספים אוטומטית את כל מה שמחכה, מקבלים את "הפתעת סוף עונה", ועוברים לעונה הבאה.
+// עודף XP מעבר ל-20 הדרגות עובר לעונה החדשה. אם כרטיס הזהב מוכן – מופעל לפני האיסוף.
+export function completeSeason() {
+  if (!seasonDone()) return null;
+  const S = State.get(), P = S.pass, n = season();
+  if (goldReady()) activateGold();
+  const lost = !goldActive();   // לא הופעל כרטיס זהב: פרסי הזהב לא נאספים
+  const auto = []; for (const [tr, t] of claimable()) { const rs = claim(tr, t); if (rs) auto.push(...rs); }
+  const finale = n > 1 ? buildSeason(n).finale : S1_FINALE;
+  for (const id of finale.items) P.owned[id] = true;
+  P.boxes += finale.boxes; for (const [k, v] of Object.entries(finale.power)) P.power[k] += v;
+  const next = n + 1;
+  S.season = next; P.base += MAX_TIER * TIER_XP; P.gold = false; P.seasonRounds = 0;
+  ensureSeason(next); State.save();
+  return { season: n, next, theme: themeOf(next), auto, finale, lostGold: lost };
+}
+
 // פותח קופסה: פריט שעוד אין לשחקן (בהסתברות לפי נדירות). אם הכול כבר אצלו – מקבל כוחות במקום.
 const WEIGHT = { common: 60, rare: 28, epic: 10, legendary: 2 };
 export function openBox() {
@@ -90,13 +115,13 @@ export function renderTrack(v, sc) {
   function paint() {
     const S = State.get(), tier = State.tierOf(), P = S.pass, inTier = S.xp % TIER_XP;
     if (passPage === null) { const c = claimable(); passPage = c.length ? pageOf(c[0][1]) : pageOf(Math.min(tier, MAX_TIER)); }
-    root.replaceChildren(season(), progress(), ticket(), inventory(), pageTabs(), trackHead(), ...rows(), ...(passPage === PAGES.length - 1 ? [examRow()] : []));
+    root.replaceChildren(seasonBanner(), ...(seasonDone() ? [finaleCard()] : []), progress(), ticket(), inventory(), pageTabs(), trackHead(), ...rows(), ...(passPage === PAGES.length - 1 && season() === 1 ? [examRow()] : []));
 
-    function season() {
-      const d = daysLeft();
+    function seasonBanner() {
+      const n = season(), th = n > 1 ? themeOf(n) : null, d = daysLeft();
       return h('div', { class: 'season' },
-        h('div', {}, h('small', {}, 'עונה 1'), h('b', {}, 'מבצע יריחו')),
-        h('div', { class: 'se-d' }, d > 0 ? [h('b', {}, String(d)), ' ימים לסוף העונה'] : d === 0 ? 'העונה מסתיימת היום! 💪' : 'העונה הסתיימה – אפשר להמשיך לאסוף'),
+        h('div', {}, h('small', {}, `עונה ${n}`), h('b', {}, th ? `${th.icon} ${th.name}` : 'מבצע יריחו')),
+        h('div', { class: 'se-d' }, n > 1 ? 'עונה חדשה – משחקים ואוספים!' : d > 0 ? [h('b', {}, String(d)), ' ימים לסוף העונה'] : d === 0 ? 'העונה מסתיימת היום! 💪' : 'העונה הסתיימה – אפשר להמשיך לאסוף'),
         h('button', { class: 'helplink', 'aria-label': 'איך פס הקרב עובד', onclick: showHelp }, '❓'));
     }
     function progress() {
@@ -107,13 +132,20 @@ export function renderTrack(v, sc) {
           h('small', {}, tier >= MAX_TIER ? 'דרגה מקסימלית!' : `${inTier}/${TIER_XP} XP לדרגה ${tier + 1}`)),
         h('button', { class: 'btn claimall' + (all.length ? ' primary glow' : ''), disabled: !all.length, onclick: claimAll }, all.length ? `קבל הכול (${all.length})` : 'אין מה לקבל'));
     }
+    function finaleCard() {
+      const n = season(), nx = themeOf(n + 1), warn = !goldActive() && !goldReady();
+      return h('div', { class: 'finale' }, h('span', { class: 'fi-i' }, '🎉'),
+        h('div', {}, h('b', {}, `סיימת את עונה ${n}!`), h('small', {}, `מחכה לך הפתעה, ועונה חדשה: ${nx.icon} ${nx.name}`),
+          warn && h('small', { class: 'fi-warn' }, 'שים לב: כרטיס הזהב לא הופעל, ולכן פרסי הזהב של העונה לא ייאספו.')),
+        h('button', { class: 'btn primary glow', onclick: onFinale }, 'פתח את ההפתעה! 🎁'));
+    }
     function ticket() {
-      const caps = State.capturedCount();
+      const g = goldProgress(), caps = g.cur;
       if (P.gold) return h('div', { class: 'ticket on slim' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, 'כרטיס הזהב פעיל')));
-      if (goldReady()) return h('div', { class: 'ticket ready' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, `כבשת ${GOLD_ZONES} אזורים!`), h('small', {}, 'הפעל את כרטיס הזהב וקבל את כל פרסי הזהב')),
+      if (goldReady()) return h('div', { class: 'ticket ready' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, g.zones ? `כבשת ${GOLD_ZONES} אזורים!` : `שיחקת ${GOLD_ROUNDS} סבבים!`), h('small', {}, 'הפעל את כרטיס הזהב וקבל את כל פרסי הזהב')),
         h('button', { class: 'btn primary glow', onclick: onActivate }, 'הפעל!'));
-      return h('div', { class: 'ticket slim' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, 'כרטיס הזהב'), h('small', {}, `כבוש ${GOLD_ZONES} מתוך 5 אזורים כדי להפעיל (${caps}/${GOLD_ZONES})`)),
-        h('div', { class: 'tk-bar' }, h('i', { style: { width: Math.min(100, caps / GOLD_ZONES * 100) + '%' } })));
+      return h('div', { class: 'ticket slim' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, 'כרטיס הזהב'), h('small', {}, g.zones ? `כבוש ${GOLD_ZONES} מתוך 5 אזורים כדי להפעיל (${caps}/${GOLD_ZONES})` : `שחק ${GOLD_ROUNDS} סבבים בעונה הזאת כדי להפעיל (${caps}/${GOLD_ROUNDS})`)),
+        h('div', { class: 'tk-bar' }, h('i', { style: { width: Math.min(100, caps / g.need * 100) + '%' } })));
     }
     function inventory() {
       const chips = Object.entries(POWER).map(([k, p]) => h('button', { class: 'pwchip' + (State.power(k) ? '' : ' zero'), onclick: () => { sfx.tap(); toast(`${p.icon} ${p.name}: ${p.desc}`, 5000); } },
@@ -140,7 +172,7 @@ export function renderTrack(v, sc) {
       return out;
     }
     function cell(track, t) {
-      const rs = cellRewards(track, t), claimed = isClaimed(track, t), can = canClaim(track, t);
+      const rs = cells(track, t), claimed = isClaimed(track, t), can = canClaim(track, t);
       const lockedGold = track === 'gold' && !P.gold;
       const ms = MILESTONES.includes(t);
       return h('div', { class: `cell ${track}` + (claimed ? ' claimed' : '') + (can ? ' can' : '') + (t > tier ? ' future' : '') + (lockedGold ? ' glock' : '') },
@@ -181,8 +213,9 @@ export function renderTrack(v, sc) {
       row('⭐', 'דרגות', 'כל סבב נותן XP. כל 60 XP = דרגה חדשה, ובכל דרגה מחכה לך פרס.'),
       row('✅', 'לאסוף פרסים', 'כשפרס זוהר בירוק – לוחצים „קבל". רק פרס שנאסף אפשר ללבוש.'),
       row('📄', 'דפים', 'הדרגות מחולקות לדפים של 5. הנקודה האדומה מראה באיזה דף מחכה לך פרס.'),
-      row('🎫', 'כרטיס זהב', `כובשים ${GOLD_ZONES} מתוך 5 אזורים ומפעילים אותו – ואז נפתחים גם פרסי הזהב (הטור השמאלי).`),
+      row('🎫', 'כרטיס זהב', `בעונה 1: כובשים ${GOLD_ZONES} מתוך 5 אזורים. בעונות הבאות: משחקים ${GOLD_ROUNDS} סבבים. מפעילים אותו – ואז נפתחים פרסי הזהב (הטור השמאלי).`),
       row('🎁', 'קופסת מסתורין', 'נפתחת ומגלה פריט שעוד אין לך.'),
+      row('🏁', 'סוף עונה', 'כשמגיעים לדרגה 20 מסיימים את העונה: מחכה הפתעה ענקית, ומתחילה עונה חדשה עם פרסים חדשים.'),
       ...Object.values(POWER).map(p => row(p.icon, `כוח: ${p.name}`, p.desc)),
       row('😀', 'אימוג׳י, חולצה, כדור...', 'פריטים לעיצוב. לוחצים על אריח כדי לראות מה זה ואיך הוא נראה.')),
       h('button', { class: 'btn primary', onclick: () => m.close() }, 'הבנתי')]);
@@ -201,6 +234,24 @@ export function renderTrack(v, sc) {
     const got = [];
     for (const [tr, t] of claimable()) { const rs = claim(tr, t); if (rs) got.push(rs); }
     if (got.length) showGain('כל הפרסים שלך', got);
+  }
+  // הפתעת סוף עונה: קופסה רועדת, זיקוקים ושופר, ואז חושפים את הפרסים ועוברים לעונה הבאה
+  function onFinale() {
+    const res = completeSeason(); if (!res) return;
+    passPage = null; renderTop(); dot();
+    const body = h('div', { class: 'boxreveal' }, h('div', { class: 'tag' }, `סיימת את עונה ${res.season}!`), h('div', { class: 'mbox' }, '🎁'), h('p', { class: 'sub' }, 'מכינים הפתעה...'));
+    const m = modal(body, { cls: 'celebrate', onClose: () => go('pass') });
+    sfx.shofar(); playShow('fireworks', {}, { force: true });
+    setTimeout(() => {
+      const prizes = [...res.finale.items.map(id => ({ item: id })), { box: res.finale.boxes }, ...Object.entries(res.finale.power).map(([k, n]) => ({ power: k, n }))];
+      const tiles = prizes.map(r => h('div', { class: 'gain ' + rarClass(r) }, h('span', { html: rewardArt(r, 56) }), h('small', {}, rewardName(r))));
+      body.replaceChildren(...[h('div', { class: 'tag' }, 'הפתעת סוף עונה!'), h('h3', {}, `${res.theme.icon} עונה ${res.next} מתחילה!`), h('div', { class: 'gains' }, tiles),
+        res.auto.length > 0 && h('p', { class: 'sub' }, `ועוד ${res.auto.length} פרסים שחיכו לך נאספו אוטומטית.`),
+        res.lostGold && h('p', { class: 'sub' }, 'פרסי הזהב של העונה לא נאספו כי הכרטיס לא הופעל.'),
+        h('p', { class: 'sub' }, `הנושא החדש: ${res.theme.name}`),
+        h('button', { class: 'btn primary', onclick: () => m.close() }, `יאללה לעונה ${res.next}!`)].filter(Boolean));
+      burst(m.box, 40); sfx.capture(); playShow('crowd', { colors: ['#ff3d8b', '#ffe14a', '#2effd2'] }, { force: true });
+    }, 1700);
   }
   function onActivate() {
     if (!activateGold()) return;

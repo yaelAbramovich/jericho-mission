@@ -2,15 +2,20 @@
 import * as State from './state.js';
 import { ITEMS, itemById, DEFAULT_ID } from './rewards.js';
 import { hebNum } from './content.js';
+import { claimKey } from './pass-data.js';
 
 export function isOpen(item, S = State.get()) {
   if (item.how && item.how.ch) return State.captured(item.how.ch);
   if (item.how && item.how.ach) return !!S.ach[item.how.ach];
+  if (item.how && item.how.season) {                                              // עונה 2 ואילך
+    const w = item.how;
+    return w.finale ? !!S.pass.owned[item.id] : !!S.pass.claimed[claimKey(w.season, w.track, w.tier)];
+  }
   if (item.how && item.how.gold) return !!S.pass.claimed['g' + item.how.gold];   // פס זהב: נפתח באיסוף
   if (item.how && item.how.box) return !!S.pass.owned[item.id];                  // קופסת מסתורין
   if (item.tier === 'exam') return !!S.examDone;
   if (item.tier === 'custom' || item.tier === 0) return true;
-  return item.tier <= State.tierOf() && !!S.pass.claimed['f' + item.tier];       // פס חינם: צריך לאסוף
+  return !!S.pass.claimed['f' + item.tier];       // פס חינם (עונה 1): נפתח באיסוף. (איסוף כבר מחייב שהגיעו לדרגה)
 }
 export const openIds = () => new Set(ITEMS.filter(i => isOpen(i)).map(i => i.id));
 
@@ -25,6 +30,7 @@ export function equipped(type) {
 export function howText(item, achName = id => id) {
   if (item.how && item.how.ch) return `כבוש את אזור ${hebNum(item.how.ch)}׳`;
   if (item.how && item.how.ach) return `הישג: ${achName(item.how.ach)}`;
+  if (item.how && item.how.season) return item.how.finale ? `הפתעת סוף עונה ${item.how.season}` : `עונה ${item.how.season} · ${item.how.track === 'gold' ? 'זהב · ' : ''}דרגה ${item.how.tier}`;
   if (item.how && item.how.gold) return `פס זהב · דרגה ${item.how.gold}`;
   if (item.how && item.how.box) return 'קופסת מסתורין 🎁';
   if (item.tier === 'exam') return 'נפתח במבחן הסיכום';

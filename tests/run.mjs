@@ -45,6 +45,7 @@ async function withPage(fn, { storage, permissions, init, viewport = { width: 39
   page.on('console', m => { if (m.type() === 'error') errors.push('console.error: ' + m.text()); });
   page.on('response', r => { if (r.status() >= 400) errors.push(`HTTP ${r.status()}: ${r.url().replace(BASE, '')}`); });
   try {
+    await page.addInitScript(() => { window.__strictAppend = true; });   // append(false/null) = שגיאה בבדיקות (בייצור – מתעלמים)
     if (init) await page.addInitScript(init);
     if (storage) await page.addInitScript(s => { if (!localStorage.getItem('jericho.v1')) localStorage.setItem('jericho.v1', s); }, JSON.stringify(storage));
     await page.goto(BASE + '/'); await page.waitForSelector('.map');
@@ -461,6 +462,28 @@ await test('הארון: לשונית לכל סוג פריט, מציגה רק פ�
   }
   await page.locator('.typebtn').nth(0).click(); await page.locator('.lgrid .item:not(.locked)').first().click();
 }));
+await test('כל משחק מציג בראשו באיזה פרק ובאיזה סוג משחקים (וגם בכרטיס הסיום)', async () => {
+  const cases = [['hunter', { chapter: 2, mode: 'trivia', count: 1 }, ['פרק ב׳', 'חומת יריחו', 'טריוויה']], ['hunter', { chapter: 4, mode: 'find', count: 1 }, ['פרק ד׳', 'מצא בתנ״ך']], ['hunter', { chapter: 5, mode: 'match', count: 1 }, ['פרק ה׳', 'התאמת ציטוט']],
+    ['hunter', { chapter: 0, mode: 'trivia', count: 1 }, ['כל הפרקים', 'טריוויה']], ['swipe', { chapter: 3, duration: 3 }, ['פרק ג׳']], ['who', { chapter: 1, count: 1 }, ['פרק א׳']], ['order', { chapter: 2, count: 1 }, ['פרק ב׳']],
+    ['boss', { chapter: 2 }, ['פרק ב׳']], ['exam', { swipeSeconds: 2 }, ['כל הפרקים']], ['duel', { topic: 'j34' }, ['פרקים ג׳–ד׳']], ['duel', { topic: 'j5' }, ['פרק ה׳']]];
+  for (const [key, opts, want] of cases) await withPage(async page => {
+    await page.evaluate(([k, o]) => import('/js/app.js').then(m => m.startGame(k, o)), [key, opts]); await page.waitForSelector('.game');
+    const head = await page.locator('.gctx').first().innerText(); for (const w of want) ok(head.includes(w), `[${key}] בראש המשחק חסר "${w}" (מוצג: "${head.replace(/\s+/g, ' ')}")`);
+    if ((key === 'hunter' && opts.mode === 'trivia' && opts.chapter === 2) || (key === 'who' && opts.chapter === 1)) { await playToEnd(page, 60000); const end = await page.locator('.end-ctx').innerText(); for (const w of want) ok(end.includes(w), `[${key}] בכרטיס הסיום חסר "${w}"`); }
+  });
+});
+await test('כרטיסי המשחקים לא זזים: אותו מיקום מהרגע הראשון, בכל פרק, בכל כניסה, ובאותו סדר', () => withPage(async page => {
+  const rects = () => page.evaluate(() => [...document.querySelectorAll('.tiles .tile')].map(t => { const r = t.getBoundingClientRect(); return `${t.querySelector('.tn').innerText}@${Math.round(r.left)},${Math.round(r.top)}`; }).join(' | '));
+  const visit = async (name, params) => { await page.evaluate(([n, p]) => import('/js/app.js').then(m => m.go(n, p)), [name, params]); return rects(); };   // מיד אחרי הציור
+  const tops = new Set(), settled = {};
+  for (const [name, params] of [['zone', { ch: 1 }], ['zone', { ch: 2 }], ['zone', { ch: 3 }], ['zone', { ch: 4 }], ['zone', { ch: 5 }], ['games', {}]]) {
+    const first = await visit(name, params); await page.waitForTimeout(150); const mid = await rects(); await page.waitForTimeout(500); const late = await rects();
+    eq(first, mid, `${name} ${JSON.stringify(params)}: הכרטיסים זזו בין הרגע הראשון ל-150ms`); eq(mid, late, `${name} ${JSON.stringify(params)}: הכרטיסים זזו אחרי 150ms`);
+    const again = await visit(name, params); eq(again, first, `${name} ${JSON.stringify(params)}: מיקום שונה בכניסה חוזרת`);
+    if (name === 'zone') tops.add(first.split(' | ')[0].split('@')[1].split(',')[1]);
+  }
+  eq(tops.size, 1, 'הכרטיס הראשון בגובה שונה בין הפרקים: ' + [...tops].join(','));
+}));
 await test('כוח 50/50: מסתיר שתי תשובות שגויות ולא את הנכונה, ונצרך', () => withPage(async page => {
   await page.evaluate(() => import('/js/app.js').then(m => m.startGame('who', { chapter: 2, count: 1 })));
   await page.waitForSelector('.pwbtn'); await page.click('.pwbtn');
@@ -550,6 +573,81 @@ await test('פנדלים טריוויה: שאלות מהפרק שנבחר בלב
   });
   ok(!r.length, r.slice(0, 6).join('\n'));
 }));
+
+// ===== 9. עונות =====
+console.log('עונות');
+await test('עונות 2-8 נוצרות תקינות: פריטים קיימים, בלי כפילויות, פרס בכל דרגה, פתיחה לפי איסוף, עברית, ציור, אפקטים קיימים', () => withPage(async page => {
+  const problems = await page.evaluate(async () => {
+    const S = await import('/js/seasons.js'), R = await import('/js/rewards.js'), D = await import('/js/pass-data.js'), E = await import('/js/effects.js'), A = await import('/js/audio.js');
+    const out = []; S.ensureSeason(8);
+    const ids = R.ITEMS.map(i => i.id); const dup = ids.filter((x, i) => ids.indexOf(x) !== i); if (dup.length) out.push('מזהים כפולים: ' + dup.slice(0, 3));
+    for (let n = 2; n <= 8; n++) {
+      const s = S.buildSeason(n), s2 = S.buildSeason(n);
+      if (JSON.stringify(s.free) !== JSON.stringify(s2.free)) out.push(`עונה ${n}: יצירה לא דטרמיניסטית`);
+      if (s.items.length < 31) out.push(`עונה ${n}: רק ${s.items.length} פריטים`);
+      for (const tr of ['free', 'gold']) for (let t = 1; t <= 20; t++) {
+        const cell = D.cellRewards(tr, t, n); if (!cell.length) out.push(`עונה ${n} ${tr} דרגה ${t}: אין פרס`);
+        for (const r of cell) if (r.item) { const it = R.itemById(r.item); if (!it) out.push('פריט חסר ' + r.item); else if (it.how.track !== tr || it.how.tier !== t || it.how.season !== n) out.push(`${r.item}: how לא תואם לתא`); }
+        if ([5, 10, 15, 20].includes(t) && !cell.some(r => r.item)) out.push(`עונה ${n} ${tr} אבן דרך ${t} בלי פריט`);
+      }
+      for (const id of s.finale.items) { const it = R.itemById(id); if (!it || it.rarity !== 'legendary') out.push(`עונה ${n}: פריט הפתעה ${id} לא אגדי`); }
+      for (const it of s.items) {
+        if (!/[א-ת]/.test(it.name)) out.push(`${it.id}: שם לא בעברית "${it.name}"`);
+        if (!R.TYPE_LABEL[it.type]) out.push(`${it.id}: סוג לא מוכר`); if (!D.RARITY[it.rarity]) out.push(`${it.id}: נדירות לא מוכרת`);
+        if (!R.art(it, 40) || R.art(it, 40).length < 10) out.push(`${it.id}: ציור ריק`);
+        if (it.type === 'fx' && !E.SHOWS[it.p.show]) out.push(`${it.id}: הצגה לא קיימת ${it.p.show}`);
+        if (it.type === 'emote' && (!it.p.ch || (it.p.snd && !A.sfx[it.p.snd]))) out.push(`${it.id}: אימוג׳י/צליל לא תקין`);
+      }
+    }
+    if (D.BOX_POOL().length < 23 + 6 * 7) out.push('מאגר הקופסאות לא גדל עם העונות');
+    return out;
+  });
+  ok(!problems.length, problems.slice(0, 8).join('\n'));
+}));
+await test('סוף עונה: כרטיס "סיימת", הפתעה, מעבר לעונה 2 (עודף XP עובר), ומה שנאסף בעונה 1 נשאר פתוח', () => withPage(async page => {
+  await page.evaluate(() => import('/js/app.js').then(m => m.go('pass'))); await page.waitForSelector('.passv');
+  ok(await page.locator('.finale').count() === 1, 'כרטיס סיום העונה לא מופיע בדרגה 20');
+  ok(await page.locator('#nav button[data-go="pass"].dot').count() === 1, 'אין נקודה אדומה כשהעונה הסתיימה');
+  await page.click('.finale .btn.primary'); await page.waitForSelector('.mbox');
+  await page.waitForSelector('.gains', { timeout: 6000 });
+  const text = await page.locator('.modal').innerText(); ok(text.includes('עונה 2') && text.includes('מסע במדבר'), 'חלון ההפתעה לא מציין את העונה החדשה: ' + text.slice(0, 80));
+  await page.click('.modal .btn.primary'); await page.waitForSelector('.season');
+  const r = await page.evaluate(async () => {
+    const S = await import('/js/state.js'), L = await import('/js/locker.js'), R = await import('/js/rewards.js'), P = await import('/js/pass.js');
+    const s = S.get(); return { season: s.season, base: s.pass.base, tier: S.tierOf(), gold: s.pass.gold, boxes: s.pass.boxes, fin: ['fin1a', 'fin1t', 'fin1e'].map(i => L.isOpen(R.itemById(i))), old: ['j5', 'ga20', 'ba2'].map(i => L.isOpen(R.itemById(i))), power: s.pass.power, done: P.seasonDone(), xp: s.xp };
+  });
+  eq(r.season, 2, 'עונה'); eq(r.base, 1200, 'XP בתחילת העונה'); eq(r.tier, 1, 'דרגה בעונה החדשה (100 XP עודף = דרגה 1)'); eq(r.gold, false, 'כרטיס זהב מתאפס');
+  ok(r.fin.every(Boolean), 'פריטי ההפתעה לא נפתחו'); ok(r.old.every(Boolean), 'פריטים מעונה 1 ננעלו בטעות: ' + r.old); ok(r.boxes >= 2 && r.power.fifty >= 3, 'קופסאות/כוחות מההפתעה'); ok(!r.done, 'העונה החדשה כבר "הסתיימה"');
+  ok((await page.locator('.season').innerText()).includes('מסע במדבר'), 'כותרת העונה החדשה');
+  eq(await page.locator('.cell.free.can').count(), 1, 'דרגה 1 בעונה 2 אמורה להיות מוכנה לאיסוף');
+  await page.locator('.cell.free.can .claim').click(); await page.waitForTimeout(300);
+  ok(await page.evaluate(() => import('/js/locker.js').then(async L => L.isOpen((await import('/js/rewards.js')).itemById('s2_emote0')))), 'אימוג׳י מעונה 2 לא נפתח אחרי איסוף');
+}, { storage: seed({ xp: 1300, zone: ALLZ, pass: { claimed: Object.fromEntries([...Array(20)].flatMap((_, i) => [['f' + (i + 1), true], ['g' + (i + 1), true]])), gold: true, power: { fifty: 0, time: 0, retry: 0 }, boxes: 0, owned: {} } }) }));
+await test('שמירה מעונה 3: פריטים מעונה 2 (שנוצרים מתבנית) נטענים ונלבשים, וכרטיס הזהב דורש סבבים', () => withPage(async page => {
+  const r = await page.evaluate(async () => {
+    const L = await import('/js/locker.js'), P = await import('/js/pass.js'), S = await import('/js/state.js');
+    return { av: L.equipped('avatar').id, em: L.equipped('emote').id, season: P.season(), prog: P.goldProgress(), ready: P.goldReady(), tier: S.tierOf() };
+  });
+  eq(r.av, 's2_avatar0', 'דמות מעונה 2 לא נטענה'); eq(r.em, 's2_emote0', 'אימוג׳י מעונה 2'); eq(r.season, 3, 'עונה'); eq(r.prog.zones, false, 'סוג התקדמות'); eq(r.prog.need, 10, 'סבבים לכרטיס'); eq(r.ready, false, 'כרטיס זהב מוכן בלי סבבים'); eq(r.tier, 2, 'דרגה (XP 1380, base 1260)');
+  await page.evaluate(() => import('/js/app.js').then(m => m.go('pass'))); await page.waitForSelector('.ticket');
+  ok((await page.locator('.ticket').innerText()).includes('0/10'), 'הכרטיס אמור להראות 0/10 סבבים');
+  await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('jericho.v1')); s.pass.seasonRounds = 10; localStorage.setItem('jericho.v1', JSON.stringify(s)); });
+  await page.reload(); await page.waitForSelector('.map'); await page.evaluate(() => import('/js/app.js').then(m => m.go('pass'))); await page.waitForSelector('.ticket.ready');
+}, { storage: seed({ season: 3, xp: 1380, zone: ALLZ, eq: { avatar: 's2_avatar0', banner: 'b0', jersey: 'j0', emote: 's2_emote0' }, pass: { claimed: { s2f5: true, s2f1: true }, gold: false, power: { fifty: 0, time: 0, retry: 0 }, boxes: 0, owned: {}, base: 1260, seasonRounds: 0 } }) }));
+await test('מעבר דרך כמה עונות ברצף: בלי שגיאות, בלי כפילויות, והפריטים נשמרים', () => withPage(async page => {
+  const r = await page.evaluate(async () => {
+    const S = await import('/js/state.js'), P = await import('/js/pass.js'), R = await import('/js/rewards.js'), L = await import('/js/locker.js'), D = await import('/js/pass-data.js'); const s = S.get(), out = { seasons: [], errs: [] };
+    for (let i = 0; i < 6; i++) {
+      s.xp = s.pass.base + 20 * 60 + 30; if (!P.seasonDone()) out.errs.push('העונה לא הסתיימה אחרי 20 דרגות');
+      const res = P.completeSeason(); if (!res) { out.errs.push('completeSeason החזיר null'); break; }
+      out.seasons.push(res.next); if (S.get().season !== res.next || S.tierOf() !== 0) out.errs.push(`אחרי מעבר לעונה ${res.next}: דרגה ${S.tierOf()}`);
+      for (const id of res.finale.items) if (!L.isOpen(R.itemById(id))) out.errs.push('פריט הפתעה נעול: ' + id);
+    }
+    const ids = R.ITEMS.map(i => i.id); if (new Set(ids).size !== ids.length) out.errs.push('מזהים כפולים אחרי מעברים');
+    out.finalSeason = s.season; out.nullCompletion = P.completeSeason(); return out;
+  });
+  eq(r.errs.length, 0, r.errs.join('\n')); eq(r.seasons.join(','), '2,3,4,5,6,7', 'רצף העונות'); eq(r.nullCompletion, null, 'completeSeason בעונה שלא הסתיימה צריך להחזיר null');
+}, { storage: seed({ xp: 0 }) }));
 
 // ===== סיכום =====
 

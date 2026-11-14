@@ -65,7 +65,7 @@ export async function run(el, { topic = 'j1' }, sc) {
       const btns = opts.map((t, n) => h('button', { class: 'opt', 'data-t': t }, h('span', { class: 'let' }, LET[n]), h('span', {}, t)));
       stage.append(
         h('div', { class: 'turn ' + who }, isKid ? `🎮 תור של ${kid}` : `🧑‍⚖️ תור של ${par}`),
-        !isKid && h('p', { class: 'tip big' }, `${kid}: קרא את השאלה ואת התשובות ל${par}, ואז לחץ על מה ש${par} ענה/ענתה`),
+        ...(isKid ? [] : [h('p', { class: 'tip big' }, `${kid}: קרא את השאלה ואת התשובות ל${par}, ואז לחץ על מה ש${par} ענה/ענתה`)]),
         h('div', { class: 'quote-card' }, h('small', {}, idea.title), h('p', { class: 'meaning' }, q.q)),
         ...(isKid ? powerBar(fiftyButton(btns, b => b.dataset.t === q.a)) : []),
         h('div', { class: 'opts' }, btns));

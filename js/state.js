@@ -15,7 +15,8 @@ const fresh = () => ({
   lastPenalty: 'trivia',  // סוג הפנדלים האחרון שנבחר
   seen: {},               // שאלות שנראו לאחרונה לכל משחק (כדי שסבב חדש יעדיף שאלות שלא ראה)
   daily: null,            // מונים יומיים למשימות
-  pass: { claimed: {}, gold: false, power: { fifty: 0, time: 0, retry: 0 }, boxes: 0, owned: {} },   // פס הקרב: מה נאסף, כרטיס זהב, כוחות, קופסאות
+  season: 1,              // עונת פס הקרב הנוכחית
+  pass: { claimed: {}, gold: false, power: { fifty: 0, time: 0, retry: 0 }, boxes: 0, owned: {}, base: 0, seasonRounds: 0 },   // base = ה-XP שבו התחילה העונה   // פס הקרב: מה נאסף, כרטיס זהב, כוחות, קופסאות
   trophy: { w: 0, l: 0, t: 0, hist: [] },   // גביע המשפחה
   muted: false, pinHash: null, examDone: false, overviewDone: false, names: { kid: '', parent: '' },
 });
@@ -45,7 +46,8 @@ export function save() {
 export const get = () => S;
 export const isMemoryOnly = () => memoryOnly;
 
-export const tierOf = (xp = S.xp) => Math.floor(xp / TIER_XP);
+// הדרגה בעונה הנוכחית: XP מתחילת העונה (base) חלקי 60. בכל עונה חדשה הדרגה מתחילה מחדש (עודף XP עובר הלאה).
+export const tierOf = (xp = S.xp) => Math.max(0, Math.floor((xp - ((S.pass && S.pass.base) || 0)) / TIER_XP));
 
 export function dayStr(d = new Date()) {
   const p = n => String(n).padStart(2, '0');

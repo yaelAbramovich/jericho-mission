@@ -1,6 +1,7 @@
 // פס הקרב: טבלת הפרסים (נתונים בלבד, בלי DOM). כל דרגה = שורה עם פרס חינם (מימין) ופרס זהב (משמאל).
 // פרס: { item: id } | { power: 'fifty' | 'time' | 'retry', n } | { box: n }
 import { ITEMS, itemById, MAX_TIER } from './rewards.js';
+import { buildSeason } from './seasons.js';
 
 export const POWER = {
   fifty: { icon: '½', name: 'מחק 2 תשובות', short: 'מחיקת תשובות', desc: 'בשאלה עם 4 תשובות – מוחק 2 תשובות שגויות. עוזר ב„מי אמר?", בפנדלים (התאמה) ובדו-קרב.' },
@@ -37,8 +38,14 @@ export const GOLD = {
 export const MILESTONES = [5, 10, 15, 20];
 // כרטיס הזהב נפתח כשכובשים לפחות 60% מהאזורים: 3 מתוך 5 (לשנות כאן אם רוצים קל/קשה יותר)
 export const GOLD_ZONES = 3;
+// בעונה 2 ואילך כרטיס הזהב נפתח אחרי מספר סבבים בעונה (האזורים כבר כבושים מזמן)
+export const GOLD_ROUNDS = 10;
+// הפתעת סוף עונה 1 (בעונות הבאות ההפתעה נוצרת ב-seasons.js)
+export const S1_FINALE = { items: ['fin1a', 'fin1t', 'fin1e'], boxes: 2, power: { fifty: 3, time: 3, retry: 3 } };
+// מפתח האיסוף של תא בטבלה. עונה 1 – מפתחים ישנים (f5/g5), כדי שהתקדמות שמורה תישאר תקפה
+export const claimKey = (season, track, t) => (season > 1 ? 's' + season : '') + (track === 'gold' ? 'g' : 'f') + t;
 
-export const cellRewards = (track, tier) => track === 'gold'
+export const cellRewards = (track, tier, season = 1) => season > 1 ? (buildSeason(season)[track][tier] || []) : track === 'gold'
   ? (GOLD[tier] || [])
   : [...ITEMS.filter(i => i.tier === tier).map(i => ({ item: i.id })), ...(FREE_EXTRA[tier] || [])];
 

@@ -119,6 +119,10 @@ export const ITEMS = [
   { id: 'tta4', type: 'title', name: 'בלתי ניתן לעצירה', how: { ach: 'run10' }, rarity: 'legendary', p: { fx: 'fire' } },
   { id: 'tta5', type: 'title', name: 'כובש יריחו', how: { ach: 'allzones' }, rarity: 'legendary', p: { fx: 'rainbow' } },
   { id: 'x23', type: 'title', name: 'סופר-סטאר', how: { box: true }, rarity: 'rare', p: { fx: 'rainbow' } },
+  // הפתעת סוף עונה 1 (how.finale): נפתחים רק כשמסיימים את עונה 1
+  { id: 'fin1a', type: 'avatar', name: 'מלך הקרב', how: { season: 1, finale: true }, rarity: 'legendary', p: { c1: '#2a1052', c2: '#ffe27a', shape: 'horn', acc: 'crown' } },
+  { id: 'fin1t', type: 'title', name: 'אגדת יריחו', how: { season: 1, finale: true }, rarity: 'legendary', p: { fx: 'rainbow' } },
+  { id: 'fin1e', type: 'emote', name: 'מדליית זהב', how: { season: 1, finale: true }, rarity: 'legendary', p: { ch: '🥇', anim: 'bounce', snd: 'fanfare' } },
   // החולצה שלי – מעוצבת על ידי השחקן (p מתעדכן מ-setCustomJersey)
   { id: 'jmy', type: 'jersey', name: 'החולצה שלי', tier: 'custom', p: { c1: '#1b4bd6', c2: '#ffe14a', pat: 'stripes', n: '7', name: '' } },
   // נפתח במבחן הסיכום
