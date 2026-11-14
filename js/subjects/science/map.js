@@ -1,6 +1,6 @@
 // מפת המשימה של "מדעים": תחנת מחקר בחלל. המנוע מצייר מעל הרקע את האזורים ואת המסלול ביניהם.
 export const MAP = {
-  positions: { 1: [90, 110], 2: [270, 250], 3: [100, 400] },
+  positions: { 1: [92, 92], 2: [268, 172], 3: [92, 266], 4: [268, 358], 5: [112, 448] },
   background: `
     <defs>
       <radialGradient id="planet" cx=".35" cy=".35" r=".8"><stop offset="0" stop-color="#3a7bd5"/><stop offset="1" stop-color="#0b1f4a"/></radialGradient>

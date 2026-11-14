@@ -7,12 +7,14 @@ import * as hunter from './hunter.js';
 import * as who from './who.js';
 import * as swipe from './swipe.js';
 import * as order from './order.js';
+import * as diagram from './diagram.js';
 
 const ALL_STAGES = [
   ['hunter', '⚽ פנדלים (טריוויה)', hunter, { mode: 'trivia', count: 3 }],
   ['who', '🎙️ מי אמר?', who, { count: 3 }],
   ['swipe', '🌀 הסערה (30 שניות)', swipe, { duration: 30 }],
   ['order', '🧩 בונים את הקו', order, PACK.examSequences ? { ids: PACK.examSequences } : { count: 1 }],
+  ['diagram', '🧱 בונים תרשים', diagram, { count: 1 }],
 ];
 const STAGES = ALL_STAGES.filter(([key, , , opts]) => hasGame(key, opts.mode)).map(([, name, mod, opts]) => [name, mod, opts]);
 export async function run(el, o, sc) {   // o.swipeSeconds – לבדיקות אוטומטיות (קיצור שלב הסערה)

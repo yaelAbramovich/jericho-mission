@@ -2,6 +2,7 @@
 // לא מנסה לנצח – רק לעבור את כל המסכים של המשחק כדי לגלות קריסות.
 const CLICKS = [
   '.modal .btn.ghost',                              // חלון "ניסיון נוסף": מוותרים
+  '.dg-chip:not(.assigned) .dg-btn[data-k="in"]',  // בונים תרשים: מסווגים כל רכיב (ואז לוחצים "בדוק")
   '.duel-setup .btn.primary',                       // דו-קרב: התחלה
   '.stage-splash .btn.primary',                     // מבחן הסיכום: מעבר בין שלבים
   '.idea-card ~ .btn.primary',                      // דו-קרב: כרטיס נושא
@@ -10,6 +11,7 @@ const CLICKS = [
   '.deck .acard:not(.on)',                          // בוס: בחירת טיעון
   '.sw-btns .sw-true',                              // הסערה
   '.olist ~ .btn.primary:has-text("בדוק")',         // בונים את הקו
+  '.dg-list ~ .btn.primary:has-text("בדוק")',       // בונים תרשים
   '.opt:not([disabled])',                           // מי אמר / התאמה / דו-קרב
   '.btn.primary:has-text("הבא")', '.btn.primary:has-text("לתוצאות")', '.btn.primary:has-text("סיום")',
 ];

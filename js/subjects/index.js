@@ -1,10 +1,10 @@
 // מנהל המקצועות. כל מקצוע/מבחן הוא "חבילה" (pack) בתיקייה משלו: js/subjects/<id>/pack.js.
 // החבילה הפעילה נקבעת לפי מה ששמור בהתקדמות (state.subject, ברירת מחדל joshua). החלפת מקצוע = שמירה + טעינה מחדש של הדף,
 // ולכן שאר הקוד יכול לקרוא את PACK כקבוע (top-level await).
-// להוספת מקצוע חדש: תיקייה חדשה + pack.js, ורישום ב-REGISTRY (וב-sw.js, ראו README).
+// להוספת מקצוע חדש: תיקייה חדשה + pack.js, ורישום ב-REGISTRY (וב-sw.js, ראו README). hidden: true = לא מופיע בבורר.
 export const REGISTRY = [
   { id: 'joshua', name: 'יהושע א׳–ה׳', icon: '📖' },
-  { id: 'science', name: 'מדעים (דוגמה)', icon: '🔬', hidden: true },   // hidden: לא מופיע בבורר המקצועות עד שהתוכן האמיתי מוכן (אפשר לטעון אותו בבדיקות)
+  { id: 'science', name: 'מדע וטכנולוגיה', icon: '🔬' },   // hidden: true היה מסתיר מקצוע מהבורר (למשל כשהתוכן עוד לא מוכן)
 ];
 const KEY = 'jericho.v1';
 function readSubject() {

@@ -1,6 +1,6 @@
 // Service Worker: שומר את כל הקבצים כדי שהאפליקציה תעבוד בלי אינטרנט.
 // כשמשנים קבצים – מעלים את מספר הגרסה כאן.
-const VERSION = 'jericho-v18';
+const VERSION = 'jericho-v20';
 const FILES = [
   './',
   'index.html',
@@ -55,7 +55,7 @@ const FILES = [
   'js/games/who.js',
   'js/games/order.js',
   'js/games/boss.js',
-  'js/games/exam.js',
+  'js/games/exam.js', 'js/games/diagram.js',
   'js/hebrew.js',
   'js/subjects/index.js',
   'js/subjects/joshua/pack.js',

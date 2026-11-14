@@ -669,6 +669,7 @@ await test('כל חבילת מקצוע עומדת בחוזה: יחידות רצ�
       for (const t of P.topics) if (!t.blocks || !t.blocks.length) out.push(`${id}: נושא ${t.id} ריק`);
       for (const n of nums) { for (const f of ['unit', 'unitShort', 'nodeLabel', 'zoneHead']) if (typeof P.labels[f](n) !== 'string' || !P.labels[f](n)) out.push(`${id}: label ${f}(${n})`); }
       for (const k of ['allUnits', 'pickUnit', 'unitsWord', 'studyHint']) if (!P.labels[k]) out.push(`${id}: חסר label ${k}`);
+      if (P.games.diagram) { if (!(P.diagrams || []).length) out.push(`${id}: משחק תרשימים בלי diagrams`); for (const n of nums) if (!P.diagrams.some(d => d.units.includes(n))) out.push(`${id}: ליחידה ${n} אין תרשימים`); for (const d of P.diagrams) { if (!d.name || !d.purpose || !d.inputs.length || !d.process.length || !d.outputs.length) out.push(`${id}: תרשים ${d.id} חסר שדות`); const all = [...d.inputs, ...d.process, ...d.outputs]; if (new Set(all).size !== all.length) out.push(`${id}: תרשים ${d.id} עם רכיב כפול`); } }
       if (P.games.who && (!P.quotes.length || !Object.keys(P.who).length)) out.push(`${id}: משחק "מי אמר" פעיל בלי ציטוטים`);
       if (P.games.hunter && P.games.hunter.modes.some(m => m !== 'trivia') && !P.quotes.length) out.push(`${id}: פנדלים מבוססי פסוקים בלי ציטוטים`);
       if (P.games.boss && (!P.boss || !P.games.boss.unit)) out.push(`${id}: משחק בוס בלי boss/unit`);
@@ -682,24 +683,25 @@ await test('מקצוע מדעים (חבילת דוגמה): כל המסכים נ�
   const go = (name, params = {}) => page.evaluate(([n, p]) => import('/js/app.js').then(m => m.go(n, p)), [name, params]);
   const texts = [];   // טקסט מסכי המקצוע עצמם (הפרסים משותפים לכל המקצועות, ולכן פס הקרב והפרופיל לא נבדקים כאן)
   const filled = async what => { await page.waitForFunction(() => (document.querySelector('.view') || { innerText: '' }).innerText.trim().length > 5, null, { timeout: 4000 }).catch(() => { throw new Error('מסך ריק: ' + what); }); texts.push(await page.locator('.view').innerText()); };
-  await go('map'); await filled('מפה'); eq(await page.locator('.zone').count(), 3, 'אזורים במפה'); eq(await page.title(), 'מבצע מדעים', 'כותרת הדף');
+  await go('map'); await filled('מפה'); eq(await page.locator('.zone').count(), 5, 'אזורים במפה'); eq(await page.title(), 'מבצע טכנולוגיה', 'כותרת הדף');
   ok(await page.locator('.overview-card').count() === 0, 'כרטיס "הסיפור בקצרה" לא אמור להופיע במדעים');
-  for (let ch = 1; ch <= 3; ch++) {
+  for (let ch = 1; ch <= 5; ch++) {
     await go('zone', { ch }); await filled('אזור ' + ch); const tiles = await page.locator('.tiles .tn').allInnerTexts();
-    ok(!tiles.includes('מי אמר?') && !tiles.includes('המעגל האחרון'), 'משחק שלא קיים במדעים מופיע: ' + tiles.join('|')); ok(tiles.includes('הסערה מתקרבת') && tiles.includes('בונים את הקו'), 'משחק חסר: ' + tiles.join('|'));
+    ok(!tiles.includes('מי אמר?') && !tiles.includes('המעגל האחרון'), 'משחק שלא קיים במדעים מופיע: ' + tiles.join('|')); ok(tiles.includes('הסערה מתקרבת') && tiles.includes('בונים את הקו') && tiles.includes('בונים תרשים'), 'משחק חסר: ' + tiles.join('|'));
     await go('story', { ch }); await page.waitForTimeout(150); await filled('תדריך ' + ch);
   }
-  await go('focus'); await filled('למבחן'); await go('topic', { id: 'sci-water' }); await filled('נושא'); await go('games'); await filled('משחקים');
+  await go('focus'); await filled('למבחן'); await go('topic', { id: 'tech-1' }); await filled('נושא'); await go('games'); await filled('משחקים');
   const names = await page.locator('.tiles .tn').allInnerTexts(); ok(names.join('|').includes('פנדלים') && !names.join('|').includes('מי אמר'), 'רשימת משחקים: ' + names.join('|'));
   await go('profile'); await filled('פרופיל'); await go('pass'); await page.waitForSelector('.passv');
   const hit = /יהושע|יריחו|רחב|הירדן/.exec(texts.slice(0, -1).join('\n')); ok(!hit, `מסכי המקצוע מזכירים את יהושע: "${hit && hit[0]}"`);
 }, { storage: seed(SCI) }));
 const sciCases = [];
-for (const ch of [0, 1, 2, 3]) {
+for (const ch of [0, 1, 2, 3, 4, 5]) {
   const label = ch ? `יחידה ${ch}` : 'כל היחידות';
   sciCases.push([`מדעים · פנדלים טריוויה · ${label}`, 'hunter', { chapter: ch, mode: 'trivia', count: 2 }]);
   sciCases.push([`מדעים · הסערה · ${label}`, 'swipe', { chapter: ch, duration: 3 }]);
   sciCases.push([`מדעים · בונים את הקו · ${label}`, 'order', { chapter: ch, count: 1 }]);
+  sciCases.push([`מדעים · בונים תרשים · ${label}`, 'diagram', { chapter: ch, count: 2 }]);
 }
 sciCases.push(['מדעים · מבחן הסיכום', 'exam', { swipeSeconds: 3 }], ['מדעים · דו-קרב משפחתי', 'duel', { topic: 's1' }]);
 await pool(sciCases, 4, async ([name, key, opts]) => {
@@ -720,10 +722,23 @@ await test('התקדמות לפי מקצוע: אזורים שנכבשו במקצ
   });
   eq(r.sciCaptured, 1, 'אזורים במדעים'); eq(r.joshuaCaptured, 0, 'אזורים ביהושע'); eq(r.ec1, false, 'פרס אזור א׳ של יהושע נפתח מכיבוש אזור במדעים!'); eq(r.total, 1, 'סך הכול'); eq(r.sub, 'science', 'מקצוע פעיל');
 }, { storage: seed(SCI) }));
+await test('בורר המקצועות: שני מקצועות בבורר, מעבר בין מקצועות מהמפה, כותרת/אזורים/תאריך מבחן לפי המקצוע, והתקדמות נשמרת לכל אחד', () => withPage(async page => {
+  const info = () => page.evaluate(async () => { const { PACK } = await import('/js/subjects/index.js'); return { id: PACK.id, zones: document.querySelectorAll('.zone').length, title: document.title, date: PACK.testDate, days: document.querySelector('.test-count') && document.querySelector('.test-count').innerText }; });
+  let r = await info(); eq(r.id, 'joshua', 'מקצוע התחלתי'); eq(r.zones, 5, 'אזורי יהושע'); ok(r.title.includes('יריחו'), 'כותרת יהושע: ' + r.title);
+  await page.click('.subj-chip'); await page.waitForSelector('.pkinds');
+  const opts = await page.locator('.pkinds .tn').allInnerTexts(); ok(opts.length === 2 && opts.some(o => o.includes('יהושע')) && opts.some(o => o.includes('מדע')), 'בבורר: ' + opts.join('|'));
+  await Promise.all([page.waitForNavigation({ waitUntil: 'load' }), page.locator('.pkinds .tile', { hasText: 'מדע' }).click()]); await page.waitForSelector('.map');
+  r = await info(); eq(r.id, 'science', 'אחרי מעבר'); eq(r.zones, 5, 'אזורי מדע וטכנולוגיה'); eq(r.date, '2026-11-17', 'תאריך המבחן'); ok(r.title.includes('טכנולוגיה'), 'כותרת: ' + r.title); ok(!!r.days, 'ספירה לאחור למבחן');
+  await page.evaluate(async () => { const S = await import('/js/state.js'); S.setObjective(1, 'story'); S.setObjective(1, 'hunter'); S.setObjective(1, 'other'); });   // כובשים אזור במדע
+  await page.click('.subj-chip'); await page.waitForSelector('.pkinds');
+  await Promise.all([page.waitForNavigation({ waitUntil: 'load' }), page.locator('.pkinds .tile', { hasText: 'יהושע' }).click()]); await page.waitForSelector('.map');
+  const j = await page.evaluate(async () => { const S = await import('/js/state.js'); return { id: S.subjectId(), joshua: S.capturedCount('joshua'), science: S.capturedCount('science') }; });
+  eq(j.id, 'joshua', 'חזרה ליהושע'); eq(j.joshua, 0, 'יהושע לא הושפע'); eq(j.science, 1, 'התקדמות מדע נשמרה');
+}));
 await test('מתג פיתוח: ‎?subject=science‎ בכתובת טוען את חבילת מדעים (גם מוסתרת) ושומר אותה, ערך לא מוכר מתעלמים ממנו, ויהושע נשמר', () => withPage(async page => {
   const id = () => page.evaluate(() => import('/js/subjects/index.js').then(m => m.PACK.id));
   eq(await id(), 'joshua', 'ברירת מחדל');
-  await page.goto(BASE + '/?subject=science'); await page.waitForSelector('.map'); eq(await id(), 'science', 'עם ?subject=science'); eq(await page.locator('.zone').count(), 3, 'אזורי מדעים');
+  await page.goto(BASE + '/?subject=science'); await page.waitForSelector('.map'); eq(await id(), 'science', 'עם ?subject=science'); eq(await page.locator('.zone').count(), 5, 'אזורי מדע וטכנולוגיה');
   await page.goto(BASE + '/'); await page.waitForSelector('.map'); eq(await id(), 'science', 'המקצוע נשמר אחרי טעינה רגילה');
   await page.goto(BASE + '/?subject=nonsense'); await page.waitForSelector('.map'); eq(await id(), 'science', 'ערך לא מוכר צריך להתעלם');
   await page.goto(BASE + '/?subject=joshua'); await page.waitForSelector('.map'); eq(await id(), 'joshua', 'חזרה ליהושע'); eq(await page.locator('.zone').count(), 5, 'אזורי יהושע');

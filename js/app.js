@@ -23,6 +23,7 @@ const ALL_GAMES = {
   swipe: { name: 'הסערה מתקרבת', icon: '🌀', desc: '60 שניות של אמת או שקר' },
   who: { name: 'מי אמר?', icon: '🎙️', desc: 'מי אמר את הציטוט?' },
   order: { name: 'בונים את הקו', icon: '🧩', desc: 'סדר את האירועים' },
+  diagram: { name: 'בונים תרשים', icon: '🧱', desc: 'מסווגים קלט, תהליך ופלט' },
   boss: { name: 'המעגל האחרון', icon: '👑', desc: PACK.boss ? PACK.boss.title : '', fixedChapter: PACK.games.boss && PACK.games.boss.unit },
 };
 // רק המשחקים שהמקצוע הפעיל מגדיר (בסדר קבוע)
@@ -156,6 +157,7 @@ function zoneScreen(v, { ch }) {
     hasGame('swipe') && tile('', '🌀', 'הסערה מתקרבת', 'אמת או שקר', () => startGame('swipe', { chapter: ch }), next === 'other'),
     hasGame('who') && tile('', '🎙️', 'מי אמר?', 'ציטוט ודובר', () => startGame('who', { chapter: ch })),
     hasGame('order') && tile('', '🧩', 'בונים את הקו', 'סדר אירועים', () => startGame('order', { chapter: ch })),
+    hasGame('diagram') && tile('', '🧱', 'בונים תרשים', 'קלט · תהליך · פלט', () => startGame('diagram', { chapter: ch })),
     hasGame('boss') && ch === PACK.games.boss.unit && tile('boss', '👑', 'המעגל האחרון', PACK.boss.title, () => startGame('boss', { chapter: ch })),
   );
   v.append(grid);
@@ -373,7 +375,7 @@ async function finishRound(key, opts, res) {
   State.maxStat('bestRun', res.run || 0);
   if (key === 'swipe') State.maxStat('bestCombo', res.bestCombo || 0);
   if (key === 'hunter' && res.total >= 3 && res.correct === res.total) s.stats.perfectPen++;
-  if (key === 'order' && res.allPerfect) s.stats.perfectLine++;
+  if ((key === 'order' || key === 'diagram') && res.allPerfect) s.stats.perfectLine++;
   if (key === 'who' && res.total >= 3 && res.correct === res.total) s.stats.perfectWho++;
   if (key === 'duel') { State.recordDuel(res.kg, res.pg, res.topic); if (res.kidPerfect) s.stats.perfectDuel++; }
   Quests.record(key, opts, res);
