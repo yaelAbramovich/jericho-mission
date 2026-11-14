@@ -2,6 +2,7 @@
 // פרס: { item: id } | { power: 'fifty' | 'time' | 'retry', n } | { box: n }
 import { ITEMS, itemById, MAX_TIER } from './rewards.js';
 import { buildSeason } from './seasons.js';
+import { N_UNITS } from './subjects/index.js';
 
 export const POWER = {
   fifty: { icon: '½', name: 'מחק 2 תשובות', short: 'מחיקת תשובות', desc: 'בשאלה עם 4 תשובות – מוחק 2 תשובות שגויות. עוזר ב„מי אמר?", בפנדלים (התאמה) ובדו-קרב.' },
@@ -37,7 +38,7 @@ export const GOLD = {
 };
 export const MILESTONES = [5, 10, 15, 20];
 // כרטיס הזהב נפתח כשכובשים לפחות 60% מהאזורים: 3 מתוך 5 (לשנות כאן אם רוצים קל/קשה יותר)
-export const GOLD_ZONES = 3;
+export const GOLD_ZONES = Math.max(1, Math.ceil(N_UNITS * 0.6));   // 60% מהאזורים
 // בעונה 2 ואילך כרטיס הזהב נפתח אחרי מספר סבבים בעונה (האזורים כבר כבושים מזמן)
 export const GOLD_ROUNDS = 10;
 // הפתעת סוף עונה 1 (בעונות הבאות ההפתעה נוצרת ב-seasons.js)

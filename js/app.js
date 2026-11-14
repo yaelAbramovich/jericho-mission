@@ -2,7 +2,9 @@
 import * as State from './state.js';
 import { sfx, unlock } from './audio.js';
 import { h, $, createScope, modal, toast, burst } from './ui.js';
-import { CHAPTERS, OVERVIEW, TEST_DATE, hebNum } from './content.js';
+import { PACK, UNITS, UNIT_NUMS, N_UNITS, hasGame, REGISTRY } from './subjects/index.js';
+import { hebNum } from './hebrew.js';
+const CHAPTERS = UNITS, OVERVIEW = PACK.overview, TEST_DATE = PACK.testDate, L = PACK.labels;   // (שמות ישנים: היחידות הן הפרקים/הנושאים של המקצוע הפעיל)
 import { TIER_XP, MAX_TIER, ITEMS, TYPE_LABEL, TYPE_ICON, art, itemById, setCustomJersey } from './rewards.js';
 import * as Pass from './pass.js';
 import { ensureSeason } from './seasons.js';
@@ -16,13 +18,16 @@ let scope = createScope();
 let current = { name: null, params: null };
 
 // ---------- הגדרות משחקים ----------
-export const GAMES = {
-  hunter: { name: 'דו-קרב פנדלים', icon: '⚽', desc: 'עונים נכון וכובשים גולים', modes: [['trivia', 'טריוויה'], ['find', 'מצא בתנ״ך'], ['match', 'התאמת ציטוט']] },
+const ALL_GAMES = {
+  hunter: { name: 'דו-קרב פנדלים', icon: '⚽', desc: 'עונים נכון וכובשים גולים', modes: [['trivia', 'טריוויה'], ['find', L.findName], ['match', L.matchName]].filter(([k]) => hasGame('hunter', k)) },
   swipe: { name: 'הסערה מתקרבת', icon: '🌀', desc: '60 שניות של אמת או שקר' },
   who: { name: 'מי אמר?', icon: '🎙️', desc: 'מי אמר את הציטוט?' },
   order: { name: 'בונים את הקו', icon: '🧩', desc: 'סדר את האירועים' },
-  boss: { name: 'המעגל האחרון', icon: '👑', desc: 'האם רחב עשתה חסד?', fixedChapter: 2 },
+  diagram: { name: 'בונים תרשים', icon: '🧱', desc: 'מסווגים קלט, תהליך ופלט' },
+  boss: { name: 'המעגל האחרון', icon: '👑', desc: PACK.boss ? PACK.boss.title : '', fixedChapter: PACK.games.boss && PACK.games.boss.unit },
 };
+// רק המשחקים שהמקצוע הפעיל מגדיר (בסדר קבוע)
+export const GAMES = Object.fromEntries(Object.entries(ALL_GAMES).filter(([k]) => hasGame(k)));
 
 // ---------- ניווט ----------
 export function go(name, params = {}) {
@@ -66,48 +71,46 @@ const daysLeft = () => {
 };
 
 // ---------- מפה ----------
-const ZONE_POS = { 1: [292, 92], 2: [72, 165], 3: [186, 262], 4: [92, 362], 5: [82, 458] };
+// ---------- בורר מקצועות (מוצג רק כשיש יותר ממקצוע אחד גלוי) ----------
+const VISIBLE_SUBJECTS = REGISTRY.filter(r => !r.hidden);
+function subjectChip() {
+  if (VISIBLE_SUBJECTS.length < 2) return [];
+  return [h('button', { class: 'subj-chip', onclick: openSubjects }, `${PACK.icon} ${PACK.name} ▾`)];
+}
+function openSubjects() {
+  const m = modal([h('h3', {}, 'איזה מבחן לומדים?'), h('p', { class: 'sub' }, 'הפרסים, הדרגות והעונות משותפים לכל המקצועות. האזורים נשמרים לכל מקצוע בנפרד.'),
+    h('div', { class: 'pkinds' }, VISIBLE_SUBJECTS.map(r => h('button', { class: 'tile pkind' + (r.id === PACK.id ? ' rec' : ''), onclick: () => { if (r.id === PACK.id) return m.close(); State.setSubject(r.id); location.reload(); } },
+      h('span', { class: 'ti' }, r.icon), h('span', { class: 'tn' }, r.name), r.id === PACK.id && h('em', {}, 'פעיל'))))]);
+}
 function mapScreen(v) {
+  v.append(...subjectChip());
   const dl = daysLeft();
   v.append(h('div', { class: 'test-count' },
     dl > 0 ? [h('b', {}, String(dl)), ' ימים למבחן'] : dl === 0 ? 'המבחן היום! בהצלחה 💪' : 'המבחן עבר – כל הכבוד!'));
-  const ovDone = State.get().overviewDone;
-  v.append(h('button', { class: 'overview-card' + (ovDone ? '' : ' new'), onclick: () => { sfx.pick(); go('story', { ch: 0 }); } },
-    h('span', { class: 'ti' }, '📖'),
-    h('span', { class: 'ov-t' }, h('b', {}, 'הסיפור בקצרה'), h('small', {}, ovDone ? 'לקרוא שוב את כל הסיפור' : 'לא מכירים את הסיפור? מתחילים כאן')),
-    !ovDone && h('em', {}, 'התחל כאן')));
+  const ovDone = State.sub().overviewDone, oc = L.overviewCard;
+  if (OVERVIEW && oc) v.append(h('button', { class: 'overview-card' + (ovDone ? '' : ' new'), onclick: () => { sfx.pick(); go('story', { ch: 0 }); } },
+    h('span', { class: 'ti' }, oc.icon),
+    h('span', { class: 'ov-t' }, h('b', {}, oc.title), h('small', {}, ovDone ? oc.again : oc.first)),
+    !ovDone && h('em', {}, oc.cta)));
   v.append(questsCard());
   const cap = State.capturedCount();
-  const zones = [1, 2, 3, 4, 5].map(n => {
-    const [x, y] = ZONE_POS[n], o = State.objectives(n), c = State.captured(n);
+  const POS = PACK.map.positions;
+  const zones = UNIT_NUMS.map(n => {
+    const [x, y] = POS[n], o = State.objectives(n), c = State.captured(n);
     const cnt = ['story', 'hunter', 'other'].filter(k => o[k]).length;
     const R = 25, C = 2 * Math.PI * R;
     return `<g class="zone ${c ? 'cap' : ''}" data-ch="${n}" transform="translate(${x} ${y})" tabindex="0" role="button" aria-label="${CHAPTERS[n - 1].zone}">
       ${c ? '' : '<circle class="pulse" r="26"/>'}
       <circle r="${R}" class="zbg"/>
       <circle r="${R}" class="zring" stroke-dasharray="${C * cnt / 3} ${C}" transform="rotate(-90)"/>
-      <text class="znum" y="9">${hebNum(n)}</text>
+      <text class="znum" y="9">${L.nodeLabel(n)}</text>
       ${c ? '<text class="zflag" y="-32">⚑</text>' : ''}
       <g transform="translate(0 44)"><rect class="zlab" x="-48" y="-13" width="96" height="22" rx="11"/><text class="ztxt" y="3">${CHAPTERS[n - 1].zone}</text></g>
     </g>`;
   }).join('');
-  const svg = `<svg viewBox="0 0 360 520" class="map" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <pattern id="hex" width="28" height="48.5" patternUnits="userSpaceOnUse" patternTransform="scale(.9)"><path d="M14 0l14 8v16l-14 8-14-8V8zM14 32l14 8v8.5M14 32L0 40v8.5" fill="none" stroke="#7df" stroke-opacity=".08"/></pattern>
-      <linearGradient id="land" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#16301f"/><stop offset="1" stop-color="#0d1c2a"/></linearGradient>
-      <filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    </defs>
-    <rect width="360" height="520" fill="#070c18"/>
-    <path d="M0 0H190C150 90 230 150 185 230S140 380 190 520H0z" fill="url(#land)"/>
-    <path d="M360 0H190C150 90 230 150 185 230S140 380 190 520H360z" fill="#1a2a20"/>
-    <path d="M190 0C150 90 230 150 185 230S140 380 190 520" fill="none" stroke="#0b4f7c" stroke-width="46" opacity=".9"/>
-    <path d="M190 0C150 90 230 150 185 230S140 380 190 520" fill="none" stroke="#35c9ff" stroke-width="3" stroke-dasharray="2 12" stroke-linecap="round" opacity=".7" class="flow"/>
-    <rect width="360" height="520" fill="url(#hex)"/>
-    <circle cx="170" cy="290" r="250" fill="none" stroke="#a24bff" stroke-width="3" stroke-dasharray="6 10" opacity=".55" class="stormring"/>
-    <circle cx="170" cy="290" r="330" fill="none" stroke="#a24bff" stroke-width="40" opacity=".08"/>
-    <text x="330" y="22" class="cmp">מזרח</text><text x="30" y="22" class="cmp">מערב</text>
-    <text x="196" y="500" class="cmp river">הירדן</text>
-    <path d="M292 92L72 165L186 262L92 362L82 458" fill="none" stroke="#2effd2" stroke-width="2" stroke-dasharray="3 7" stroke-linecap="round" opacity=".6"/>
+  const route = UNIT_NUMS.map((n, i) => (i ? 'L' : 'M') + POS[n][0] + ' ' + POS[n][1]).join('');
+  const svg = `<svg viewBox="0 0 360 520" class="map" xmlns="http://www.w3.org/2000/svg">${PACK.map.background}
+    <path d="${route}" fill="none" stroke="#2effd2" stroke-width="2" stroke-dasharray="3 7" stroke-linecap="round" opacity=".6"/>
     ${zones}</svg>`;
   const wrap = h('div', { class: 'map-wrap', html: svg });
   wrap.addEventListener('click', e => {
@@ -117,7 +120,7 @@ function mapScreen(v) {
   v.append(wrap);
   const examOpen = State.allCaptured();
   v.append(h('div', { class: 'map-foot' },
-    h('div', { class: 'cap-count' }, `אזורים שנכבשו: `, h('b', {}, `${cap}/5`)),
+    h('div', { class: 'cap-count' }, `אזורים שנכבשו: `, h('b', {}, `${cap}/${N_UNITS}`)),
     h('button', { class: 'btn ' + (examOpen ? 'primary glow' : 'ghost'), disabled: !examOpen, onclick: () => startGame('exam', {}) },
       examOpen ? '🏆 מבחן הסיכום' : '🔒 מבחן הסיכום – כבוש את כל האזורים')));
 }
@@ -139,7 +142,7 @@ function zoneScreen(v, { ch }) {
   const mk = (ok, label) => h('li', { class: ok ? 'ok' : '' }, h('span', {}, ok ? '✓' : '○'), label);
   v.append(
     h('button', { class: 'back', onclick: () => go('map') }, '→ למפה'),
-    h('div', { class: 'zone-head' }, h('small', {}, `אזור ${hebNum(ch)}׳ · פרק ${hebNum(ch)}`), h('h2', {}, c.zone), h('p', {}, c.title)),
+    h('div', { class: 'zone-head' }, h('small', {}, L.zoneHead(ch)), h('h2', {}, c.zone), h('p', {}, c.title)),
     h('ul', { class: 'objs' },
       mk(o.story, 'לסיים את תדריך המשימה'),
       mk(o.hunter, 'סבב פנדלים עם 3 גולים לפחות'),
@@ -149,20 +152,22 @@ function zoneScreen(v, { ch }) {
   const tile = (cls, icon, name, desc, fn, rec) => h('button', { class: 'tile ' + cls + (rec ? ' rec' : ''), onclick: () => { sfx.pick(); fn(); } },
     h('span', { class: 'ti' }, icon), h('span', { class: 'tn' }, name), h('small', {}, desc), rec && h('em', {}, 'מומלץ'));
   const grid = h('div', { class: 'tiles' },
-    tile('', '📖', 'תדריך משימה', 'הסיפור של הפרק', () => go('story', { ch }), next === 'story'),
-    tile('', '⚽', 'פנדלים', 'טריוויה או מצא בתנ״ך', () => penaltyPicker(ch), next === 'hunter'),
-    tile('', '🌀', 'הסערה מתקרבת', 'אמת או שקר', () => startGame('swipe', { chapter: ch }), next === 'other'),
-    tile('', '🎙️', 'מי אמר?', 'ציטוט ודובר', () => startGame('who', { chapter: ch })),
-    tile('', '🧩', 'בונים את הקו', 'סדר אירועים', () => startGame('order', { chapter: ch })),
-    ch === 2 && tile('boss', '👑', 'המעגל האחרון', 'האם רחב עשתה חסד?', () => startGame('boss', { chapter: 2 })),
+    tile('', '📖', L.briefing.name, L.briefing.desc, () => go('story', { ch }), next === 'story'),
+    tile('', '⚽', 'פנדלים', ALL_GAMES.hunter.modes.map(m => m[1]).join(' · '), () => penaltyPicker(ch), next === 'hunter'),
+    hasGame('swipe') && tile('', '🌀', 'הסערה מתקרבת', 'אמת או שקר', () => startGame('swipe', { chapter: ch }), next === 'other'),
+    hasGame('who') && tile('', '🎙️', 'מי אמר?', 'ציטוט ודובר', () => startGame('who', { chapter: ch })),
+    hasGame('order') && tile('', '🧩', 'בונים את הקו', 'סדר אירועים', () => startGame('order', { chapter: ch })),
+    hasGame('diagram') && tile('', '🧱', 'בונים תרשים', 'קלט · תהליך · פלט', () => startGame('diagram', { chapter: ch })),
+    hasGame('boss') && ch === PACK.games.boss.unit && tile('boss', '👑', 'המעגל האחרון', PACK.boss.title, () => startGame('boss', { chapter: ch })),
   );
   v.append(grid);
 }
 
 // בחירת סוג הפנדלים: טריוויה / מצא בתנ"ך / התאמת ציטוט (זוכרים מה נבחר בפעם הקודמת)
-const PENALTY_KINDS = [['trivia', '🧠', 'טריוויה', 'שאלות על הפרק – עונים נכון וכובשים'], ['find', '📖', 'מצא בתנ״ך', 'מוצאים את הפרק והפסוק של ציטוט'], ['match', '🎯', 'התאמת ציטוט', 'בוחרים את הציטוט שמתאים לפירוש']];
+const PENALTY_KINDS = [['trivia', '🧠', 'טריוויה', L.triviaDesc], ['find', '📖', L.findName, L.findDesc], ['match', '🎯', L.matchName, L.matchDesc]].filter(([k]) => hasGame('hunter', k));
 function penaltyPicker(ch) {
-  const s = State.get(), last = s.lastPenalty || 'trivia';
+  if (PENALTY_KINDS.length === 1) return startGame('hunter', { chapter: ch, mode: PENALTY_KINDS[0][0] });
+  const s = State.get(), last = PENALTY_KINDS.some(k => k[0] === s.lastPenalty) ? s.lastPenalty : PENALTY_KINDS[0][0];
   const m = modal([h('h3', {}, 'איזה פנדלים משחקים?'), h('div', { class: 'pkinds' }, PENALTY_KINDS.map(([k, icon, name, desc]) =>
     h('button', { class: 'tile pkind' + (k === last ? ' rec' : ''), onclick: () => { sfx.pick(); s.lastPenalty = k; State.save(); m.close(); startGame('hunter', { chapter: ch, mode: k }); } },
       h('span', { class: 'ti' }, icon), h('span', { class: 'tn' }, name), h('small', {}, desc), k === last && h('em', {}, 'האחרון'))))]);
@@ -176,7 +181,7 @@ function gamesScreen(v) {
     h('button', { class: 'tile', onclick: () => { sfx.pick(); pickScope(k); } }, h('span', { class: 'ti' }, g.icon), h('span', { class: 'tn' }, g.name), h('small', {}, g.desc))));
   const ex = State.allCaptured();
   grid.append(h('button', { class: 'tile ' + (ex ? 'rec' : 'locked'), disabled: !ex, onclick: () => startGame('exam', {}) },
-    h('span', { class: 'ti' }, ex ? '🏆' : '🔒'), h('span', { class: 'tn' }, 'מבחן הסיכום'), h('small', {}, ex ? 'כל המשחקים יחד' : 'נפתח אחרי כיבוש 5 אזורים')));
+    h('span', { class: 'ti' }, ex ? '🏆' : '🔒'), h('span', { class: 'tn' }, 'מבחן הסיכום'), h('small', {}, ex ? 'כל המשחקים יחד' : `נפתח אחרי כיבוש ${N_UNITS} אזורים`)));
   v.append(grid);
 }
 function pickScope(key) {
@@ -184,9 +189,9 @@ function pickScope(key) {
   if (g.fixedChapter) return startGame(key, { chapter: g.fixedChapter });
   let mode = g.modes ? g.modes[0][0] : null;
   const box = h('div', { class: 'chips' });
-  const m = modal([h('h3', {}, g.name), g.modes && modeChips(g.modes, v => { mode = v; }), h('p', { class: 'sub' }, 'איזה פרק?'), box]);
+  const m = modal([h('h3', {}, g.name), g.modes && modeChips(g.modes, v => { mode = v; }), h('p', { class: 'sub' }, L.pickUnit), box]);
   const chip = (label, ch) => h('button', { class: 'chip', onclick: () => { m.close(); startGame(key, { chapter: ch, mode }); } }, label);
-  box.append(chip('הכול', 0), ...CHAPTERS.map(c => chip(`פרק ${hebNum(c.n)}׳`, c.n)));
+  box.append(chip('הכול', 0), ...CHAPTERS.map(c => chip(PACK.labels.unit(c.n), c.n)));
 }
 function modeChips(modes, onSel) {
   const row = h('div', { class: 'chips mode' });
@@ -296,7 +301,7 @@ function profileScreen(v) {
         h('button', { class: 'mini', 'aria-label': 'שינוי שם', onclick: editName }, '✏️'))),
     h('div', { class: 'stats' },
       stat('XP', s.xp), stat('דרגה', Math.min(State.tierOf(), MAX_TIER)), stat('רצף ימים', State.streakNow()),
-      stat('סבבים', s.rounds), stat('שיא הסערה', s.best.swipe), stat('אזורים', State.capturedCount() + '/5')),
+      stat('סבבים', s.rounds), stat('שיא הסערה', s.best.swipe), stat('אזורים', State.capturedCount() + '/' + N_UNITS)),
     trophyCard(s),
     h('button', { class: 'btn', onclick: designer }, '🎨 עיצוב החולצה שלי'),
     h('p', { class: 'sub' }, `הישגים: ${Ach.ACH.filter(a => s.ach[a.id]).length}/${Ach.ACH.length} · אפשר להחליף פריטים בפס הקרב ובארון.`),
@@ -325,14 +330,14 @@ async function storyScreen(v, p, sc) { (await import('./story.js')).render(v, p,
 async function parentScreen(v, p, sc) { (await import('./parent.js')).render(v, p, sc); }
 
 // ---------- איפה אנחנו משחקים: פרק + סוג המשחק (מוצג בראש המשחק ובכרטיס הסיום) ----------
-const chapLabel = n => `פרק ${hebNum(n)}׳ · ${CHAPTERS[n - 1].zone}`;
+const chapLabel = n => `${L.unit(n)} · ${CHAPTERS[n - 1].zone}`;
 const PENALTY_MODE = { trivia: '🧠 טריוויה', find: '📖 מצא בתנ״ך', match: '🎯 התאמת ציטוט' };
 export function playWhere(key, opts) {
   if (key === 'duel') {
-    const chs = { j1: [1], j2: [2], j34: [3, 4], j5: [5] }[opts.topic] || [];
-    return chs.length === 1 ? chapLabel(chs[0]) : `פרקים ${chs.map(n => hebNum(n) + '׳').join('–')} · ${chs.map(n => CHAPTERS[n - 1].zone).join(' ו')}`;
+    const chs = PACK.duelUnits[opts.topic] || [];
+    return chs.length === 1 ? chapLabel(chs[0]) : `${L.unitsWord} ${chs.map(n => L.unitShort(n)).join('–')} · ${chs.map(n => CHAPTERS[n - 1].zone).join(' ו')}`;
   }
-  return opts.chapter ? chapLabel(opts.chapter) : 'כל הפרקים';
+  return opts.chapter ? chapLabel(opts.chapter) : L.allUnits;
 }
 const playChips = (key, opts) => [h('span', { class: 'gchip where' }, '📍 ' + playWhere(key, opts)), key === 'hunter' && h('span', { class: 'gchip' }, PENALTY_MODE[opts.mode || 'trivia'])].filter(Boolean);
 
@@ -363,14 +368,14 @@ async function finishRound(key, opts, res) {
   const openBefore = openIds(), tb = State.tierOf();
   s.rounds++; s.pass.seasonRounds = (s.pass.seasonRounds || 0) + 1;   // סבבים בעונה (לכרטיס הזהב של עונה 2+)
   if (key === 'swipe' && res.score > s.best.swipe) s.best.swipe = res.score;
-  if (key === 'exam') s.examDone = true;
+  if (key === 'exam') State.sub().examDone = true;
   if (ch && key === 'hunter' && res.correct >= 3) State.setObjective(ch, 'hunter');
   if (ch && key !== 'hunter' && key !== 'exam' && res.completed !== false) State.setObjective(ch, 'other');
   // סטטיסטיקות להישגים, גביע המשפחה ומשימות היום
   State.maxStat('bestRun', res.run || 0);
   if (key === 'swipe') State.maxStat('bestCombo', res.bestCombo || 0);
   if (key === 'hunter' && res.total >= 3 && res.correct === res.total) s.stats.perfectPen++;
-  if (key === 'order' && res.allPerfect) s.stats.perfectLine++;
+  if ((key === 'order' || key === 'diagram') && res.allPerfect) s.stats.perfectLine++;
   if (key === 'who' && res.total >= 3 && res.correct === res.total) s.stats.perfectWho++;
   if (key === 'duel') { State.recordDuel(res.kg, res.pg, res.topic); if (res.kidPerfect) s.stats.perfectDuel++; }
   Quests.record(key, opts, res);
@@ -428,7 +433,7 @@ function endScreen(v, { key, opts, res, tb, ta, justCaptured, nowAll, xpTotal, e
 function showCapture(ch, nowAll) {
   const c = CHAPTERS[ch - 1];
   const m = modal([h('div', { class: 'cap-big' }, '⚑'), h('h3', {}, `${c.zone} נכבש!`),
-    h('p', {}, nowAll ? 'כל 5 האזורים בידיים שלך. מבחן הסיכום נפתח!' : `אזורים שנכבשו: ${State.capturedCount()}/5`),
+    h('p', {}, nowAll ? `כל ${N_UNITS} האזורים בידיים שלך. מבחן הסיכום נפתח!` : `אזורים שנכבשו: ${State.capturedCount()}/${N_UNITS}`),
     State.capturedCount() === GOLD_ZONES && h('p', { class: 'gold-note' }, '🎫 כרטיס הזהב מוכן! מפעילים אותו בפס הקרב.'),
     h('button', { class: 'btn primary', onclick: () => m.close() }, 'יאללה')], { cls: 'celebrate' });
   burst(m.box, 30);
@@ -453,6 +458,7 @@ const ROUTES = { focus: focusScreen, topic: topicScreen, map: mapScreen, zone: z
 // ---------- אתחול ----------
 export function boot() {
   State.load();
+  document.title = PACK.appTitle;
   ensureSeason(State.get().season || 1);   // פריטים של עונות קודמות (נוצרים מתבנית) – חייבים להיות קיימים לפני ציור הדמות והארון
   setCustomJersey(State.get().custom);
   document.addEventListener('pointerdown', unlock, { passive: true });

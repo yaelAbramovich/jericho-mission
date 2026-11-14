@@ -1,5 +1,5 @@
 // עזרים כלליים: בניית אלמנטים, תזמון עם ניקוי, חלוניות, אפקטים.
-import { GLOSSARY } from './content.js';
+import { PACK } from './subjects/index.js';
 import { sfx } from './audio.js';
 
 export function h(tag, attrs, ...kids) {
@@ -59,7 +59,7 @@ export function modal(content, { onClose, cls = '' } = {}) {
   return { close, box };
 }
 export function termPopup(key) {
-  const g = GLOSSARY[key]; if (!g) return;
+  const g = PACK.glossary[key]; if (!g) return;
   sfx.pick();
   const m = modal([
     h('div', { class: 'tag' }, 'מושג'),

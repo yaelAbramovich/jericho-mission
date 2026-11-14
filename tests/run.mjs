@@ -57,7 +57,8 @@ async function withPage(fn, { storage, permissions, init, viewport = { width: 39
 const eq = (a, b, msg) => { if (a !== b) throw new Error(`${msg}: ציפינו ל-${b}, קיבלנו ${a}`); };
 const ok = (c, msg) => { if (!c) throw new Error(msg); };
 async function pool(items, n, fn) { const q = [...items]; await Promise.all(Array.from({ length: n }, async () => { while (q.length) await fn(q.shift()); })); }
-const jsFiles = ['js', 'js/games', 'js/bank'].flatMap(d => fs.readdirSync(path.join(ROOT, d)).filter(f => f.endsWith('.js')).map(f => d + '/' + f));
+const walk = d => fs.readdirSync(path.join(ROOT, d), { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(d + '/' + e.name) : e.name.endsWith('.js') ? [d + '/' + e.name] : []);
+const jsFiles = walk('js');   // כל קובצי ה-JS (כולל חבילות המקצועות)
 
 console.log(`\nבדיקות מבצע יריחו ${FAST ? '(מהיר)' : ''}\n`);
 
@@ -84,7 +85,7 @@ await test('ה-Service Worker מכיל את כל הקבצים (אחרת האפל
 console.log('תוכן');
 await test('מספיק תוכן בכל פרק, ומבנה תקין', () => withPage(async page => {
   const problems = await page.evaluate(async () => {
-    const { QUOTES, STATEMENTS, SEQUENCES, WHO } = await import('/js/content.js');
+    const { QUOTES, STATEMENTS, SEQUENCES, WHO } = await import('/js/subjects/joshua/content.js');
     const out = [];
     for (let c = 1; c <= 5; c++) {
       const hq = QUOTES.filter(q => q.c === c && !q.extra), wq = QUOTES.filter(q => q.c === c && q.who);
@@ -106,7 +107,7 @@ await test('מספיק תוכן בכל פרק, ומבנה תקין', () => withP
 }));
 await test('שאלות הדו-קרב: 4 תשובות שונות, והתשובה הנכונה לא "הארוכה" בכל פעם', () => withPage(async page => {
   const problems = await page.evaluate(async () => {
-    const { DUELS } = await import('/js/duel-content.js');
+    const { DUELS } = await import('/js/subjects/joshua/duel-content.js');
     const out = [];
     for (const [k, D] of Object.entries(DUELS)) {
       let n = 0, longest = 0;
@@ -130,7 +131,7 @@ await test('שאלות הדו-קרב: 4 תשובות שונות, והתשובה 
 await test('בחירת פרק: סבבים ומסיחים מגיעים רק מהפרק שנבחר', () => withPage(async page => {
   const problems = await page.evaluate(async () => {
     const { pickRound, pickDistractors } = await import('/js/games/common.js');
-    const { QUOTES, STATEMENTS, SEQUENCES } = await import('/js/content.js');
+    const { QUOTES, STATEMENTS, SEQUENCES } = await import('/js/subjects/joshua/content.js');
     const hunter = QUOTES.filter(q => !q.extra), who = QUOTES.filter(q => q.who), out = [];
     for (let c = 1; c <= 5; c++) for (let t = 0; t < 50; t++) {
       for (const [name, pool] of [['פנדלים', hunter], ['מי אמר', who]]) {
@@ -162,7 +163,7 @@ await test('כל המסכים נפתחים בלי שגיאות (מפה, אזור
   for (let ch = 1; ch <= 5; ch++) { await go('zone', { ch }); await filled('אזור ' + ch); }
   for (let ch = 0; ch <= 5; ch++) { await go('story', { ch }); await page.waitForTimeout(150); await filled('סיפור ' + ch); }
   await go('focus'); await filled('למבחן');
-  const topics = await page.evaluate(() => import('/js/focus-content.js').then(m => m.TOPICS.map(t => t.id)));
+  const topics = await page.evaluate(() => import('/js/subjects/joshua/focus-content.js').then(m => m.TOPICS.map(t => t.id)));
   for (const id of topics) { await go('topic', { id }); await filled('נושא ' + id); }
   await go('games'); await filled('משחקים');
   for (const tab of ['פס קרב', 'אתגרים', 'הארון', 'הישגים']) { await go('pass'); await page.click(`.chips.tabs .chip:has-text("${tab}")`); await filled('לשונית ' + tab); }
@@ -225,7 +226,7 @@ await test('הפריטים שנלבשו מופיעים על המגרש, ותשו
   for (let i = 0; i < 3; i++) {
     await page.waitForSelector('.opt:not([disabled])');
     const m = await page.locator('.meaning').innerText();
-    const id = await page.evaluate(async mm => (await import('/js/content.js')).QUOTES.find(q => q.m === mm).id, m);
+    const id = await page.evaluate(async mm => (await import('/js/subjects/joshua/content.js')).QUOTES.find(q => q.m === mm).id, m);
     await page.click(`.opt[data-id="${id}"]`); await page.waitForTimeout(1300);
     bubble = bubble || (await page.locator('.react-bubble').count()) > 0;
     await page.locator('.hunter .btn.primary').first().click().catch(() => {});
@@ -254,7 +255,7 @@ console.log('העתקת חומר הלימוד');
 const goTo = (page, name, params = {}) => page.evaluate(([n, p]) => import('/js/app.js').then(m => m.go(n, p)), [name, params]);
 await test('הטקסט המועתק מכיל את כל החומר של כל נושא (ובלי סימוני **)', () => withPage(async page => {
   const problems = await page.evaluate(async () => {
-    const { TOPICS } = await import('/js/focus-content.js'), { topicToText } = await import('/js/export.js');
+    const { TOPICS } = await import('/js/subjects/joshua/focus-content.js'), { topicToText } = await import('/js/export.js');
     const KEYS = ['h', 'sh', 'p', 'q', 'say', 'big', 'note', 'answer'], out = [];
     for (const t of TOPICS) {
       const text = topicToText(t);
@@ -273,32 +274,32 @@ await test('הטקסט המועתק מכיל את כל החומר של כל נו
 }));
 const PERM = ['clipboard-read', 'clipboard-write'];
 await test('כפתור "העתק" בנושא מעתיק ללוח בדיוק את הטקסט', () => withPage(async page => {
-  const id = await page.evaluate(() => import('/js/focus-content.js').then(m => m.TOPICS[1].id));
+  const id = await page.evaluate(() => import('/js/subjects/joshua/focus-content.js').then(m => m.TOPICS[1].id));
   await goTo(page, 'topic', { id }); await page.waitForSelector('.doc-tools');
   await page.click('.doc-tools .tool >> nth=0');
   await page.waitForSelector('.toast');
   const [clip, expected] = await Promise.all([page.evaluate(() => navigator.clipboard.readText()),
-    page.evaluate(id => import('/js/focus-content.js').then(async m => (await import('/js/export.js')).topicToText(m.TOPICS.find(t => t.id === id))), id)]);
+    page.evaluate(id => import('/js/subjects/joshua/focus-content.js').then(async m => (await import('/js/export.js')).topicToText(m.TOPICS.find(t => t.id === id))), id)]);
   eq(clip, expected, 'תוכן הלוח'); ok(clip.length > 200, 'הטקסט המועתק קצר מדי');
 }, { permissions: PERM }));
 await test('"העתק את כל החומר" ברשימת הנושאים מעתיק את כל הנושאים', () => withPage(async page => {
   await goTo(page, 'focus'); await page.waitForSelector('.doc-tools');
   await page.click('.doc-tools .tool >> nth=0'); await page.waitForSelector('.toast');
   const r = await page.evaluate(async () => {
-    const clip = await navigator.clipboard.readText(), { TOPICS } = await import('/js/focus-content.js');
+    const clip = await navigator.clipboard.readText(), { TOPICS } = await import('/js/subjects/joshua/focus-content.js');
     return { missing: TOPICS.filter(t => !clip.includes(t.title)).map(t => t.title), len: clip.length };
   });
   ok(!r.missing.length, 'נושאים שחסרים בהעתקה: ' + r.missing.join(', ')); ok(r.len > 10000, 'הטקסט המועתק קצר מדי: ' + r.len);
 }, { permissions: PERM }));
 await test('העתקה עובדת גם בלי ממשק הלוח המודרני (למשל אתר לא מאובטח בטלפון)', () => withPage(async page => {
-  const id = await page.evaluate(() => import('/js/focus-content.js').then(m => m.TOPICS[0].id));
+  const id = await page.evaluate(() => import('/js/subjects/joshua/focus-content.js').then(m => m.TOPICS[0].id));
   await goTo(page, 'topic', { id }); await page.waitForSelector('.doc-tools');
   await page.click('.doc-tools .tool >> nth=0'); await page.waitForSelector('.toast');
   const clip = await page.evaluate(() => navigator.clipboard.readText());
   ok(clip.length > 200, 'דרך הגיבוי (execCommand) לא העתיקה כלום');
 }, { permissions: PERM, init: () => { Object.defineProperty(navigator.clipboard, 'writeText', { value: undefined }); } }));
 await test('אם כל דרכי ההעתקה חסומות – נפתח חלון עם הטקסט מסומן להעתקה ידנית', () => withPage(async page => {
-  const id = await page.evaluate(() => import('/js/focus-content.js').then(m => m.TOPICS[0].id));
+  const id = await page.evaluate(() => import('/js/subjects/joshua/focus-content.js').then(m => m.TOPICS[0].id));
   await goTo(page, 'topic', { id }); await page.waitForSelector('.doc-tools');
   await page.click('.doc-tools .tool >> nth=0'); await page.waitForSelector('.copy-fallback');
   const v = await page.locator('.copy-fallback').inputValue();
@@ -488,7 +489,7 @@ await test('כוח 50/50: מסתיר שתי תשובות שגויות ולא א�
   await page.evaluate(() => import('/js/app.js').then(m => m.startGame('who', { chapter: 2, count: 1 })));
   await page.waitForSelector('.pwbtn'); await page.click('.pwbtn');
   const r = await page.evaluate(async () => {
-    const t = document.querySelector('.quote-card q').innerText, { QUOTES } = await import('/js/content.js'), who = QUOTES.find(q => q.t === t).who;
+    const t = document.querySelector('.quote-card q').innerText, { QUOTES } = await import('/js/subjects/joshua/content.js'), who = QUOTES.find(q => q.t === t).who;
     return { gone: document.querySelectorAll('.opt.gone').length, rightHidden: document.querySelector(`.opt[data-k="${who}"]`).classList.contains('gone'), left: JSON.parse(localStorage.getItem('jericho.v1')).pass.power.fifty };
   });
   eq(r.gone, 2, 'תשובות שהוסתרו'); ok(!r.rightHidden, 'התשובה הנכונה הוסתרה!'); eq(r.left, 1, 'כוחות 50/50 שנשארו (היו 2)');
@@ -504,7 +505,7 @@ await test('כוח בעיטה חוזרת: אחרי טעות אפשר לנסות 
   await page.evaluate(() => import('/js/app.js').then(m => m.startGame('hunter', { chapter: 2, mode: 'match', count: 2 })));
   await page.waitForSelector('.opt:not([disabled])');
   const q1 = await page.locator('.meaning').innerText();
-  const wrongId = await page.evaluate(async m => { const { QUOTES } = await import('/js/content.js'), right = QUOTES.find(q => q.m === m).id; return [...document.querySelectorAll('.opt')].map(b => b.dataset.id).find(id => id !== right); }, q1);
+  const wrongId = await page.evaluate(async m => { const { QUOTES } = await import('/js/subjects/joshua/content.js'), right = QUOTES.find(q => q.m === m).id; return [...document.querySelectorAll('.opt')].map(b => b.dataset.id).find(id => id !== right); }, q1);
   await page.click(`.opt[data-id="${wrongId}"]`); await page.waitForSelector('.modal .btn.primary');
   await page.click('.modal .btn.primary'); await page.waitForTimeout(500);
   eq((await page.locator('.h-head b').innerText()).includes('בעיטה 1 מתוך 2'), true, 'חזרנו לשאלה הראשונה');
@@ -514,7 +515,7 @@ await test('כוח בעיטה חוזרת: אחרי טעות אפשר לנסות 
 // ===== 8. בלי שאלות שחוזרות באותו סבב =====
 console.log('שאלות שונות בכל סבב');
 await test('הסערה המתקרבת: כל משפט מוצג פעם אחת לפני שמשפט כלשהו חוזר, ואף פעם לא אותו כרטיס פעמיים ברצף', () => withPage(async page => {
-  const pool = await page.evaluate(() => import('/js/content.js').then(m => m.STATEMENTS.filter(s => s[0] === 4).length));
+  const pool = await page.evaluate(() => import('/js/subjects/joshua/content.js').then(m => m.STATEMENTS.filter(s => s[0] === 4).length));
   await page.evaluate(() => import('/js/app.js').then(m => m.startGame('swipe', { chapter: 4, duration: 240 })));
   const seq = [], want = pool + 6;
   for (let i = 0; i < want; i++) {
@@ -552,7 +553,7 @@ await test('באג שדווח: אחרי טעות עם "ניסיון נוסף" ה
     await withPage(async page => {
       await page.evaluate(m => import('/js/app.js').then(a => a.startGame('hunter', { chapter: 2, mode: m, count: 2 })), mode);
       if (mode === 'find') { await page.waitForSelector('.kick-btn'); await page.click('.pick-row.ch .pk >> nth=4'); await page.click('.pick-grid .pk >> nth=22'); await page.click('.kick-btn'); }
-      else if (mode === 'match') { await page.waitForSelector('.opt:not([disabled])'); const m = await page.locator('.meaning').innerText(); const id = await page.evaluate(async mm => { const r = (await import('/js/content.js')).QUOTES.find(q => q.m === mm).id; return [...document.querySelectorAll('.opt')].map(x => x.dataset.id).find(x => x !== r); }, m); await page.click(`.opt[data-id="${id}"]`); }
+      else if (mode === 'match') { await page.waitForSelector('.opt:not([disabled])'); const m = await page.locator('.meaning').innerText(); const id = await page.evaluate(async mm => { const r = (await import('/js/subjects/joshua/content.js')).QUOTES.find(q => q.m === mm).id; return [...document.querySelectorAll('.opt')].map(x => x.dataset.id).find(x => x !== r); }, m); await page.click(`.opt[data-id="${id}"]`); }
       else { await page.waitForSelector('.opt:not([disabled])'); const q = await page.locator('.meaning').innerText(); const wrong = await page.evaluate(async qq => { const T = (await import('/js/trivia.js')).TRIVIA.find(x => x.q === qq); return T.w[0]; }, q); await page.click(`.opt[data-t="${wrong.replace(/"/g, '\\"')}"]`); }
       await page.waitForSelector('.modal .btn.primary', { timeout: 5000 });
       const pos = await page.evaluate(() => { const r = document.querySelector('.modal .btn.primary').getBoundingClientRect(); return { top: r.top, bottom: r.bottom, h: innerHeight }; });
@@ -648,6 +649,109 @@ await test('מעבר דרך כמה עונות ברצף: בלי שגיאות, ב�
   });
   eq(r.errs.length, 0, r.errs.join('\n')); eq(r.seasons.join(','), '2,3,4,5,6,7', 'רצף העונות'); eq(r.nullCompletion, null, 'completeSeason בעונה שלא הסתיימה צריך להחזיר null');
 }, { storage: seed({ xp: 0 }) }));
+
+// ===== 10. מסגרת המקצועות =====
+console.log('מסגרת המקצועות');
+const SCI = { subject: 'science' };
+await test('כל חבילת מקצוע עומדת בחוזה: יחידות רצופות, מפה, תוכן, משחקים, תוויות (ובלי תלות ביהושע)', () => withPage(async page => {
+  const problems = await page.evaluate(async () => {
+    const { REGISTRY } = await import('/js/subjects/index.js'), out = [];
+    for (const r of REGISTRY) {
+      const P = (await import(`/js/subjects/${r.id}/pack.js`)).default, id = r.id;
+      for (const k of ['id', 'name', 'icon', 'appTitle', 'testDate', 'units', 'glossary', 'topics', 'duels', 'duelUnits', 'statements', 'sequences', 'map', 'games', 'labels']) if (P[k] == null) out.push(`${id}: חסר שדה ${k}`);
+      if (P.id !== id) out.push(`${id}: id לא תואם (${P.id})`);
+      const nums = P.units.map(u => u.n); if (nums.join() !== nums.map((_, i) => i + 1).join()) out.push(`${id}: יחידות לא רצופות מ-1: ${nums}`);
+      for (const u of P.units) { if (!u.zone || !u.title) out.push(`${id}: יחידה ${u.n} בלי zone/title`); if (!Array.isArray(u.story) || !u.story.length || u.story.some(s => !s.text)) out.push(`${id}: יחידה ${u.n} בלי שקופיות תדריך`); if (!P.map.positions[u.n]) out.push(`${id}: אין מיקום במפה ליחידה ${u.n}`); }
+      if (!P.map.background || !P.map.background.includes('<rect')) out.push(`${id}: רקע מפה חסר`);
+      for (const s of P.statements) { if (!nums.includes(s[0]) || typeof s[1] !== 'string' || typeof s[2] !== 'boolean' || !s[3]) out.push(`${id}: משפט לא תקין: ${String(s[1]).slice(0, 40)}`); }
+      for (const q of P.sequences) { if (!nums.includes(q.ch) && q.ch !== 0) out.push(`${id}: סדרה ${q.id} ביחידה לא קיימת`); if (q.items.length < 3 || new Set(q.items).size !== q.items.length) out.push(`${id}: סדרה ${q.id} לא תקינה`); }
+      for (const [tk, D] of Object.entries(P.duels)) { if (!P.duelUnits[tk]) out.push(`${id}: דו-קרב ${tk} בלי duelUnits`); for (const idea of D.ideas) { const u = idea.unit || (P.duelUnits[tk].length === 1 ? P.duelUnits[tk][0] : 0); if (!nums.includes(u)) out.push(`${id}/${tk}: רעיון "${idea.title}" בלי יחידה`); for (const q of idea.qs) if (q.w.length !== 3 || new Set([q.a, ...q.w]).size !== 4 || !q.why) out.push(`${id}: שאלת דו-קרב לא תקינה: ${q.q}`); } }
+      for (const t of P.topics) if (!t.blocks || !t.blocks.length) out.push(`${id}: נושא ${t.id} ריק`);
+      for (const n of nums) { for (const f of ['unit', 'unitShort', 'nodeLabel', 'zoneHead']) if (typeof P.labels[f](n) !== 'string' || !P.labels[f](n)) out.push(`${id}: label ${f}(${n})`); }
+      for (const k of ['allUnits', 'pickUnit', 'unitsWord', 'studyHint']) if (!P.labels[k]) out.push(`${id}: חסר label ${k}`);
+      if (P.games.diagram) { if (!(P.diagrams || []).length) out.push(`${id}: משחק תרשימים בלי diagrams`); for (const n of nums) if (!P.diagrams.some(d => d.units.includes(n))) out.push(`${id}: ליחידה ${n} אין תרשימים`); for (const d of P.diagrams) { if (!d.name || !d.purpose || !d.inputs.length || !d.process.length || !d.outputs.length) out.push(`${id}: תרשים ${d.id} חסר שדות`); const all = [...d.inputs, ...d.process, ...d.outputs]; if (new Set(all).size !== all.length) out.push(`${id}: תרשים ${d.id} עם רכיב כפול`); } }
+      if (P.games.who && (!P.quotes.length || !Object.keys(P.who).length)) out.push(`${id}: משחק "מי אמר" פעיל בלי ציטוטים`);
+      if (P.games.hunter && P.games.hunter.modes.some(m => m !== 'trivia') && !P.quotes.length) out.push(`${id}: פנדלים מבוססי פסוקים בלי ציטוטים`);
+      if (P.games.boss && (!P.boss || !P.games.boss.unit)) out.push(`${id}: משחק בוס בלי boss/unit`);
+      const text = JSON.stringify([P.units, P.statements, P.sequences, P.duels, P.topics]); if (id !== 'joshua' && /יהושע|יריחו|רחב|ירדן/.test(text)) out.push(`${id}: תוכן שמזכיר את יהושע`);
+    }
+    return out;
+  });
+  ok(!problems.length, problems.slice(0, 10).join('\n'));
+}));
+await test('מקצוע מדעים (חבילת דוגמה): כל המסכים נפתחים, 3 אזורים, בלי משחקים שלא קיימים, ובלי הפניות ליהושע במסכי המקצוע', () => withPage(async page => {
+  const go = (name, params = {}) => page.evaluate(([n, p]) => import('/js/app.js').then(m => m.go(n, p)), [name, params]);
+  const texts = [];   // טקסט מסכי המקצוע עצמם (הפרסים משותפים לכל המקצועות, ולכן פס הקרב והפרופיל לא נבדקים כאן)
+  const filled = async what => { await page.waitForFunction(() => (document.querySelector('.view') || { innerText: '' }).innerText.trim().length > 5, null, { timeout: 4000 }).catch(() => { throw new Error('מסך ריק: ' + what); }); texts.push(await page.locator('.view').innerText()); };
+  await go('map'); await filled('מפה'); eq(await page.locator('.zone').count(), 5, 'אזורים במפה'); eq(await page.title(), 'מבצע טכנולוגיה', 'כותרת הדף');
+  ok(await page.locator('.overview-card').count() === 0, 'כרטיס "הסיפור בקצרה" לא אמור להופיע במדעים');
+  for (let ch = 1; ch <= 5; ch++) {
+    await go('zone', { ch }); await filled('אזור ' + ch); const tiles = await page.locator('.tiles .tn').allInnerTexts();
+    ok(!tiles.includes('מי אמר?') && !tiles.includes('המעגל האחרון'), 'משחק שלא קיים במדעים מופיע: ' + tiles.join('|')); ok(tiles.includes('הסערה מתקרבת') && tiles.includes('בונים את הקו') && tiles.includes('בונים תרשים'), 'משחק חסר: ' + tiles.join('|'));
+    await go('story', { ch }); await page.waitForTimeout(150); await filled('תדריך ' + ch);
+  }
+  await go('focus'); await filled('למבחן'); await go('topic', { id: 'tech-1' }); await filled('נושא'); await go('games'); await filled('משחקים');
+  const names = await page.locator('.tiles .tn').allInnerTexts(); ok(names.join('|').includes('פנדלים') && !names.join('|').includes('מי אמר'), 'רשימת משחקים: ' + names.join('|'));
+  await go('profile'); await filled('פרופיל'); await go('pass'); await page.waitForSelector('.passv');
+  const hit = /יהושע|יריחו|רחב|הירדן/.exec(texts.slice(0, -1).join('\n')); ok(!hit, `מסכי המקצוע מזכירים את יהושע: "${hit && hit[0]}"`);
+}, { storage: seed(SCI) }));
+const sciCases = [];
+for (const ch of [0, 1, 2, 3, 4, 5]) {
+  const label = ch ? `יחידה ${ch}` : 'כל היחידות';
+  sciCases.push([`מדעים · פנדלים טריוויה · ${label}`, 'hunter', { chapter: ch, mode: 'trivia', count: 2 }]);
+  sciCases.push([`מדעים · הסערה · ${label}`, 'swipe', { chapter: ch, duration: 3 }]);
+  sciCases.push([`מדעים · בונים את הקו · ${label}`, 'order', { chapter: ch, count: 1 }]);
+  sciCases.push([`מדעים · בונים תרשים · ${label}`, 'diagram', { chapter: ch, count: 2 }]);
+}
+sciCases.push(['מדעים · מבחן הסיכום', 'exam', { swipeSeconds: 3 }], ['מדעים · דו-קרב משפחתי', 'duel', { topic: 's1' }]);
+await pool(sciCases, 4, async ([name, key, opts]) => {
+  const t0 = Date.now();
+  try {
+    await withPage(async page => {
+      await page.evaluate(([k, o]) => import('/js/app.js').then(m => m.startGame(k, o)), [key, opts]); await playToEnd(page, key === 'exam' ? 120000 : 60000);
+      const st = await page.evaluate(() => JSON.parse(localStorage.getItem('jericho.v1'))); ok(st.rounds === 1, `rounds=${st.rounds}`); eq(st.subject, 'science', 'המקצוע הפעיל');
+    }, { storage: seed(SCI) });
+    results.push({ name, ok: true }); console.log(`  ✓ ${name} (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
+  } catch (e) { results.push({ name, ok: false, e }); console.log(`  ✗ ${name}\n      ${String(e.message).split('\n').join('\n      ')}`); }
+});
+await test('התקדמות לפי מקצוע: אזורים שנכבשו במקצוע אחד לא משפיעים על האחר, וחסימות פרסי אזור שייכות למקצוע', () => withPage(async page => {
+  const r = await page.evaluate(async () => {
+    const S = await import('/js/state.js'), L = await import('/js/locker.js'), R = await import('/js/rewards.js'), s = S.get();
+    S.setObjective(1, 'story'); S.setObjective(1, 'hunter'); S.setObjective(1, 'other');          // כובשים אזור 1 ב-science (המקצוע הפעיל)
+    return { sciCaptured: S.capturedCount('science'), joshuaCaptured: S.capturedCount('joshua'), ec1: L.isOpen(R.itemById('ec1')), total: S.capturedTotal(), sub: S.subjectId(), keys: Object.keys(s.subjects).sort().join() };
+  });
+  eq(r.sciCaptured, 1, 'אזורים במדעים'); eq(r.joshuaCaptured, 0, 'אזורים ביהושע'); eq(r.ec1, false, 'פרס אזור א׳ של יהושע נפתח מכיבוש אזור במדעים!'); eq(r.total, 1, 'סך הכול'); eq(r.sub, 'science', 'מקצוע פעיל');
+}, { storage: seed(SCI) }));
+await test('בורר המקצועות: שני מקצועות בבורר, מעבר בין מקצועות מהמפה, כותרת/אזורים/תאריך מבחן לפי המקצוע, והתקדמות נשמרת לכל אחד', () => withPage(async page => {
+  const info = () => page.evaluate(async () => { const { PACK } = await import('/js/subjects/index.js'); return { id: PACK.id, zones: document.querySelectorAll('.zone').length, title: document.title, date: PACK.testDate, days: document.querySelector('.test-count') && document.querySelector('.test-count').innerText }; });
+  let r = await info(); eq(r.id, 'joshua', 'מקצוע התחלתי'); eq(r.zones, 5, 'אזורי יהושע'); ok(r.title.includes('יריחו'), 'כותרת יהושע: ' + r.title);
+  await page.click('.subj-chip'); await page.waitForSelector('.pkinds');
+  const opts = await page.locator('.pkinds .tn').allInnerTexts(); ok(opts.length === 2 && opts.some(o => o.includes('יהושע')) && opts.some(o => o.includes('מדע')), 'בבורר: ' + opts.join('|'));
+  await Promise.all([page.waitForNavigation({ waitUntil: 'load' }), page.locator('.pkinds .tile', { hasText: 'מדע' }).click()]); await page.waitForSelector('.map');
+  r = await info(); eq(r.id, 'science', 'אחרי מעבר'); eq(r.zones, 5, 'אזורי מדע וטכנולוגיה'); eq(r.date, '2026-11-17', 'תאריך המבחן'); ok(r.title.includes('טכנולוגיה'), 'כותרת: ' + r.title); ok(!!r.days, 'ספירה לאחור למבחן');
+  await page.evaluate(async () => { const S = await import('/js/state.js'); S.setObjective(1, 'story'); S.setObjective(1, 'hunter'); S.setObjective(1, 'other'); });   // כובשים אזור במדע
+  await page.click('.subj-chip'); await page.waitForSelector('.pkinds');
+  await Promise.all([page.waitForNavigation({ waitUntil: 'load' }), page.locator('.pkinds .tile', { hasText: 'יהושע' }).click()]); await page.waitForSelector('.map');
+  const j = await page.evaluate(async () => { const S = await import('/js/state.js'); return { id: S.subjectId(), joshua: S.capturedCount('joshua'), science: S.capturedCount('science') }; });
+  eq(j.id, 'joshua', 'חזרה ליהושע'); eq(j.joshua, 0, 'יהושע לא הושפע'); eq(j.science, 1, 'התקדמות מדע נשמרה');
+}));
+await test('מתג פיתוח: ‎?subject=science‎ בכתובת טוען את חבילת מדעים (גם מוסתרת) ושומר אותה, ערך לא מוכר מתעלמים ממנו, ויהושע נשמר', () => withPage(async page => {
+  const id = () => page.evaluate(() => import('/js/subjects/index.js').then(m => m.PACK.id));
+  eq(await id(), 'joshua', 'ברירת מחדל');
+  await page.goto(BASE + '/?subject=science'); await page.waitForSelector('.map'); eq(await id(), 'science', 'עם ?subject=science'); eq(await page.locator('.zone').count(), 5, 'אזורי מדע וטכנולוגיה');
+  await page.goto(BASE + '/'); await page.waitForSelector('.map'); eq(await id(), 'science', 'המקצוע נשמר אחרי טעינה רגילה');
+  await page.goto(BASE + '/?subject=nonsense'); await page.waitForSelector('.map'); eq(await id(), 'science', 'ערך לא מוכר צריך להתעלם');
+  await page.goto(BASE + '/?subject=joshua'); await page.waitForSelector('.map'); eq(await id(), 'joshua', 'חזרה ליהושע'); eq(await page.locator('.zone').count(), 5, 'אזורי יהושע');
+}));
+await test('שמירה ישנה (אזורים ברמה העליונה) עוברת בבטחה למקצוע יהושע; אפשר להחליף מקצוע וההתקדמות נשמרת לכל אחד', () => withPage(async page => {
+  const r1 = await page.evaluate(async () => { const S = await import('/js/state.js'); return { sub: S.subjectId(), c: S.capturedCount(), legacy: ['zone', 'storySeen', 'examDone'].filter(k => k in S.get()), stories: Object.keys(S.sub().storySeen).length, exam: S.sub().examDone }; });
+  eq(r1.sub, 'joshua', 'מקצוע ברירת מחדל'); eq(r1.c, 2, 'אזורים שנכבשו הועברו'); eq(r1.legacy.length, 0, 'שדות ישנים נשארו: ' + r1.legacy); eq(r1.stories, 1, 'התקדמות סיפור הועברה'); eq(r1.exam, true, 'מבחן הסיכום הועבר');
+  await page.evaluate(async () => { (await import('/js/state.js')).setSubject('science'); }); await page.reload(); await page.waitForSelector('.map');
+  const r2 = await page.evaluate(async () => { const S = await import('/js/state.js'), { PACK } = await import('/js/subjects/index.js'); return { id: PACK.id, c: S.capturedCount(), joshua: S.capturedCount('joshua') }; });
+  eq(r2.id, 'science', 'החבילה אחרי רענון'); eq(r2.c, 0, 'במדעים עוד לא כבשו כלום'); eq(r2.joshua, 2, 'יהושע נשמר');
+  await page.evaluate(async () => { (await import('/js/state.js')).setSubject('joshua'); }); await page.reload(); await page.waitForSelector('.map');
+  eq(await page.evaluate(() => import('/js/state.js').then(S => S.capturedCount())), 2, 'חזרה ליהושע: האזורים נשמרו');
+}, { storage: { xp: 200, rounds: 3, zone: { 1: { story: true, hunter: true, other: true }, 2: { story: true, hunter: true, other: true } }, storySeen: { 1: [0, 1] }, examDone: true, best: { swipe: 0 }, streak: { last: null, count: 0 }, eq: { avatar: 'a0', banner: 'b0', jersey: 'j0', emote: null } } }));
 
 // ===== סיכום =====
 

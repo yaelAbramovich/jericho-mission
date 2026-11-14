@@ -1,5 +1,7 @@
 // דו-קרב פנדלים בשלושה סוגים: טריוויה (שאלות על הפרק), מצא בתנ"ך (פרק+פסוק), התאמת ציטוט.
-import { QUOTES, hebNum, refText } from '../content.js';
+import { PACK, UNIT_NUMS } from '../subjects/index.js';
+import { hebNum } from '../hebrew.js';
+const QUOTES = PACK.quotes || [], refText = PACK.refText;
 import { TRIVIA } from '../trivia.js';
 import { h, shuffle } from '../ui.js';
 import { sfx } from '../audio.js';
@@ -40,7 +42,7 @@ export async function run(el, { chapter = 0, mode = 'trivia', count = 5, exclude
       const clock = h('span', { class: 'clock' }, '0');
       sc.every(() => { clock.textContent = Math.floor((Date.now() - t0) / 1000); }, 1000);
       const upd = () => { kickBtn.disabled = !(ch && vs); };
-      const chRow = h('div', { class: 'pick-row ch' }, [1, 2, 3, 4, 5].map(n => h('button', { class: 'pk', onclick: e => { sfx.pick(); ch = n; mark(chRow, e.currentTarget); upd(); } }, hebNum(n))));
+      const chRow = h('div', { class: 'pick-row ch' }, UNIT_NUMS.map(n => h('button', { class: 'pk', onclick: e => { sfx.pick(); ch = n; mark(chRow, e.currentTarget); upd(); } }, hebNum(n))));
       const vGrid = h('div', { class: 'pick-grid' }, Array.from({ length: 24 }, (_, k) => h('button', { class: 'pk', onclick: e => { sfx.pick(); vs = k + 1; mark(vGrid, e.currentTarget); upd(); } }, hebNum(k + 1))));
       stage.append(
         h('div', { class: 'quote-card' }, h('small', {}, 'מצא בתנ״ך את המקום של:'), h('q', {}, q.t), clock),

@@ -2,17 +2,21 @@
 import { h } from '../ui.js';
 import { sfx } from '../audio.js';
 import { waitClick } from './common.js';
+import { PACK, hasGame } from '../subjects/index.js';
 import * as hunter from './hunter.js';
 import * as who from './who.js';
 import * as swipe from './swipe.js';
 import * as order from './order.js';
+import * as diagram from './diagram.js';
 
-const STAGES = [
-  ['⚽ פנדלים (טריוויה)', hunter, { mode: 'trivia', count: 3 }],
-  ['🎙️ מי אמר?', who, { count: 3 }],
-  ['🌀 הסערה (30 שניות)', swipe, { duration: 30 }],
-  ['🧩 בונים את הקו', order, { ids: ['sx'] }],
+const ALL_STAGES = [
+  ['hunter', '⚽ פנדלים (טריוויה)', hunter, { mode: 'trivia', count: 3 }],
+  ['who', '🎙️ מי אמר?', who, { count: 3 }],
+  ['swipe', '🌀 הסערה (30 שניות)', swipe, { duration: 30 }],
+  ['order', '🧩 בונים את הקו', order, PACK.examSequences ? { ids: PACK.examSequences } : { count: 1 }],
+  ['diagram', '🧱 בונים תרשים', diagram, { count: 1 }],
 ];
+const STAGES = ALL_STAGES.filter(([key, , , opts]) => hasGame(key, opts.mode)).map(([, name, mod, opts]) => [name, mod, opts]);
 export async function run(el, o, sc) {   // o.swipeSeconds – לבדיקות אוטומטיות (קיצור שלב הסערה)
   let xp = 30, correct = 0, total = 0, run = 0;
   const used = [];   // שאלות שכבר הופיעו בשלב קודם – לא חוזרות באותו מבחן
@@ -29,6 +33,6 @@ export async function run(el, o, sc) {   // o.swipeSeconds – לבדיקות א
   }
   el.innerHTML = '';
   const { get, save } = await import('../state.js');
-  get().examDone = true; save();
+  // (הסימון נעשה ב-finishRound – ברמת המקצוע הפעיל)
   return { xp, correct, total, run, title: 'מבחן הסיכום הושלם! 🏆', big: `${correct} / ${total}`, lines: ['נפתח פריט מיוחד בפס הקרב: אלוף יריחו'] };
 }

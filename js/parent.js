@@ -1,9 +1,11 @@
 // מצב הורה: קוד PIN, הקלטת קריינות לכל מסך סיפור, גיבוי וייבוא, ותסריט להדפסה.
 import * as State from './state.js';
-import { CHAPTERS, OVERVIEW, hebNum } from './content.js';
-const ALL = [OVERVIEW, ...CHAPTERS];
+import { PACK, UNITS } from './subjects/index.js';
+import { hebNum } from './hebrew.js';
+const CHAPTERS = UNITS, OVERVIEW = PACK.overview;
+const ALL = [OVERVIEW, ...CHAPTERS].filter(Boolean);
 const chapterOf = n => ALL.find(c => c.n === n);
-const chLabel = n => n === 0 ? 'הסיפור בקצרה' : `פרק ${hebNum(n)}׳`;
+const chLabel = n => n === 0 ? 'הסיפור בקצרה' : PACK.labels.unit(n);
 import { h, modal, toast, plain } from './ui.js';
 import { sfx, playBlob, stopPlayback } from './audio.js';
 import { putRec, getRec, delRec, recIds, exportAll, importAll } from './db.js';
@@ -153,7 +155,7 @@ async function dash(root, sc) {
     area.innerHTML = '';
     area.append(h('h1', {}, 'תסריט הקראה – מבצע יריחו'));
     ALL.forEach(c => {
-      area.append(h('h2', {}, `${c.n === 0 ? '' : 'פרק ' + hebNum(c.n) + '׳ – '}${c.title}`));
+      area.append(h('h2', {}, `${c.n === 0 ? '' : PACK.labels.unit(c.n) + ' – '}${c.title}`));
       c.story.forEach((s, i) => area.append(h('p', {}, h('b', {}, `${i + 1}. `), plain(s.text), s.cast ? ' ' + s.cast.map(([n, d]) => `${n}: ${d}.`).join(' ') : '', s.verse ? ` (פסוק: ${s.verse.t})` : '')));
     });
     document.body.classList.add('printing');

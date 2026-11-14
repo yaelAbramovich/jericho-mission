@@ -5,15 +5,9 @@ import { BANK } from './bank/index.js';   // שאלות נוספות לכל פר
 
 export const TEST_DATE = '2026-11-15';
 
-// ---------- עזרי אותיות עבריות ----------
-const ONES = ['', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט'];
-export function hebNum(n) {
-  if (n === 15) return 'טו';
-  if (n === 16) return 'טז';
-  const tens = { 10: 'י', 20: 'כ', 30: 'ל' };
-  const t = Math.floor(n / 10) * 10;
-  return (tens[t] || '') + ONES[n % 10];
-}
+// ---------- עזרי אותיות עבריות (הוצאו ל-js/hebrew.js; כאן רק ייצוא מחדש לתאימות) ----------
+import { hebNum } from '../../hebrew.js';
+export { hebNum };
 export const refText = (ch, v) => `יהושע ${hebNum(ch)}׳:${hebNum(v)}`;
 
 // ---------- מילון מושגים (חלונית הסבר) ----------

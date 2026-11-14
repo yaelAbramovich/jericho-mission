@@ -1,6 +1,7 @@
 // דו-קרב משפחתי: ילד נגד הורה על טלפון אחד. תור ההורה: הילד שואל, שומע את התשובה ושופט.
 import * as State from '../state.js';
-import { DUELS } from '../duel-content.js';
+import { PACK } from '../subjects/index.js';
+const DUELS = PACK.duels;
 import { h, shuffle, sample, floatText, burst } from '../ui.js';
 import { sfx } from '../audio.js';
 import { waitClick } from './common.js';

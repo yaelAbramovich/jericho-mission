@@ -498,3 +498,14 @@ body.quake #app { animation: fxquake .15s linear 11; } @keyframes fxquake { 25% 
 /* איפה אנחנו משחקים */
 .gctx { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 8px; } .end-ctx { justify-content: center; margin: 0; }
 .gchip { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 3px 10px; font-size: 13px; font-weight: 700; color: var(--txt); } .gchip.where { background: #0f5a49; border-color: var(--neon); color: #dffff6; }
+
+.subj-chip { display: block; width: 100%; text-align: center; background: var(--panel2); border: 1px solid var(--line); border-radius: 14px; padding: 8px; font-weight: 800; margin-bottom: 8px; }
+
+/* בונים תרשים */
+.dg-list { display: grid; gap: 8px; margin-bottom: 10px; } .dg-chip { background: var(--panel2); border: 2px solid var(--line); border-radius: 14px; padding: 10px 12px; display: grid; gap: 8px; }
+.dg-t { font-weight: 800; font-size: 17px; } .dg-btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.dg-btn { min-height: 44px; border-radius: 12px; background: #0f173a; border: 2px solid var(--line); font-weight: 800; font-size: 15px; color: var(--txt); } .dg-btn.on { background: var(--neon); color: #03201b; border-color: var(--neon); }
+.dg-chip.right { border-color: var(--neon); background: #0f5a4944; } .dg-chip.wrong { border-color: var(--red); background: #5a142044; } .dg-fix { color: #ffb3bb; font-weight: 700; }
+.bdia { display: flex; align-items: stretch; gap: 6px; margin-top: 8px; } .bd-col { display: grid; gap: 6px; align-content: center; flex: 1; }
+.bd-box { flex: 1; border: 2px dashed #ff7a6a; border-radius: 12px; background: #fff; color: #7a2a1a; display: grid; place-content: center; text-align: center; padding: 6px; } .bd-box small { color: #c0503a; font-size: 11px; font-weight: 800; } .bd-box b { font-size: 14px; }
+.bd-arrow { background: linear-gradient(90deg, #ff9d4a, #ec6a3a); color: #fff; font-weight: 800; font-size: 12px; padding: 8px 10px 8px 6px; text-align: center; clip-path: polygon(0 50%, 14% 0, 100% 0, 96% 50%, 100% 100%, 14% 100%); line-height: 1.15; }

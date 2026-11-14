@@ -1,5 +1,6 @@
 // מי אמר? ציטוט + 4 דוברים לבחירה.
-import { QUOTES, WHO, refText } from '../content.js';
+import { PACK } from '../subjects/index.js';
+const QUOTES = PACK.quotes, WHO = PACK.who, refText = PACK.refText;
 import { h, shuffle, sample } from '../ui.js';
 import { sfx } from '../audio.js';
 import { pickRound, waitClick, tally } from './common.js';
