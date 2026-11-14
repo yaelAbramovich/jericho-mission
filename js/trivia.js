@@ -1,18 +1,15 @@
-// טריוויה לפנדלים: שאלות רב-ברירה על הפרק, מתוך מאגר שאלות הדו-קרב (בלי שאלות "באיזה פסוק כתוב").
-import { DUELS } from './duel-content.js';
-
-const NUM = { 'א': 1, 'ב': 2, 'ג': 3, 'ד': 4, 'ה': 5 };
-const chOfRef = ref => { const m = /פרק\s+([א-ה])׳/.exec(ref || ''); return m ? NUM[m[1]] : 0; };
-const FIXED = { j1: 1, j2: 2, j5: 5 };   // נושא אחד = פרק אחד. j34 מכיל שני פרקים, לכן קובעים לפי פסוק הרעיון
+// טריוויה לפנדלים: שאלות רב-ברירה על היחידה, מתוך מאגר שאלות הדו-קרב (בלי שאלות "באיזה פסוק כתוב").
+// היחידה של שאלה: idea.unit אם הוגדר, אחרת היחידה היחידה של הנושא (pack.duelUnits).
+import { PACK } from './subjects/index.js';
 
 export const TRIVIA = [];
-for (const [topic, D] of Object.entries(DUELS)) {
-  let ch = FIXED[topic] || 0;
+for (const [topic, D] of Object.entries(PACK.duels)) {
+  const units = (PACK.duelUnits || {})[topic] || [];
   D.ideas.forEach((idea, ii) => {
-    if (!FIXED[topic]) ch = chOfRef(idea.verse && idea.verse.ref) || ch;   // רעיון בלי פסוק – יורש את הפרק של הקודם
+    const unit = idea.unit || (units.length === 1 ? units[0] : 0);
     idea.qs.forEach((q, qi) => {
       if (q.q.startsWith('באיזה פסוק')) return;   // שאלות "איפה כתוב" לא נכללות: זו לא טריוויה
-      TRIVIA.push({ id: `${topic}:${ii}:${qi}`, c: ch, q: q.q, a: q.a, w: q.w, why: q.why, idea: idea.title });
+      TRIVIA.push({ id: `${topic}:${ii}:${qi}`, c: unit, q: q.q, a: q.a, w: q.w, why: q.why, idea: idea.title });
     });
   });
 }

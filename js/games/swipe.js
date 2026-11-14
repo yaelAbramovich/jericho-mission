@@ -1,5 +1,6 @@
 // הסערה מתקרבת: אמת/שקר במהירות, 60 שניות, מעגל סערה נסגר, קומבו ושיא אישי.
-import { STATEMENTS } from '../content.js';
+import { PACK } from '../subjects/index.js';
+const STATEMENTS = PACK.statements;
 import * as State from '../state.js';
 import { h, shuffle, floatText } from '../ui.js';
 import { sfx } from '../audio.js';

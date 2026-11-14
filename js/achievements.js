@@ -18,8 +18,8 @@ export const ACH = [
   { id: 'duelp', icon: '🛡️', name: 'דו-קרב ללא רבב', desc: 'דו-קרב משפחתי בלי טעות שלך', xp: 40, ...need(S => S.stats.perfectDuel, 1) },
   { id: 'streak3', icon: '📅', name: 'שלושה ימים ברצף', desc: 'שחק 3 ימים רצופים', xp: 20, ...need(() => State.streakNow(), 3) },
   { id: 'streak7', icon: '🗓️', name: 'שבוע ברצף', desc: 'שחק 7 ימים רצופים', xp: 50, ...need(() => State.streakNow(), 7) },
-  { id: 'zones3', icon: '⚑', name: 'שלושה אזורים', desc: 'כבוש 3 אזורים', xp: 30, ...need(() => State.capturedCount(), 3) },
-  { id: 'allzones', icon: '👑', name: 'כובש יריחו', desc: 'כבוש את כל 5 האזורים', xp: 80, ...need(() => State.capturedCount(), 5) },
+  { id: 'zones3', icon: '⚑', name: 'שלושה אזורים', desc: 'כבוש 3 אזורים', xp: 30, ...need(() => State.capturedCount('joshua'), 3) },
+  { id: 'allzones', icon: '👑', name: 'כובש יריחו', desc: 'כבוש את כל 5 האזורים', xp: 80, ...need(() => State.capturedCount('joshua'), 5) },
   { id: 'season1', icon: '🏁', name: 'סיימת עונה', desc: 'סיים עונה של פס הקרב וקבל את ההפתעה', xp: 60, ...need(S => (S.season || 1) - 1, 1) },
   { id: 'quests3', icon: '📋', name: 'משימות היום', desc: 'סיים את כל 3 המשימות של היום', xp: 20, ...need(S => S.stats.questDays, 1) },
 ];

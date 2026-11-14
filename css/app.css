@@ -498,3 +498,5 @@ body.quake #app { animation: fxquake .15s linear 11; } @keyframes fxquake { 25% 
 /* איפה אנחנו משחקים */
 .gctx { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 8px; } .end-ctx { justify-content: center; margin: 0; }
 .gchip { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 3px 10px; font-size: 13px; font-weight: 700; color: var(--txt); } .gchip.where { background: #0f5a49; border-color: var(--neon); color: #dffff6; }
+
+.subj-chip { display: block; width: 100%; text-align: center; background: var(--panel2); border: 1px solid var(--line); border-radius: 14px; padding: 8px; font-weight: 800; margin-bottom: 8px; }

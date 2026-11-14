@@ -1,12 +1,13 @@
 // מצב האפליקציה: XP, רצף, התקדמות באזורים. נשמר ב-localStorage (עטוף ב-try/catch).
 import { TIER_XP } from './rewards.js';
+import { UNIT_NUMS, SUBJECT_ID } from './subjects/index.js';
 
 const KEY = 'jericho.v1';
 const fresh = () => ({
   xp: 0, rounds: 0,
   streak: { last: null, count: 0 },
-  zone: {},               // { "1": {story:true, hunter:true, other:true} }
-  storySeen: {},          // { "1": [0,1,2] }
+  subject: 'joshua',      // המקצוע הפעיל
+  subjects: {},           // התקדמות לפי מקצוע: { joshua: { zone, storySeen, overviewDone, examDone } }
   best: { swipe: 0 },
   eq: { avatar: 'a0', banner: 'b0', jersey: 'j0', emote: null, ball: 'ba0', fx: 'fx0', pitch: 'pt0', keeper: 'kp0', trail: 'tr0', title: 'tt0' },
   custom: { c1: '#1b4bd6', c2: '#ffe14a', pat: 'stripes', n: '7', name: '' },   // החולצה שלי
@@ -18,7 +19,7 @@ const fresh = () => ({
   season: 1,              // עונת פס הקרב הנוכחית
   pass: { claimed: {}, gold: false, power: { fifty: 0, time: 0, retry: 0 }, boxes: 0, owned: {}, base: 0, seasonRounds: 0 },   // base = ה-XP שבו התחילה העונה   // פס הקרב: מה נאסף, כרטיס זהב, כוחות, קופסאות
   trophy: { w: 0, l: 0, t: 0, hist: [] },   // גביע המשפחה
-  muted: false, pinHash: null, examDone: false, overviewDone: false, names: { kid: '', parent: '' },
+  muted: false, pinHash: null, names: { kid: '', parent: '' },
 });
 
 let S = fresh();
@@ -34,6 +35,11 @@ export function load() {
       const base = fresh();
       for (const k of ['eq', 'custom', 'stats', 'trophy', 'ach']) S[k] = Object.assign({}, base[k], saved[k]);
       S.pass = Object.assign({}, base.pass, saved.pass);
+      // שמירה מלפני המקצועות: ההתקדמות באזורים הייתה ברמה העליונה – עוברת למקצוע joshua
+      if (!saved.subjects) {
+        S.subjects = { joshua: { zone: saved.zone || {}, storySeen: saved.storySeen || {}, overviewDone: !!saved.overviewDone, examDone: !!saved.examDone } };
+        for (const k of ['zone', 'storySeen', 'overviewDone', 'examDone']) delete S[k];
+      }
       S.pass.power = Object.assign({}, base.pass.power, (saved.pass || {}).power);
       // שמירה מלפני פס הקרב עם איסוף: כל פרסי החינם שכבר נפתחו נחשבים כנאספו (שלא יאבד כלום)
       if (!saved.pass) { S.pass.claimed = {}; for (let t = 1; t <= tierOf(S.xp); t++) S.pass.claimed['f' + t] = true; }
@@ -75,24 +81,34 @@ export function addXP(n) {
   return { before, after: tierOf() };
 }
 
+// ---------- התקדמות לפי מקצוע ----------
+// הפרסים (XP, פריטים, עונות) משותפים לכל המקצועות; האזורים, הסיפור והמבחן – לכל מקצוע בנפרד.
+export const subjectId = () => SUBJECT_ID;   // המקצוע הפעיל = החבילה שנטענה
+export function sub(id = subjectId()) {
+  S.subjects = S.subjects || {};
+  return (S.subjects[id] = S.subjects[id] || { zone: {}, storySeen: {}, overviewDone: false, examDone: false });
+}
+export function setSubject(id) { S.subject = id; save(); }
 export function setObjective(ch, key) {
   if (!ch) return false;
-  const z = (S.zone[ch] = S.zone[ch] || {});
+  const z = (sub().zone[ch] = sub().zone[ch] || {});
   const was = !!z[key];
   z[key] = true;
   save();
   return !was;
 }
-export const objectives = ch => S.zone[ch] || {};
-export const captured = ch => { const z = objectives(ch); return !!(z.story && z.hunter && z.other); };
-export const allCaptured = () => [1, 2, 3, 4, 5].every(captured);
-export const capturedCount = () => [1, 2, 3, 4, 5].filter(captured).length;
+export const objectives = (ch, id) => sub(id).zone[ch] || {};
+export const captured = (ch, id) => { const z = objectives(ch, id); return !!(z.story && z.hunter && z.other); };
+export const allCaptured = () => UNIT_NUMS.every(n => captured(n));
+export const capturedCount = (id) => id ? Object.keys(sub(id).zone).filter(n => captured(+n, id)).length : UNIT_NUMS.filter(n => captured(n)).length;
+// סך האזורים שנכבשו בכל המקצועות (לכרטיס הזהב של עונה 1)
+export const capturedTotal = () => Object.keys(S.subjects || {}).reduce((a, id) => a + capturedCount(id), 0);
 
 export function markStoryScreen(ch, i, total) {
-  const a = (S.storySeen[ch] = S.storySeen[ch] || []);
+  const a = (sub().storySeen[ch] = sub().storySeen[ch] || []);
   if (!a.includes(i)) a.push(i);
   let first = false;
-  if (ch === 0) { if (a.length >= total && !S.overviewDone) { S.overviewDone = true; first = true; } }
+  if (ch === 0) { if (a.length >= total && !sub().overviewDone) { sub().overviewDone = true; first = true; } }
   else if (a.length >= total) first = setObjective(ch, 'story');
   save();
   return first;

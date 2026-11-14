@@ -1,6 +1,6 @@
 // מסכי "למבחן": רשימת נושאים, ודף קריאה לנושא (טקסט ממוקד למבחן).
-import { TOPICS } from './focus-content.js';
-import { DUELS } from './duel-content.js';
+import { PACK } from './subjects/index.js';
+const TOPICS = PACK.topics, DUELS = PACK.duels;
 import { h, modal, toast } from './ui.js';
 import { topicToText, allToText, copyText, canShare, shareText } from './export.js';
 import { sfx } from './audio.js';
@@ -25,7 +25,7 @@ const toolBtn = (icon, label, fn) => h('button', { class: 'tool', onclick: () =>
 export function list(v) {
   v.append(
     h('h2', { class: 'sec' }, '🎯 למבחן'),
-    h('p', { class: 'sub' }, 'כל מה שחשוב לדעת למבחן. לוחצים על נושא וקוראים.'));
+    h('p', { class: 'sub' }, PACK.labels.studyHint));
   v.append(h('div', { class: 'doc-tools' },
     toolBtn('📋', 'העתק את כל החומר', () => doCopy(allToText())),
     canShare() && toolBtn('📤', 'שתף', () => shareText('חומר למבחן – יהושע', allToText()))));

@@ -1,6 +1,7 @@
 // "תדריך משימה": מסכי סיפור עם החלקה, מילים קשות, והקלטות משפחתיות.
 import * as State from './state.js';
-import { CHAPTERS, OVERVIEW, refText, hebNum } from './content.js';
+import { PACK, UNITS } from './subjects/index.js';
+const CHAPTERS = UNITS, OVERVIEW = PACK.overview, refText = PACK.refText;
 import { h, richText, termPopup, toast } from './ui.js';
 import { sfx, playBlob, stopPlayback } from './audio.js';
 import { getRec } from './db.js';
@@ -19,7 +20,7 @@ export async function render(v, { ch, start = 0 }, sc) {
     c.leading && h('button', { class: 'lead-chip', onclick: () => termPopup('leading') }, 'מילה מנחה: ', h('b', {}, c.leading)));
   const stage = h('div', { class: 'story-stage' });
   const ctrl = h('div', { class: 'story-ctrl' });
-  v.append(h('div', { class: 'story-head' }, h('small', {}, ch === 0 ? 'התחילו כאן' : `פרק ${hebNum(ch)}׳ · ${c.zone}`), h('h2', {}, c.title)), top, stage, ctrl);
+  v.append(h('div', { class: 'story-head' }, h('small', {}, ch === 0 ? 'התחילו כאן' : `${PACK.labels.unit(ch)} · ${c.zone}`), h('h2', {}, c.title)), top, stage, ctrl);
 
   // swipe: אצבע שזזה שמאלה→ימינה = הבא (כיוון קריאה בעברית)
   let sx = null, sy = null;

@@ -1,5 +1,6 @@
 // בונים את הקו: גרירת כרטיסים (עובד במגע) או לחיצה על שני כרטיסים להחלפה.
-import { SEQUENCES } from '../content.js';
+import { PACK } from '../subjects/index.js';
+const SEQUENCES = PACK.sequences;
 import { h, shuffle } from '../ui.js';
 import { sfx } from '../audio.js';
 import { waitClick } from './common.js';

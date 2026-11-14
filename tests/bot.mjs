@@ -28,7 +28,8 @@ export async function playToEnd(page, timeoutMs = 90000) {
   const t0 = Date.now();
   while (Date.now() - t0 < timeoutMs) {
     // מילים שלא אמורות להופיע אף פעם על המסך (ערך false/null שהודפס בטעות)
-    const txt = await page.locator('.game').innerText().catch(() => '');
+    // (בסוף הסבב .game נעלם – בלי בדיקת count הייתה כאן המתנה של 30 שניות בכל משחק)
+    const txt = (await page.locator('.game').count()) ? await page.locator('.game').first().innerText({ timeout: 1000 }).catch(() => '') : '';
     const stray = /\b(false|null|undefined|NaN|\[object)/.exec(txt);
     if (stray) throw new Error(`על מסך המשחק מופיע "${stray[1]}": ${txt.slice(0, 120).replace(/\s+/g, ' ')}`);
     if (await page.locator('.end-card').count()) return;

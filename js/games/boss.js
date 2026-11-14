@@ -1,5 +1,6 @@
 // המעגל האחרון: שאלה פתוחה – בוחרים עמדה, בונים תשובה מכרטיסי טיעון, ורואים תשובה לדוגמה.
-import { BOSS } from '../content.js';
+import { PACK } from '../subjects/index.js';
+const BOSS = PACK.boss;
 import { h, shuffle } from '../ui.js';
 import { sfx } from '../audio.js';
 import { waitClick } from './common.js';

@@ -1,5 +1,6 @@
 // העתקה ושיתוף של חומר הלימוד ("למבחן") כטקסט נקי: אפשר להדביק בוואטסאפ, במסמך או להדפיס.
-import { TOPICS } from './focus-content.js';
+import { PACK } from './subjects/index.js';
+const TOPICS = PACK.topics;
 
 const clean = s => String(s).replace(/\*\*/g, '');
 const HR = '\n\n━━━━━━━━━━━━\n\n';

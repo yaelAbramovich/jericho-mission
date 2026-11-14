@@ -6,7 +6,8 @@ import { art, itemById, MAX_TIER, TIER_XP } from './rewards.js';
 import { isOpen, equipped, howText } from './locker.js';
 import { cellRewards, POWER, RARITY, TYPE_HELP, rewardRarity, rarityOf, MILESTONES, BOX_POOL, GOLD_ZONES, GOLD_ROUNDS, S1_FINALE, claimKey } from './pass-data.js';
 import { buildSeason, ensureSeason, themeOf } from './seasons.js';
-import { TEST_DATE } from './content.js';
+import { PACK, N_UNITS } from './subjects/index.js';
+const TEST_DATE = PACK.testDate;
 import * as Quests from './quests.js';
 import { achName } from './achievements.js';
 import { renderTop, go } from './app.js';
@@ -22,7 +23,7 @@ export const isClaimed = (track, t) => !!State.get().pass.claimed[key(track, t)]
 export const goldActive = () => State.get().pass.gold;
 // התקדמות לכרטיס הזהב: עונה 1 – כיבוש אזורים; עונה 2 ואילך – סבבים בעונה
 export function goldProgress() {
-  return season() === 1 ? { cur: State.capturedCount(), need: GOLD_ZONES, zones: true } : { cur: State.get().pass.seasonRounds || 0, need: GOLD_ROUNDS, zones: false };
+  return season() === 1 ? { cur: State.capturedTotal(), need: GOLD_ZONES, zones: true } : { cur: State.get().pass.seasonRounds || 0, need: GOLD_ROUNDS, zones: false };
 }
 export const goldReady = () => { const g = goldProgress(); return g.cur >= g.need && !goldActive(); };
 export const seasonDone = () => State.tierOf() >= MAX_TIER;
@@ -120,7 +121,7 @@ export function renderTrack(v, sc) {
     function seasonBanner() {
       const n = season(), th = n > 1 ? themeOf(n) : null, d = daysLeft();
       return h('div', { class: 'season' },
-        h('div', {}, h('small', {}, `עונה ${n}`), h('b', {}, th ? `${th.icon} ${th.name}` : 'מבצע יריחו')),
+        h('div', {}, h('small', {}, `עונה ${n}`), h('b', {}, th ? `${th.icon} ${th.name}` : PACK.appTitle)),
         h('div', { class: 'se-d' }, n > 1 ? 'עונה חדשה – משחקים ואוספים!' : d > 0 ? [h('b', {}, String(d)), ' ימים לסוף העונה'] : d === 0 ? 'העונה מסתיימת היום! 💪' : 'העונה הסתיימה – אפשר להמשיך לאסוף'),
         h('button', { class: 'helplink', 'aria-label': 'איך פס הקרב עובד', onclick: showHelp }, '❓'));
     }
@@ -144,7 +145,7 @@ export function renderTrack(v, sc) {
       if (P.gold) return h('div', { class: 'ticket on slim' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, 'כרטיס הזהב פעיל')));
       if (goldReady()) return h('div', { class: 'ticket ready' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, g.zones ? `כבשת ${GOLD_ZONES} אזורים!` : `שיחקת ${GOLD_ROUNDS} סבבים!`), h('small', {}, 'הפעל את כרטיס הזהב וקבל את כל פרסי הזהב')),
         h('button', { class: 'btn primary glow', onclick: onActivate }, 'הפעל!'));
-      return h('div', { class: 'ticket slim' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, 'כרטיס הזהב'), h('small', {}, g.zones ? `כבוש ${GOLD_ZONES} מתוך 5 אזורים כדי להפעיל (${caps}/${GOLD_ZONES})` : `שחק ${GOLD_ROUNDS} סבבים בעונה הזאת כדי להפעיל (${caps}/${GOLD_ROUNDS})`)),
+      return h('div', { class: 'ticket slim' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, 'כרטיס הזהב'), h('small', {}, g.zones ? `כבוש ${GOLD_ZONES} מתוך ${N_UNITS} אזורים כדי להפעיל (${caps}/${GOLD_ZONES})` : `שחק ${GOLD_ROUNDS} סבבים בעונה הזאת כדי להפעיל (${caps}/${GOLD_ROUNDS})`)),
         h('div', { class: 'tk-bar' }, h('i', { style: { width: Math.min(100, caps / g.need * 100) + '%' } })));
     }
     function inventory() {
@@ -160,9 +161,9 @@ export function renderTrack(v, sc) {
         `\u200E${a}–${z}`, cl.some(([, t]) => t >= a && t <= z) && h('i', { class: 'pdot' }))));
     }
     function trackHead() { return h('div', { class: 'thead' }, h('span', { class: 'free' }, 'חינם'), h('span', {}), h('span', { class: 'gold' }, 'זהב ✨')); }
-    function examRow() { return h('div', { class: 'exam-row' + (S.examDone ? ' done' : '') },
+    function examRow() { const exDone = !!(S.subjects && S.subjects.joshua && S.subjects.joshua.examDone); return h('div', { class: 'exam-row' + (exDone ? ' done' : '') },
       h('button', { class: 'rtile rar-legendary', onclick: () => { sfx.tap(); openPreview(EXAM_R); } }, h('span', { class: 'rt-kind' }, rewardKind(EXAM_R)), h('span', { class: 'ra', html: rewardArt(EXAM_R, 56) }), h('small', {}, itemById('ax').name)),
-      h('div', {}, h('b', {}, '🏆 פרס מבחן הסיכום'), h('small', {}, S.examDone ? 'נפתח! אפשר ללבוש בארון' : 'משחקים את מבחן הסיכום אחרי כיבוש כל האזורים'))); }
+      h('div', {}, h('b', {}, '🏆 פרס מבחן הסיכום'), h('small', {}, exDone ? 'נפתח! אפשר ללבוש בארון' : 'משחקים את מבחן הסיכום אחרי כיבוש כל האזורים'))); }
     function rows() {
       const [from, to] = PAGES[passPage], out = [];
       for (let t = from; t <= to; t++) {
@@ -213,7 +214,7 @@ export function renderTrack(v, sc) {
       row('⭐', 'דרגות', 'כל סבב נותן XP. כל 60 XP = דרגה חדשה, ובכל דרגה מחכה לך פרס.'),
       row('✅', 'לאסוף פרסים', 'כשפרס זוהר בירוק – לוחצים „קבל". רק פרס שנאסף אפשר ללבוש.'),
       row('📄', 'דפים', 'הדרגות מחולקות לדפים של 5. הנקודה האדומה מראה באיזה דף מחכה לך פרס.'),
-      row('🎫', 'כרטיס זהב', `בעונה 1: כובשים ${GOLD_ZONES} מתוך 5 אזורים. בעונות הבאות: משחקים ${GOLD_ROUNDS} סבבים. מפעילים אותו – ואז נפתחים פרסי הזהב (הטור השמאלי).`),
+      row('🎫', 'כרטיס זהב', `בעונה 1: כובשים ${GOLD_ZONES} מתוך ${N_UNITS} אזורים. בעונות הבאות: משחקים ${GOLD_ROUNDS} סבבים. מפעילים אותו – ואז נפתחים פרסי הזהב (הטור השמאלי).`),
       row('🎁', 'קופסת מסתורין', 'נפתחת ומגלה פריט שעוד אין לך.'),
       row('🏁', 'סוף עונה', 'כשמגיעים לדרגה 20 מסיימים את העונה: מחכה הפתעה ענקית, ומתחילה עונה חדשה עם פרסים חדשים.'),
       ...Object.values(POWER).map(p => row(p.icon, `כוח: ${p.name}`, p.desc)),
