@@ -3,8 +3,8 @@
 // ולכן שאר הקוד יכול לקרוא את PACK כקבוע (top-level await).
 // להוספת מקצוע חדש: תיקייה חדשה + pack.js, ורישום ב-REGISTRY (וב-sw.js, ראו README). hidden: true = לא מופיע בבורר.
 export const REGISTRY = [
-  { id: 'joshua', name: 'יהושע א׳–ה׳', icon: '📖' },
-  { id: 'science', name: 'מדע וטכנולוגיה', icon: '🔬' },
+  { id: 'joshua', name: 'תנ״ך', icon: '📖', desc: 'יהושע א׳–ה׳' },
+  { id: 'science', name: 'מדעים', icon: '🔬', desc: 'מערכות טכנולוגיות' },
   { id: 'math', name: 'מתמטיקה', icon: '🧮', desc: 'מספרים עשרוניים, אחוזים וחקר נתונים' },   // hidden: true היה מסתיר מקצוע מהבורר (למשל כשהתוכן עוד לא מוכן)
 ];
 const KEY = 'jericho.v1';

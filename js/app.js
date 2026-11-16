@@ -75,7 +75,8 @@ const daysLeft = () => {
 const VISIBLE_SUBJECTS = REGISTRY.filter(r => !r.hidden);
 function subjectChip() {
   if (VISIBLE_SUBJECTS.length < 2) return [];
-  return [h('button', { class: 'subj-chip', onclick: openSubjects }, `${PACK.icon} ${PACK.name} ▾`)];
+  const me = REGISTRY.find(r => r.id === PACK.id) || PACK;
+  return [h('button', { class: 'subj-chip', onclick: openSubjects }, `${me.icon} ${me.name} ▾`, h('small', {}, me.desc || ''))];
 }
 function openSubjects() {
   const m = modal([h('h3', {}, 'איזה מבחן לומדים?'), h('p', { class: 'sub' }, 'הפרסים, הדרגות והעונות משותפים לכל המקצועות. האזורים נשמרים לכל מקצוע בנפרד.'),
