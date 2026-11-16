@@ -780,6 +780,7 @@ await test('חשבון: כל שאלה שנוצרה אוטומטית נכונה (
     for (const D of Object.values(PACK.duels)) for (const idea of D.ideas) for (const q of idea.qs) {
       const t = clean(q.q); let m;
       if ((m = t.match(/^כמה זה (\S+) ([×:]) (10|100|1,000)\?$/))) { const [, a, op, p] = m, want = op === '×' ? num(a) * num(p) : num(a) / num(p); checked++; if (Math.abs(num(q.a) - want) > 1e-9) out.push(`${t} ← ${q.a} (צריך ${want})`); }
+      else if ((m = t.match(/^כמה זה (\S+) : (\S+)\?$/))) { checked++; if (Math.abs(num(q.a) - num(m[1]) / num(m[2])) > 1e-9) out.push(`${t} ← ${q.a} (צריך ${num(m[1]) / num(m[2])})`); }
       else if ((m = t.match(/^כמה זה (\S+) × (\S+)\?$/))) { checked++; if (Math.abs(num(q.a) - num(m[1]) * num(m[2])) > 1e-9) out.push(`${t} ← ${q.a} (צריך ${num(m[1]) * num(m[2])})`); }
       else if ((m = t.match(/^איזה מספר חסר\? (\S+) ([×:]) □ = (\S+)$/))) { const [, a, op, r] = m, want = op === '×' ? num(r) / num(a) : num(a) / num(r); checked++; if (Math.abs(num(q.a) - want) > 1e-9) out.push(`${t} ← ${q.a} (צריך ${want})`); }
       else if ((m = t.match(/^איזה מספר חסר\? (\S+) × (\S+) = (\S+) × □$/))) { const want = num(m[1]) * num(m[2]) / num(m[3]); checked++; if (Math.abs(num(q.a) - want) > 1e-9) out.push(`${t} ← ${q.a} (צריך ${want})`); }
@@ -794,25 +795,25 @@ await test('חשבון: כל שאלה שנוצרה אוטומטית נכונה (
 await test('חשבון: כל המסכים נפתחים, 3 אזורים, רק המשחקים הרלוונטיים, ובלי הפניות ליהושע או למדעים', () => withPage(async page => {
   const go = (name, params = {}) => page.evaluate(([n, p]) => import('/js/app.js').then(m => m.go(n, p)), [name, params]);
   const texts = [], filled = async what => { await page.waitForFunction(() => (document.querySelector('.view') || { innerText: '' }).innerText.trim().length > 5, null, { timeout: 4000 }).catch(() => { throw new Error('מסך ריק: ' + what); }); texts.push(await page.locator('.view').innerText()); };
-  await go('map'); await filled('מפה'); eq(await page.locator('.zone').count(), 3, 'אזורים במפה'); eq(await page.title(), 'מבצע המספרים', 'כותרת הדף');
-  for (let ch = 1; ch <= 3; ch++) {
+  await go('map'); await filled('מפה'); eq(await page.locator('.zone').count(), 5, 'אזורים במפה'); eq(await page.title(), 'מבצע המספרים', 'כותרת הדף');
+  for (let ch = 1; ch <= 5; ch++) {
     await go('zone', { ch }); await filled('אזור ' + ch); const tiles = await page.locator('.tiles .tn').allInnerTexts();
     ok(!tiles.includes('מי אמר?') && !tiles.includes('המעגל האחרון') && !tiles.includes('בונים תרשים'), 'משחק שלא קיים בחשבון: ' + tiles.join('|')); ok(tiles.includes('הסערה מתקרבת') && tiles.includes('בונים את הקו'), 'משחק חסר: ' + tiles.join('|'));
     await go('story', { ch }); await page.waitForTimeout(150); await filled('תדריך ' + ch);
   }
-  await go('focus'); await filled('למבחן'); eq(await page.locator('.topic-btn').count(), 3, 'נושאי למבחן'); ok((await page.locator('.topic-btn').first().innerText()).includes('שיעור אינטראקטיבי'), 'סימון שיעור בכפתור הנושא');
+  await go('focus'); await filled('למבחן'); eq(await page.locator('.topic-btn').count(), 7, 'נושאי למבחן'); ok((await page.locator('.topic-btn').first().innerText()).includes('שיעור אינטראקטיבי'), 'סימון שיעור בכפתור הנושא');
   await go('topic', { id: 'math-1' }); await filled('נושא'); eq(await page.locator('.lesson-cta').count(), 1, 'כפתור שיעור בנושא');
   await go('games'); await filled('משחקים'); await go('profile'); await filled('פרופיל'); await go('pass'); await page.waitForSelector('.passv');
   const hit = /יהושע|יריחו|רחב|הירדן|טכנולוגי|קלט|פלט/.exec(texts.join('\n')); ok(!hit, `מסכי חשבון מזכירים מקצוע אחר: "${hit && hit[0]}"`);
 }, { storage: seed(MATH) }));
 const mathCases = [];
-for (const ch of [0, 1, 2, 3]) {
+for (const ch of [0, 1, 2, 3, 4, 5]) {
   const label = ch ? `נושא ${ch}` : 'כל הנושאים';
   mathCases.push([`חשבון · פנדלים טריוויה · ${label}`, 'hunter', { chapter: ch, mode: 'trivia', count: 2 }]);
   mathCases.push([`חשבון · הסערה · ${label}`, 'swipe', { chapter: ch, duration: 3 }]);
   mathCases.push([`חשבון · בונים את הקו · ${label}`, 'order', { chapter: ch, count: 1 }]);
 }
-mathCases.push(['חשבון · מבחן הסיכום', 'exam', { swipeSeconds: 3 }], ['חשבון · דו-קרב משפחתי', 'duel', { topic: 'm1' }]);
+mathCases.push(['חשבון · מבחן הסיכום', 'exam', { swipeSeconds: 3 }], ['חשבון · דו-קרב משפחתי א', 'duel', { topic: 'm1' }], ['חשבון · דו-קרב משפחתי ב', 'duel', { topic: 'm2' }]);
 await pool(mathCases, 4, async ([name, key, opts]) => {
   const t0 = Date.now();
   try {
@@ -823,7 +824,7 @@ await pool(mathCases, 4, async ([name, key, opts]) => {
     results.push({ name, ok: true }); console.log(`  ✓ ${name} (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
   } catch (e) { results.push({ name, ok: false, e }); console.log(`  ✗ ${name}\n      ${String(e.message).split('\n').join('\n      ')}`); }
 });
-await test('שיעורים אינטראקטיביים: כל שלושת השיעורים נפתרים עד הסוף, XP רק בפעם הראשונה, וההתקדמות נשמרת', () => withPage(async page => {
+await test('שיעורים אינטראקטיביים: כל שבעת השיעורים נפתרים עד הסוף, XP רק בפעם הראשונה, וההתקדמות נשמרת', () => withPage(async page => {
   const go = (name, params = {}) => page.evaluate(([n, p]) => import('/js/app.js').then(m => m.go(n, p)), [name, params]);
   const xp = () => page.evaluate(() => JSON.parse(localStorage.getItem('jericho.v1')).xp);
   const play = async (id, topic) => {
@@ -837,11 +838,12 @@ await test('שיעורים אינטראקטיביים: כל שלושת השיע�
     await page.waitForSelector('.lesson-end'); return n;
   };
   const x0 = await xp();
-  for (const [id, topic] of [['times', 'math-1'], ['divide', 'math-2'], ['decimal', 'math-3']]) await play(id, topic);
-  eq(await xp() - x0, 120, 'XP אחרי שלושה שיעורים (40 כל אחד)');
-  await play('times', 'math-1'); eq(await xp() - x0, 120, 'XP לא אמור לגדול בשיעור שכבר הושלם');
-  const done = await page.evaluate(() => import('/js/lesson.js').then(m => ['times', 'divide', 'decimal'].map(m.lessonDone)));
-  eq(done.join(), 'true,true,true', 'השיעורים מסומנים כהושלמו'); await go('focus'); ok((await page.locator('.topic-btn').first().innerText()).includes('✓'), 'וי בכפתור הנושא');
+  const ALL = [['times', 'math-1'], ['divide', 'math-2'], ['decimal', 'math-3'], ['decdec', 'math-4'], ['compare', 'math-5'], ['divwhole', 'math-6'], ['divdec', 'math-7']];
+  for (const [id, topic] of ALL) await play(id, topic);
+  eq(await xp() - x0, 280, 'XP אחרי שבעה שיעורים (40 כל אחד)');
+  await play('times', 'math-1'); eq(await xp() - x0, 280, 'XP לא אמור לגדול בשיעור שכבר הושלם');
+  const done = await page.evaluate(() => import('/js/lesson.js').then(m => ['times', 'divide', 'decimal', 'decdec', 'compare', 'divwhole', 'divdec'].map(m.lessonDone)));
+  eq(done.join(), 'true,true,true,true,true,true,true', 'השיעורים מסומנים כהושלמו'); await go('focus'); ok((await page.locator('.topic-btn').first().innerText()).includes('✓'), 'וי בכפתור הנושא');
 }, { storage: seed(MATH) }));
 await test('שיעור: גרירה אמיתית בעכבר של ספרות לטבלה (כולל אפסים), טעות מחזירה את הספרה, ו"בדוק" נפתח רק כשכולן במקום', () => withPage(async page => {
   await page.evaluate(() => import('/js/app.js').then(m => m.go('lesson', { id: 'times', topic: 'math-1' }))); await page.waitForSelector('.lesson-stage .step');
@@ -876,11 +878,14 @@ await test('שיעור: טבלת המקום מציגה כל כפל וחילוק 
   });
   ok(!r.length, r.join('\n'));
   await page.setViewportSize({ width: 320, height: 640 });
-  await page.evaluate(() => import('/js/app.js').then(m => m.go('lesson', { id: 'divide', topic: 'math-2' }))); await page.waitForSelector('.lesson-stage .step');
-  for (let i = 0; i < 10; i++) {
+  for (const lid of ['divide', 'decdec', 'compare', 'divwhole', 'divdec']) {
+  await page.evaluate(id => import('/js/app.js').then(m => m.go('lesson', { id, topic: 'math-2' })), lid); await page.waitForSelector('.lesson-stage .step');
+  const nSteps = await page.locator('.dots i').count();
+  for (let i = 0; i < nSteps; i++) {
     const over = await page.evaluate(() => { const d = document.documentElement, s = document.querySelector('.lesson-stage'); return { page: d.scrollWidth - d.clientWidth, stage: s.scrollWidth - s.clientWidth }; });
-    ok(over.page <= 1 && over.stage <= 1, `גלישה אופקית בשלב ${i} (320px): ${JSON.stringify(over)}`);
+    ok(over.page <= 1 && over.stage <= 1, `גלישה אופקית בשיעור ${lid} שלב ${i} (320px): ${JSON.stringify(over)}`);
     await page.evaluate(() => document.querySelector('.lesson-stage').__solve()); await page.click('.lesson-ctrl .nav.primary'); await page.waitForTimeout(120);
+  }
   }
 }, { storage: seed(MATH) }));
 

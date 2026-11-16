@@ -19,3 +19,9 @@ export function mulStr(a, b) {
 }
 export const intOf = s => String(s).replace('.', '').replace(/^0+(?=\d)/, '');   // 0.07 -> "7"
 export const kOf = n => ({ 10: 1, 100: 2, 1000: 3 })[n];
+// מנה מדויקת של שני מספרים עשרוניים (כשהחילוק סופי); מחזיר null אם אינו מתחלק בלי שארית עד 8 ספרות
+export function divStr(a, b) {
+  const da = decimals(a), db = decimals(b), A = Number(String(a).replace('.', '')), B = Number(String(b).replace('.', ''));
+  for (let k = 0; k <= 8; k++) if ((A * 10 ** k) % B === 0) return shiftStr(String(A * 10 ** k / B), db - da - k);
+  return null;
+}

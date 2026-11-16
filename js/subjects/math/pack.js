@@ -1,5 +1,6 @@
 // חבילת המקצוע "חשבון": מספרים עשרוניים – כפל וחילוק ב-10, ב-100 וב-1,000, וכפל עשרוני (א). טיוטה על פי עמודים 7–40 של הספר.
 import * as C from './content.js';
+import * as B from './content-b.js';
 import { MAP } from './map.js';
 import { LESSONS } from './lessons.js';
 import { hebNum } from '../../hebrew.js';
@@ -7,9 +8,9 @@ import { hebNum } from '../../hebrew.js';
 export default {
   id: 'math', name: 'חשבון', icon: '🧮', appTitle: 'מבצע המספרים',
   testDate: C.TEST_DATE,
-  units: C.UNITS, overview: null, glossary: C.GLOSSARY,
-  topics: C.TOPICS, duels: C.DUELS, duelUnits: { m1: [1, 2, 3] },
-  statements: C.STATEMENTS, sequences: C.SEQUENCES, boss: null, quotes: [], who: {}, refText: () => '',
+  units: [...C.UNITS, ...B.UNITS_B], overview: null, glossary: C.GLOSSARY,
+  topics: [...C.TOPICS, ...B.TOPICS_B], duels: { ...C.DUELS, m2: B.DUEL_B }, duelUnits: { m1: [1, 2, 3], m2: [3, 4, 5] },
+  statements: [...C.STATEMENTS, ...B.STATEMENTS_B], sequences: [...C.SEQUENCES, ...B.SEQUENCES_B], boss: null, quotes: [], who: {}, refText: () => '',
   lessons: LESSONS, lessonKit: 'math/kit.js',   // נתוני השיעורים; קובץ הרכיבים (kit.js) נטען רק כשפותחים שיעור
   map: MAP,
   games: { hunter: { modes: ['trivia'] }, swipe: {}, order: {}, duel: {} },

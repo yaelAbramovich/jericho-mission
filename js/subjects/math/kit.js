@@ -3,7 +3,7 @@
 import { h, shuffle } from '../../ui.js';
 import { sfx } from '../../audio.js';
 import { celebrate } from '../../react.js';
-import { shiftStr, ltr, powName } from './numbers.js';
+import { shiftStr, ltr, powName, mulStr, divStr, decimals } from './numbers.js';
 
 const bold = s => { const f = document.createDocumentFragment(); String(s).split('**').forEach((p, i) => { if (p) f.append(i % 2 ? h('b', {}, p) : p); }); return f; };
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -312,4 +312,75 @@ export function say(step, api) {
   return el;
 }
 
-export const KINDS = { say, board, place, quiz, tenths, chain };
+// ---------- שלב: מגדילים את שני המספרים בחילוק (המחלק הופך לשלם) ----------
+export function scale(step, api) {
+  const probs = step.puzzles; let idx = 0;
+  const el = h('div', { class: 'step scale-step' }, step.title && h('h3', {}, step.title), step.text && h('p', { class: 'say' }, bold(step.text)));
+  const body = h('div', { class: 'sc' }); el.append(body);
+  let cur = null;
+  function start() {
+    const p = probs[idx], ans = divStr(p.a, p.b), need = decimals(p.b);
+    const num = (v, cls = '') => h('div', { class: 'sc-n ' + cls }, v);
+    const ma = h('div', { class: 'sc-mul' }), mb = h('div', { class: 'sc-mul' });
+    const na = num(p.a), nb = num(p.b);
+    const row = h('div', { class: 'sc-row', dir: 'ltr' }, h('div', { class: 'sc-col' }, ma, na), h('div', { class: 'sc-op' }, ':'), h('div', { class: 'sc-col' }, mb, nb));
+    const cap = h('p', { class: 'pv-cap' }, bold(`המחלק **${p.b}** הוא עשרוני. הגדילו את **שני** המספרים באותו מספר, עד שהמחלק יהיה שלם.`));
+    const res = h('div', { class: 'tn-line', dir: 'ltr' }, ltr(`${p.a} : ${p.b} = ?`));
+    let done = false;
+    const btns = [10, 100, 1000].map(n => h('button', { class: 'pv-op mul', onclick: () => apply(n) }, `× ${powName(n)}`));
+    function apply(n) {
+      if (done) return; const k = Math.round(Math.log10(n)), a2 = shiftStr(p.a, k), b2 = shiftStr(p.b, k);
+      sfx.swipe(); na.textContent = a2; nb.textContent = b2; ma.textContent = ma.dataset.t = `× ${powName(n)}`; mb.textContent = `× ${powName(n)}`;
+      [na, nb].forEach(x => { x.classList.remove('pop'); void x.offsetWidth; x.classList.add('pop'); });
+      if (decimals(b2) === 0) {
+        done = true; sfx.goal(); celebrate(api.host, 22, false); api.win(); nb.classList.add('ok');
+        res.replaceChildren(ltr(`${p.a} : ${p.b} = ${a2} : ${b2} = ${ans}`));
+        cap.replaceChildren(bold(k > need ? `נכון! אפשר גם כך, אבל ×${powName(10 ** need)} כבר הספיק. **המנה לא השתנתה: ${ans}**` : `מעולה! המחלק הוא שלם, ו**המנה לא השתנתה: ${ans}**`));
+        btns.forEach(b => b.disabled = true); setTimeout(() => { idx++; if (idx < probs.length) start(); else api.done(); }, 1700);
+      } else { sfx.wrong(); api.lose(); cap.replaceChildren(bold(`המחלק עדיין עשרוני (${b2}). נסו להגדיל יותר.`)); }
+    }
+    body.replaceChildren(h('small', { class: 'pl-lab' }, `תרגיל ${idx + 1} מתוך ${probs.length}`), row, res, cap, h('div', { class: 'pv-ops' }, btns));
+    cur = { apply, need };
+  }
+  start();
+  el.__solve = async () => { for (let k = idx; k < probs.length; k++) { cur.apply(10 ** cur.need); await wait(1900); } };
+  return el;
+}
+
+// ---------- שלב: מסך חושף (שלבי חילוק ארוך וכו') ----------
+export function reveal(step, api) {
+  const F = step.frames; let i = 0;
+  const pre = h('pre', { class: 'rv-pre', dir: 'ltr' }), cap = h('p', { class: 'say rv-cap' });
+  const btn = h('button', { class: 'btn primary glow' }, 'השלב הבא ◀');
+  const show = () => { pre.textContent = F[i].rows.join('\n'); pre.classList.remove('pop'); void pre.offsetWidth; pre.classList.add('pop'); cap.replaceChildren(bold(F[i].cap)); btn.style.display = i < F.length - 1 ? '' : 'none'; if (i === F.length - 1) { api.done(); } };
+  btn.addEventListener('click', () => { sfx.pick(); i++; show(); });
+  const el = h('div', { class: 'step reveal-step' }, step.title && h('h3', {}, step.title), step.text && h('p', { class: 'say' }, bold(step.text)), pre, cap, btn);
+  show(); el.__solve = async () => { i = F.length - 1; show(); };
+  return el;
+}
+
+// ---------- שלב: גורם קטן/שווה/גדול מ-1 – משווים את המכפלה למספר ----------
+export function factor(step, api) {
+  const a = step.a, A = Number(a), seen = new Set();
+  const bar = (cls, lab) => { const fill = h('i', { style: { width: '0%' } }), val = h('b', {}); return { fill, val, el: h('div', { class: 'fc-bar ' + cls }, h('small', {}, lab), h('div', { class: 'fc-track', dir: 'ltr' }, fill), val) }; };
+  const b0 = bar('base', 'המספר'), b1 = bar('prod', 'המכפלה');
+  const w = v => Math.min(100, Number(v) / (A * 2.2) * 100) + '%';
+  b0.fill.style.width = w(a); b0.val.textContent = a;
+  const cap = h('p', { class: 'pv-cap' }, bold(`בחרו גורם והשוו את המכפלה אל **${a}**.`));
+  const eq = h('div', { class: 'pv-eq', dir: 'ltr' }, ltr(`${a} × ? = ?`));
+  const chips = step.stops.map(s => h('button', { class: 'pv-op fc-chip', onclick: () => pickB(s) }, s));
+  function pickB(s) {
+    sfx.pick(); const prod = mulStr(a, s), cat = Number(s) < 1 ? 'lt' : Number(s) === 1 ? 'eq' : 'gt'; seen.add(cat);
+    b1.fill.style.width = w(prod); b1.val.textContent = prod; b1.el.dataset.cat = cat;
+    eq.replaceChildren(ltr(`${a} × ${s} = ${prod}`)); eq.classList.remove('pop'); void eq.offsetWidth; eq.classList.add('pop');
+    chips.forEach(c => c.classList.toggle('used', c.textContent === s));
+    cap.replaceChildren(bold(cat === 'lt' ? `${s} **קטן מ-1** ← המכפלה **קטנה** מ-${a}` : cat === 'eq' ? `כפל ב-1 ← המכפלה **שווה** ל-${a}` : `${s} **גדול מ-1** ← המכפלה **גדולה** מ-${a}`));
+    if (seen.size === 3) api.done();
+  }
+  const el = h('div', { class: 'step factor-step' }, step.title && h('h3', {}, step.title), step.text && h('p', { class: 'say' }, bold(step.text)), eq, b0.el, b1.el, cap, h('div', { class: 'pv-ops' }, chips));
+  el.__solve = async () => { for (const s of [step.stops[0], step.stops.find(x => Number(x) === 1), step.stops.at(-1)]) { pickB(s); await wait(20); } };
+  return el;
+}
+
+export const KINDS = { say, board, place, quiz, tenths, chain, scale, reveal, factor };
+

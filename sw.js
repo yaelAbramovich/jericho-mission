@@ -1,6 +1,6 @@
 // Service Worker: שומר את כל הקבצים כדי שהאפליקציה תעבוד בלי אינטרנט.
 // כשמשנים קבצים – מעלים את מספר הגרסה כאן.
-const VERSION = 'jericho-v21';
+const VERSION = 'jericho-v22';
 const FILES = [
   './',
   'index.html',
@@ -60,7 +60,7 @@ const FILES = [
   'js/subjects/index.js',
   'js/subjects/joshua/pack.js',
   'js/subjects/joshua/map.js', 'js/subjects/science/pack.js', 'js/subjects/science/content.js', 'js/subjects/science/map.js',
-  'js/lesson.js', 'js/subjects/math/pack.js', 'js/subjects/math/content.js', 'js/subjects/math/map.js', 'js/subjects/math/numbers.js', 'js/subjects/math/kit.js', 'js/subjects/math/lessons.js',
+  'js/lesson.js', 'js/subjects/math/pack.js', 'js/subjects/math/content.js', 'js/subjects/math/content-b.js', 'js/subjects/math/map.js', 'js/subjects/math/numbers.js', 'js/subjects/math/kit.js', 'js/subjects/math/lessons.js',
 ];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));

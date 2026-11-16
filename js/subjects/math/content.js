@@ -1,5 +1,5 @@
 // מקצוע "חשבון": מספרים עשרוניים. נכתב על פי עמודים 7–40 של הספר, במילים שלנו. התרגילים נוצרים בחישוב מדויק (numbers.js).
-import { ltr, powName, shiftStr, mulStr, intOf, decimals, kOf } from './numbers.js';
+import { ltr, powName, shiftStr, mulStr, divStr, intOf, decimals, kOf } from './numbers.js';
 export const TEST_DATE = '2026-12-01';   // יום ג׳ 1 בדצמבר
 
 export const GLOSSARY = {
@@ -31,6 +31,8 @@ export const UNITS = [
     { text: 'דרך נוספת: מחשבים 3 × 4 = 12. אבל 0.3 קטן פי 10 מ-3, ולכן גם המכפלה קטנה פי 10: 12 : 10 = 1.2.' },
     { text: 'אותו רעיון עם מאיות: 0.07 × 8. מחשבים 7 × 8 = 56, ו-0.07 קטן פי 100 מ-7, לכן 56 : 100 = 0.56.' },
     { text: 'אפשר להשתמש בתרגיל מוכן: 15 × 4 = 60. לכן 15 × 0.4 = 6 ו-1.5 × 4 = 6 ו-1.5 × 0.4 = 0.6.' },
+    { text: 'כופלים שני מספרים עשרוניים? מגדילים כל גורם עד שיהיה שלם, מחשבים, ואז מחלקים. 1.5 × 0.04: 15 × 4 = 60. הגדלנו פי 10 ופי 100, ביחד פי 1,000, ולכן 60 : 1,000 = 0.06.' },
+    { text: 'בכפל בטור: 4.2 × 3.8 הופך ל-42 × 38 = 1,596. הגדלנו פי 100, לכן 1,596 : 100 = 15.96. הערכה עוזרת לבדוק: 4 × 4 = 16, כמעט!' },
   ] },
 ];
 
@@ -98,32 +100,40 @@ export const SEQUENCES = [
 
 // ---------- יצירת שאלות (בחירה מרובה) ----------
 const uniq = (a, correct) => [...new Set(a)].filter(x => x !== correct);
-const take3 = (cands, correct) => { const w = uniq(cands, correct).slice(0, 3); let pad = 1; while (w.length < 3) { const x = shiftStr(correct, pad++); if (x !== correct && !w.includes(x)) w.push(x); } return w; };
+export const take3 = (cands, correct) => { const w = uniq(cands, correct).slice(0, 3); let pad = 1; while (w.length < 3) { const x = shiftStr(correct, pad++); if (x !== correct && !w.includes(x)) w.push(x); } return w; };
 const sym = { mul: '×', div: ':' };
-const PL = k => (k === 1 ? 'מקום אחד' : k === 2 ? 'שני מקומות' : 'שלושה מקומות');
+export const PL = k => (k === 1 ? 'מקום אחד' : k === 2 ? 'שני מקומות' : 'שלושה מקומות');
 // num × 10^k  או  num : 10^k
-function qShift(num, pow, dir) {
+export function qShift(num, pow, dir) {
   const k = kOf(pow), s = dir === 'mul' ? k : -k, a = shiftStr(num, s);
   const w = take3([shiftStr(num, s + (dir === 'mul' ? 1 : -1)), shiftStr(num, -s), shiftStr(num, s + (dir === 'mul' ? -1 : 1)), shiftStr(num, s + 2 * (dir === 'mul' ? 1 : -1))], a);
   return { q: `כמה זה ${ltr(`${num} ${sym[dir]} ${powName(pow)}`)}?`, a, w,
     why: `${dir === 'mul' ? 'כפל' : 'חילוק'} ב-${powName(pow)}: הספרות זזות ${PL(k)} ${dir === 'mul' ? 'שמאלה' : 'ימינה'}. ${ltr(`${num} ${sym[dir]} ${powName(pow)} = ${a}`)}` };
 }
 // num × □ = result  /  num : □ = result  (גורם חסר)
-function qMissing(num, pow, dir) {
+export function qMissing(num, pow, dir) {
   const k = kOf(pow), res = shiftStr(num, dir === 'mul' ? k : -k), choices = ['10', '100', '1,000'].filter(x => x !== powName(pow));
   return { q: `איזה מספר חסר? ${ltr(`${num} ${sym[dir]} □ = ${res}`)}`, a: powName(pow), w: [...choices, dir === 'mul' ? '0.1' : '1'].slice(0, 3),
     why: `מ-${num} הגענו ל-${res}: הספרות זזו ${PL(k)}, לכן ${dir === 'mul' ? 'כפלנו' : 'חילקנו'} ב-${powName(pow)}.` };
 }
 // a × b עם מספר עשרוני (כפל עשרוני)
-function qDec(a, b) {
+export function qDec(a, b) {
   const res = mulStr(a, b), d = decimals(a) + decimals(b), ip = String(Number(intOf(a)) * Number(intOf(b)));
   const w = take3([ip, shiftStr(res, 1), shiftStr(res, -1), shiftStr(res, 2), shiftStr(res, -2)], res);
   return { q: `כמה זה ${ltr(`${a} × ${b}`)}?`, a: res, w, why: `מחשבים בלי הנקודה: ${ltr(`${intOf(a)} × ${intOf(b)} = ${ip}`)}. יש ${d === 1 ? 'ספרה אחת' : d === 2 ? 'שתי ספרות' : d + ' ספרות'} אחרי הנקודה בגורמים, לכן התוצאה ${ltr(res)}.` };
 }
 // תרגיל מוכן → תרגיל קרוב
-const qLadder = (base, mul, rel, relRes, ex) => ({ q: `ידוע ש-${ltr(`${base} × ${mul} = ${shiftStr(String(Number(base) * Number(mul)), 0)}`)}. כמה זה ${ltr(rel)}?`, a: relRes, w: take3([shiftStr(relRes, 1), shiftStr(relRes, -1), shiftStr(relRes, 2)], relRes), why: ex });
+export const qLadder = (base, mul, rel, relRes, ex) => ({ q: `ידוע ש-${ltr(`${base} × ${mul} = ${shiftStr(String(Number(base) * Number(mul)), 0)}`)}. כמה זה ${ltr(rel)}?`, a: relRes, w: take3([shiftStr(relRes, 1), shiftStr(relRes, -1), shiftStr(relRes, 2)], relRes), why: ex });
 // גורם חסר בין שני צדדים: 0.3 × 20 = 3 × □
-const qBalance = (a, b, c) => { const x = mulStr(a, b), ans = String(Number(x) / Number(c)); return { q: `איזה מספר חסר? ${ltr(`${a} × ${b} = ${c} × □`)}`, a: ans, w: take3([shiftStr(ans, 1), shiftStr(ans, -1), shiftStr(ans, 2)], ans), why: `${ltr(`${a} × ${b} = ${x}`)}. כדי לקבל ${x} מ-${c} צריך לכפול ב-${ans}.` }; };
+export const qBalance = (a, b, c) => { const x = mulStr(a, b), ans = divStr(x, c); return { q: `איזה מספר חסר? ${ltr(`${a} × ${b} = ${c} × □`)}`, a: ans, w: take3([shiftStr(ans, 1), shiftStr(ans, -1), shiftStr(ans, 2)], ans), why: `${ltr(`${a} × ${b} = ${x}`)}. כדי לקבל ${x} מ-${c} צריך לכפול ב-${ans}.` }; };
+
+// num : den  (חילוק עשרוני; כשהמחלק עשרוני – מגדילים את שני המספרים עד שהמחלק שלם)
+export function qDiv(a, b) {
+  const res = divStr(a, b); if (res == null) throw new Error(`חילוק לא סופי: ${a} : ${b}`);
+  const k = decimals(b), A = shiftStr(a, k), B = shiftStr(b, k);
+  const w = take3([shiftStr(res, 1), shiftStr(res, -1), shiftStr(res, 2), shiftStr(res, -2)], res);
+  return { q: `כמה זה ${ltr(`${a} : ${b}`)}?`, a: res, w, why: k ? `מגדילים את שני המספרים פי ${powName(10 ** k)} כדי שהמחלק יהיה שלם: ${ltr(`${a} : ${b} = ${A} : ${B} = ${res}`)}.` : `מחלקים כמו במספרים שלמים ושמים את הנקודה במקומה: ${ltr(`${a} : ${b} = ${res}`)}.` };
+}
 
 // דו-קרב משפחתי: נושא → רעיונות (כרטיס קריאה + שאלות). unit = היחידה של הרעיון
 export const DUELS = {
@@ -237,7 +247,7 @@ export const TOPICS = [
     { p: 'כפל וחילוק ב-10 מבטלים זה את זה: 7.95 : 10 × 10 = **7.95**.' },
     { answer: 'חילוק ב-10, 100, 1,000 – הספרות זזות 1, 2, 3 מקומות ימינה.' },
   ] },
-  { id: 'math-3', label: 'נושא ג׳', title: 'כפל מספרים עשרוניים (א)', duel: 'm1', lesson: 'decimal', blocks: [
+  { id: 'math-3', label: 'נושא ג׳ · חלק 1', title: 'כפל עשרוני במספר שלם', duel: 'm1', lesson: 'decimal', blocks: [
     { h: 'עשיריות כפול מספר שלם' },
     { p: '0.3 הוא **3 עשיריות**. ארבע פעמים 3 עשיריות הן 12 עשיריות, שהן שלם אחד ועוד 2 עשיריות.' },
     { ul: ['0.3 × 4 = 12 עשיריות = **1.2**', '0.6 × 3 = 18 עשיריות = **1.8**'] },

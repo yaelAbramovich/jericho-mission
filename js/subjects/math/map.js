@@ -1,6 +1,6 @@
 // מפת המשימה של "חשבון": מעבדת מספרים – רשת זוהרת וספרות צפות. המנוע מצייר מעל הרקע את האזורים ואת המסלול.
 export const MAP = {
-  positions: { 1: [96, 96], 2: [264, 240], 3: [110, 392] },
+  positions: { 1: [96, 76], 2: [264, 170], 3: [96, 270], 4: [264, 362], 5: [110, 450] },
   background: `
     <defs>
       <pattern id="mgrid" width="30" height="30" patternUnits="userSpaceOnUse"><path d="M30 0H0V30" fill="none" stroke="#2b3f86" stroke-width=".7" opacity=".55"/></pattern>
