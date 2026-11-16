@@ -1,4 +1,4 @@
-// חבילת המקצוע "חשבון": מספרים עשרוניים – כפל וחילוק ב-10, ב-100 וב-1,000, וכפל עשרוני (א). טיוטה על פי עמודים 7–40 של הספר.
+// חבילת המקצוע "מתמטיקה": מספרים עשרוניים (עמ' 7–74), ובהמשך אחוזים וחקר נתונים.
 import * as C from './content.js';
 import * as B from './content-b.js';
 import { MAP } from './map.js';
@@ -6,7 +6,7 @@ import { LESSONS } from './lessons.js';
 import { hebNum } from '../../hebrew.js';
 
 export default {
-  id: 'math', name: 'חשבון', icon: '🧮', appTitle: 'מבצע המספרים',
+  id: 'math', name: 'מתמטיקה', icon: '🧮', appTitle: 'מבצע המספרים',   // מקצוע אחד לשלושה פרקים: מספרים עשרוניים (קיים), אחוזים וחקר נתונים (יתווספו)
   testDate: C.TEST_DATE,
   units: [...C.UNITS, ...B.UNITS_B], overview: null, glossary: C.GLOSSARY,
   topics: [...C.TOPICS, ...B.TOPICS_B], duels: { ...C.DUELS, m2: B.DUEL_B }, duelUnits: { m1: [1, 2, 3], m2: [3, 4, 5] },

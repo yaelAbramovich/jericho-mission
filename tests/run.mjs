@@ -726,7 +726,7 @@ await test('בורר המקצועות: שני מקצועות בבורר, מעב�
   const info = () => page.evaluate(async () => { const { PACK } = await import('/js/subjects/index.js'); return { id: PACK.id, zones: document.querySelectorAll('.zone').length, title: document.title, date: PACK.testDate, days: document.querySelector('.test-count') && document.querySelector('.test-count').innerText }; });
   let r = await info(); eq(r.id, 'joshua', 'מקצוע התחלתי'); eq(r.zones, 5, 'אזורי יהושע'); ok(r.title.includes('יריחו'), 'כותרת יהושע: ' + r.title);
   await page.click('.subj-chip'); await page.waitForSelector('.pkinds');
-  const opts = await page.locator('.pkinds .tn').allInnerTexts(); ok(opts.length === 3 && opts.some(o => o.includes('יהושע')) && opts.some(o => o.includes('מדע')) && opts.some(o => o.includes('חשבון')), 'בבורר: ' + opts.join('|'));
+  const opts = await page.locator('.pkinds .tn').allInnerTexts(); ok(opts.length === 3 && opts.some(o => o.includes('יהושע')) && opts.some(o => o.includes('מדע')) && opts.some(o => o.includes('מתמטיקה')), 'בבורר: ' + opts.join('|'));
   await Promise.all([page.waitForNavigation({ waitUntil: 'load' }), page.locator('.pkinds .tile', { hasText: 'מדע' }).click()]); await page.waitForSelector('.map');
   r = await info(); eq(r.id, 'science', 'אחרי מעבר'); eq(r.zones, 5, 'אזורי מדע וטכנולוגיה'); eq(r.date, '2026-11-17', 'תאריך המבחן'); ok(r.title.includes('טכנולוגיה'), 'כותרת: ' + r.title); ok(!!r.days, 'ספירה לאחור למבחן');
   await page.evaluate(async () => { const S = await import('/js/state.js'); S.setObjective(1, 'story'); S.setObjective(1, 'hunter'); S.setObjective(1, 'other'); });   // כובשים אזור במדע

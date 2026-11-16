@@ -5,7 +5,7 @@
 export const REGISTRY = [
   { id: 'joshua', name: 'יהושע א׳–ה׳', icon: '📖' },
   { id: 'science', name: 'מדע וטכנולוגיה', icon: '🔬' },
-  { id: 'math', name: 'חשבון', icon: '🧮' },   // hidden: true היה מסתיר מקצוע מהבורר (למשל כשהתוכן עוד לא מוכן)
+  { id: 'math', name: 'מתמטיקה', icon: '🧮', desc: 'מספרים עשרוניים, אחוזים וחקר נתונים' },   // hidden: true היה מסתיר מקצוע מהבורר (למשל כשהתוכן עוד לא מוכן)
 ];
 const KEY = 'jericho.v1';
 function readSubject() {
