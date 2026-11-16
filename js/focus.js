@@ -5,6 +5,11 @@ import { h, modal, toast } from './ui.js';
 import { topicToText, allToText, copyText, canShare, shareText } from './export.js';
 import { sfx } from './audio.js';
 import { go, startGame } from './app.js';
+import { lessonDone } from './lesson.js';
+
+const lessonCta = (t) => { const L = PACK.lessons && t.lesson && PACK.lessons[t.lesson]; if (!L) return null; const done = lessonDone(t.lesson);
+  return h('button', { class: 'lesson-cta' + (done ? ' done' : ''), onclick: () => { sfx.pick(); go('lesson', { id: t.lesson, topic: t.id }); } },
+    h('span', { class: 'ti' }, L.icon), h('span', { class: 'ov-t' }, h('b', {}, done ? 'שיעור אינטראקטיבי · עוד פעם' : '🎬 שיעור אינטראקטיבי'), h('small', {}, done ? 'כבר סיימתם – אפשר לתרגל שוב' : 'אנימציות, גרירה וחידות – לומדים ומשחקים')), !done && h('em', {}, `\u200E+${L.xp || 40} XP`)); };
 
 const bold = s => {           // **מודגש** -> <b>
   const frag = document.createDocumentFragment();
@@ -32,7 +37,7 @@ export function list(v) {
   const box = h('div', { class: 'topics' });
   TOPICS.forEach(t => box.append(
     h('button', { class: 'topic-btn', onclick: () => { sfx.pick(); go('topic', { id: t.id }); } },
-      h('small', {}, t.label), h('b', {}, t.title), h('span', {}, '◀'))));
+      h('small', {}, t.label + (t.lesson ? ' · 🎬 שיעור אינטראקטיבי' + (lessonDone(t.lesson) ? ' ✓' : '') : '')), h('b', {}, t.title), h('span', {}, '◀'))));
   v.append(box);
   TOPICS.filter(t => t.duel).forEach(t => {
     const n = DUELS[t.duel].ideas.length * 2;
@@ -52,7 +57,7 @@ export function topic(v, { id }) {
     h('div', { class: 'doc-tools' },
       toolBtn('📋', 'העתק', () => doCopy(topicToText(t))),
       canShare() && toolBtn('📤', 'שתף', () => shareText(t.title, topicToText(t)))),
-    toc, doc);
+    ...[lessonCta(t)].filter(Boolean), toc, doc);
   let list = null;
   t.blocks.forEach((b, i) => {
     if (b.h) {

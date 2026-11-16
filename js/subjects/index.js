@@ -4,7 +4,8 @@
 // להוספת מקצוע חדש: תיקייה חדשה + pack.js, ורישום ב-REGISTRY (וב-sw.js, ראו README). hidden: true = לא מופיע בבורר.
 export const REGISTRY = [
   { id: 'joshua', name: 'יהושע א׳–ה׳', icon: '📖' },
-  { id: 'science', name: 'מדע וטכנולוגיה', icon: '🔬' },   // hidden: true היה מסתיר מקצוע מהבורר (למשל כשהתוכן עוד לא מוכן)
+  { id: 'science', name: 'מדע וטכנולוגיה', icon: '🔬' },
+  { id: 'math', name: 'חשבון', icon: '🧮' },   // hidden: true היה מסתיר מקצוע מהבורר (למשל כשהתוכן עוד לא מוכן)
 ];
 const KEY = 'jericho.v1';
 function readSubject() {

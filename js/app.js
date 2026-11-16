@@ -34,7 +34,7 @@ export function go(name, params = {}) {
   scope.dispose(); scope = createScope();
   current = { name, params };
   const el = screenEl(); el.innerHTML = ''; el.scrollTop = 0;
-  const inGame = ['play', 'story', 'parent', 'end'].includes(name);
+  const inGame = ['play', 'story', 'parent', 'end', 'lesson'].includes(name);
   document.body.classList.toggle('immersive', inGame);
   setNav(name);
   renderTop();
@@ -46,7 +46,7 @@ export function go(name, params = {}) {
 }
 
 function setNav(name) {
-  const tab = { map: 'map', zone: 'map', focus: 'focus', topic: 'focus', games: 'games', pass: 'pass', profile: 'profile' }[name];
+  const tab = { map: 'map', zone: 'map', focus: 'focus', topic: 'focus', lesson: 'focus', games: 'games', pass: 'pass', profile: 'profile' }[name];
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.go === tab));
 }
 
@@ -452,8 +452,9 @@ function showTierUp(from, to) {
 
 async function focusScreen(v, p, sc) { (await import('./focus.js')).list(v, p, sc); }
 async function topicScreen(v, p, sc) { (await import('./focus.js')).topic(v, p, sc); }
+async function lessonScreen(v, p, sc) { (await import('./lesson.js')).render(v, p, sc); }
 
-const ROUTES = { focus: focusScreen, topic: topicScreen, map: mapScreen, zone: zoneScreen, games: gamesScreen, pass: passScreen, profile: profileScreen, story: storyScreen, parent: parentScreen, play: playScreen, end: endScreen };
+const ROUTES = { focus: focusScreen, topic: topicScreen, lesson: lessonScreen, map: mapScreen, zone: zoneScreen, games: gamesScreen, pass: passScreen, profile: profileScreen, story: storyScreen, parent: parentScreen, play: playScreen, end: endScreen };
 
 // ---------- אתחול ----------
 export function boot() {
