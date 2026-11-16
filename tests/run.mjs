@@ -847,13 +847,13 @@ await test('שיעור: גרירה אמיתית בעכבר של ספרות לט�
   await page.evaluate(() => import('/js/app.js').then(m => m.go('lesson', { id: 'times', topic: 'math-1' }))); await page.waitForSelector('.lesson-stage .step');
   for (let i = 0; i < 5; i++) { await page.evaluate(() => document.querySelector('.lesson-stage').__solve()); await page.click('.lesson-ctrl .nav.primary'); await page.waitForTimeout(150); }
   await page.waitForSelector('.pl-eq');
-  const drag = async (d, col) => { const c = page.locator(`.pl-tray .chip[data-d="${d}"]`).first(), s = page.locator(`.pv-slot[data-col="${col}"]`).last(), cb = await c.boundingBox(), sb = await s.boundingBox();
+  const drag = async (d, col) => { const c = page.locator(`.pl-tray .dchip[data-d="${d}"]`).first(), s = page.locator(`.pv-slot[data-col="${col}"]`).last(), cb = await c.boundingBox(), sb = await s.boundingBox();
     await page.mouse.move(cb.x + cb.width / 2, cb.y + cb.height / 2); await page.mouse.down(); await page.mouse.move(sb.x + 20, sb.y + 20, { steps: 5 }); await page.mouse.up(); await page.waitForTimeout(60); };
   const check = page.locator('.pl-body .btn.primary');
   eq(await check.isDisabled(), true, '"בדוק" פעיל לפני שהונחו ספרות');
   await drag('3', 0); await drag('7', 1);                       // 3.7 × 10 = 37: ספרות במקומות הפוכים (73) – שגוי
   eq(await check.isDisabled(), false, '"בדוק" לא נפתח אחרי שכל הספרות הונחו'); await check.click(); await page.waitForTimeout(900);
-  eq(await page.locator('.pl-tray .chip').count(), 2, 'ספרות שגויות צריכות לחזור למגש'); ok((await page.locator('.pv-cap').last().innerText()).includes('שמאלה'), 'הסבר אחרי טעות');
+  eq(await page.locator('.pl-tray .dchip').count(), 2, 'ספרות שגויות צריכות לחזור למגש'); ok((await page.locator('.pv-cap').last().innerText()).includes('שמאלה'), 'הסבר אחרי טעות');
   await drag('3', 1); await drag('7', 0); await check.click(); await page.waitForTimeout(1500);
   ok((await page.locator('.pl-eq').innerText()).includes('0.6'), 'אחרי תשובה נכונה צריך לעבור לתרגיל הבא: ' + await page.locator('.pl-eq').innerText());
   await drag('6', 1); await drag('0', 0); await check.click(); await page.waitForTimeout(1500);   // 0.6 × 100 = 60 (האפס הוא ספרה שצריך להניח)

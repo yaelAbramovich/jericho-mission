@@ -125,7 +125,7 @@ export function place(step, api) {
     const msg = h('p', { class: 'pv-cap' }, bold(`סדרו את התוצאה: גררו כל ספרה למקום שלה (או לחצו על ספרה ואז על עמודה).`));
     const check = h('button', { class: 'btn primary', disabled: true }, 'בדוק ✓');
     const digits = Object.entries(exp).sort((a, b) => b[0] - a[0]).map(e => e[1]);
-    const chips = shuffle(digits).map(d => ({ d, slot: null, locked: false, el: h('span', { class: 'pv-t chip', 'data-d': d }, d) }));
+    const chips = shuffle(digits).map(d => ({ d, slot: null, locked: false, el: h('span', { class: 'pv-t dchip', 'data-d': d }, d) }));
     let selected = null;
     const sync = () => { check.disabled = !chips.every(c => c.slot); chips.forEach(c => c.el.classList.toggle('sel', c === selected)); };
     const toTray = c => { if (c.slot) { c.slot.chip = null; c.slot = null; } tray.append(c.el); c.el.classList.remove('placed'); };
