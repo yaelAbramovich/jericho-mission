@@ -363,13 +363,31 @@ await test('כרטיס זהב: נפתח כשכובשים 60% מהאזורים (3
   ok(await page.locator('.ticket.ready').count() === 1, 'כרטיס הזהב לא מוכן להפעלה אחרי כיבוש כל האזורים');
   await page.click('.ticket .btn.primary'); await page.waitForSelector('.modal .btn.primary'); await page.click('.modal .btn.primary');
   await page.waitForSelector('.ticket.on');
+  // טפטוף: בהפעלה נפתחים רק 2–3 פרסי זהב הראשונים, לא כל הדרגות שכבר עברת
+  const first = await page.evaluate(async () => { const P = await import('/js/pass.js'); return { rel: P.goldRel(), gold: P.claimable().filter(c => c[0] === 'gold').map(c => c[1]) }; });
+  ok(first.gold.length >= 1 && first.gold.length <= 3 && first.rel < 5, `אחרי ההפעלה נפתחו דרגות זהב: ${first.gold} (goldRel=${first.rel}) – ציפינו ל-2–3 פרסים בלבד`);
   await page.click('.claimall'); await page.waitForSelector('.gains');
-  const r = await page.evaluate(async () => {
+  let r = await page.evaluate(async () => {
     const S = await import('/js/state.js'), L = await import('/js/locker.js'), R = await import('/js/rewards.js'), P = await import('/js/pass.js');
-    return { gold: S.get().pass.gold, gj5: L.isOpen(R.itemById('gj5')), ge3: L.isOpen(R.itemById('ge3')), left: P.claimable().length, boxes: S.get().pass.boxes };
+    return { gold: S.get().pass.gold, gj5: L.isOpen(R.itemById('gj5')), left: P.claimable().length, boxes: S.get().pass.boxes };
   });
-  ok(r.gold && r.gj5 && r.ge3, 'פריטי זהב לא נפתחו אחרי "קבל הכול"'); eq(r.left, 0, 'פרסים שנשארו'); eq(r.boxes, 1, 'קופסאות מהזהב (דרגה 2 נותנת קופסה אחת; דרגה 10 עוד לא הושגה)');
+  ok(r.gold && !r.gj5, 'פריט הזהב של דרגה 5 נפתח כבר בהפעלה (אמור להיפתח רק בסבבים הבאים)'); eq(r.left, 0, 'פרסים שנשארו');
+  // כל סבב מוסיף 2–3 פרסי זהב, עד שכל מה שהושג נפתח
+  const rounds = await page.evaluate(async () => { const P = await import('/js/pass.js'); const sizes = []; for (let i = 0; i < 10; i++) { const out = P.releaseGold(); if (!out.length) break; sizes.push(out.length); } return sizes; });
+  ok(rounds.length >= 1 && rounds.slice(0, -1).every(n => n >= 2 && n <= 4) && rounds.at(-1) >= 1 && rounds.at(-1) <= 4, `גודל כל פתיחה (האחרונה יכולה להיות קטנה יותר – נגמרו הדרגות שהושגו): ${rounds}`);
+  await page.click('.claimall').catch(() => {}); await page.waitForTimeout(300);
+  await page.evaluate(async () => { const P = await import('/js/pass.js'); for (const [tr, t] of P.claimable()) P.claim(tr, t); });
+  r = await page.evaluate(async () => {
+    const L = await import('/js/locker.js'), R = await import('/js/rewards.js'), P = await import('/js/pass.js');
+    return { gj5: L.isOpen(R.itemById('gj5')), ge3: L.isOpen(R.itemById('ge3')), left: P.claimable().length };
+  });
+  ok(r.gj5 && r.ge3, 'פריטי זהב לא נפתחו אחרי כל הפתיחות'); eq(r.left, 0, 'פרסים שנשארו');
 }, { storage: seed({ xp: 330, zone: ALLZ }) }));
+await test('כרטיס זהב פעיל: סיום סבב פותח 2–3 פרסי זהב חדשים ומציג אותם במסך הסיום', () => withPage(async page => {
+  await page.evaluate(() => import('/js/app.js').then(m => m.startGame('swipe', { chapter: 0, duration: 3 }))); await playToEnd(page, 60000);
+  const rows = await page.locator('.xrow.gold').count(); ok(rows >= 1 && rows <= 4, `שורות "פרס זהב נפתח" במסך הסיום: ${rows}`);
+  const rel = await page.evaluate(() => import('/js/pass.js').then(P => P.goldRel())); ok(rel >= 1, `goldRel אחרי הסבב: ${rel}`);
+}, { storage: seed({ xp: 330, zone: ALLZ, pass: { claimed: {}, gold: true, goldRel: 0, power: { fifty: 0, time: 0, retry: 0 }, boxes: 0, owned: {} } }) }));
 await test('כרטיס זהב: בדיוק בסף – 2 אזורים לא מספיקים, 3 מספיקים (ולא צריך את כולם)', async () => {
   const two = { 1: { story: true, hunter: true, other: true }, 2: { story: true, hunter: true, other: true } };
   await withPage(async page => {

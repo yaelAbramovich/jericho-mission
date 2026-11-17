@@ -385,20 +385,22 @@ async function finishRound(key, opts, res) {
   const ach = Ach.evaluate(), achXp = ach.reduce((a, x) => a + x.xp, 0);
   if (achXp) State.addXP(achXp);
   const ta = State.tierOf();
+  const goldNew = Pass.releaseGold();   // 2–3 פרסי זהב חדשים בכל סבב (אם כרטיס הזהב פעיל)
   // פריטים חדשים שלא מדרגות הפס (אזורים והישגים) – דרגות מוצגות בחלון הדרגה
   const items = ITEMS.filter(i => typeof i.tier !== 'number' && !openBefore.has(i.id) && isOpen(i));
   const justCaptured = ch && !before.cap && State.captured(ch);
   // דרגות מעל המקסימום לא נחגגות שוב (אחרת חלון "דרגה 20!" היה קופץ אחרי כל סבב)
   go('end', { key, opts, res, tb: Math.min(tb, MAX_TIER), ta: Math.min(ta, MAX_TIER), justCaptured, nowAll: !before.all && State.allCaptured(),
-    xpTotal: Math.round(res.xp) + quests.xp + achXp, extra: { quests, ach, items } });
+    xpTotal: Math.round(res.xp) + quests.xp + achXp, extra: { quests, ach, items, gold: goldNew } });
 }
 
-function extraBlock({ quests, ach, items }) {
+function extraBlock({ quests, ach, items, gold = [] }) {
   const rows = [];
   quests.done.forEach(q => rows.push(h('div', { class: 'xrow' }, h('span', { class: 'xi' }, '📋'), h('b', {}, `משימה: ${q.text}`), h('em', {}, plus(q.xp) + ' XP'))));
   if (quests.bonus) rows.push(h('div', { class: 'xrow' }, h('span', { class: 'xi' }, '🎉'), h('b', {}, 'כל המשימות של היום!'), h('em', {}, plus(quests.bonus) + ' XP')));
   ach.forEach(a => rows.push(h('div', { class: 'xrow ach' }, h('span', { class: 'xi' }, a.icon), h('b', {}, `הישג: ${a.name}`), h('em', {}, a.xp ? plus(a.xp) + ' XP' : ''))));
   items.forEach(it => rows.push(h('div', { class: 'xrow item' }, h('span', { class: 'xart', html: art(it, 40) }), h('b', {}, `פריט חדש: ${it.name}`), h('small', {}, TYPE_LABEL[it.type]))));
+  gold.forEach(r => rows.push(h('div', { class: 'xrow item gold' }, h('span', { class: 'xart', html: Pass.rewardArt(r, 40) }), h('b', {}, `פרס זהב נפתח: ${Pass.rewardName(r)}`), h('small', {}, 'מחכה לך בפס הקרב ✨'))));
   return rows.length ? h('div', { class: 'xtras' }, h('h4', {}, 'מה חדש 🎉'), ...rows) : null;
 }
 
@@ -428,7 +430,7 @@ function endScreen(v, { key, opts, res, tb, ta, justCaptured, nowAll, xpTotal, e
     if (justCaptured) { sfx.capture(); showCapture(opts.chapter, nowAll); }
     else if (ta > tb) showTierUp(tb, ta);
     if (justCaptured && ta > tb) setTimeout(() => showTierUp(tb, ta), 400);
-    if (!justCaptured && !(ta > tb) && extra && (extra.ach.length || extra.items.length)) sfx.tierUp();
+    if (!justCaptured && !(ta > tb) && extra && (extra.ach.length || extra.items.length || (extra.gold || []).length)) sfx.tierUp();
   }, 900);
 }
 function showCapture(ch, nowAll) {

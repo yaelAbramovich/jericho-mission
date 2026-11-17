@@ -27,7 +27,17 @@ export function goldProgress() {
 }
 export const goldReady = () => { const g = goldProgress(); return g.cur >= g.need && !goldActive(); };
 export const seasonDone = () => State.tierOf() >= MAX_TIER;
-export const canClaim = (track, t) => t <= State.tierOf() && !isClaimed(track, t) && (track === 'free' || goldActive()) && cells(track, t).length > 0;
+// פרסי הזהב נפתחים בטפטוף: בהפעלת הכרטיס ואחרי כל סבב נפתחים 2–3 פרסים (לפי סדר הדרגות), ולא כולם בבת אחת.
+// goldRel = עד איזו דרגה נפתחו פרסי הזהב. שמירות ישנות (בלי השדה) נחשבות כפתוחות במלואן.
+export const goldRel = () => { const r = State.get().pass.goldRel; return r == null ? MAX_TIER : r; };
+export const GOLD_PER_ROUND = 2;   // מינימום פרסים שנפתחים בכל פעם (דרגה עם כמה פרסים נפתחת שלמה, לכן בפועל 2–3)
+export function releaseGold() {
+  if (!goldActive()) return [];
+  const P = State.get().pass, out = []; let rel = goldRel();
+  while (rel < MAX_TIER && rel + 1 <= State.tierOf() && out.length < GOLD_PER_ROUND) { rel++; out.push(...cells('gold', rel)); }
+  P.goldRel = rel; State.save(); return out;
+}
+export const canClaim = (track, t) => t <= State.tierOf() && !isClaimed(track, t) && (track === 'free' || (goldActive() && t <= goldRel())) && cells(track, t).length > 0;
 export function claimable() {
   const out = [];
   for (let t = 1; t <= MAX_TIER; t++) for (const tr of ['free', 'gold']) if (canClaim(tr, t)) out.push([tr, t]);
@@ -49,7 +59,9 @@ export function claim(track, t) {
 }
 export function activateGold() {
   if (!goldReady()) return false;
-  State.get().pass.gold = true; State.save(); return true;
+  const P = State.get().pass; P.gold = true; P.goldRel = 0; State.save();
+  releaseGold();   // הפרסים הראשונים נפתחים מיד, השאר – בכל סבב
+  return true;
 }
 // סיום עונה: אוספים אוטומטית את כל מה שמחכה, מקבלים את "הפתעת סוף עונה", ועוברים לעונה הבאה.
 // עודף XP מעבר ל-20 הדרגות עובר לעונה החדשה. אם כרטיס הזהב מוכן – מופעל לפני האיסוף.
@@ -58,12 +70,13 @@ export function completeSeason() {
   const S = State.get(), P = S.pass, n = season();
   if (goldReady()) activateGold();
   const lost = !goldActive();   // לא הופעל כרטיס זהב: פרסי הזהב לא נאספים
+  if (goldActive()) P.goldRel = MAX_TIER;   // בסוף עונה נפתחים כל פרסי הזהב שנותרו, כדי שלא ילכו לאיבוד
   const auto = []; for (const [tr, t] of claimable()) { const rs = claim(tr, t); if (rs) auto.push(...rs); }
   const finale = n > 1 ? buildSeason(n).finale : S1_FINALE;
   for (const id of finale.items) P.owned[id] = true;
   P.boxes += finale.boxes; for (const [k, v] of Object.entries(finale.power)) P.power[k] += v;
   const next = n + 1;
-  S.season = next; P.base += MAX_TIER * TIER_XP; P.gold = false; P.seasonRounds = 0;
+  S.season = next; P.base += MAX_TIER * TIER_XP; P.gold = false; P.goldRel = 0; P.seasonRounds = 0;
   ensureSeason(next); State.save();
   return { season: n, next, theme: themeOf(next), auto, finale, lostGold: lost };
 }
@@ -142,8 +155,8 @@ export function renderTrack(v, sc) {
     }
     function ticket() {
       const g = goldProgress(), caps = g.cur;
-      if (P.gold) return h('div', { class: 'ticket on slim' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, 'כרטיס הזהב פעיל')));
-      if (goldReady()) return h('div', { class: 'ticket ready' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, g.zones ? `כבשת ${GOLD_ZONES} אזורים!` : `שיחקת ${GOLD_ROUNDS} סבבים!`), h('small', {}, 'הפעל את כרטיס הזהב וקבל את כל פרסי הזהב')),
+      if (P.gold) return h('div', { class: 'ticket on slim' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, 'כרטיס הזהב פעיל'), h('small', {}, goldRel() >= MAX_TIER ? 'כל פרסי הזהב נפתחו' : 'בכל סבב שתסיים ייפתחו עוד 2–3 פרסי זהב')));
+      if (goldReady()) return h('div', { class: 'ticket ready' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, g.zones ? `כבשת ${GOLD_ZONES} אזורים!` : `שיחקת ${GOLD_ROUNDS} סבבים!`), h('small', {}, 'הפעל את כרטיס הזהב – ייפתחו 2–3 פרסי זהב בכל סבב')),
         h('button', { class: 'btn primary glow', onclick: onActivate }, 'הפעל!'));
       return h('div', { class: 'ticket slim' }, h('span', { class: 'tk-i' }, '🎫'), h('div', {}, h('b', {}, 'כרטיס הזהב'), h('small', {}, g.zones ? `כבוש ${GOLD_ZONES} מתוך ${N_UNITS} אזורים כדי להפעיל (${caps}/${GOLD_ZONES})` : `שחק ${GOLD_ROUNDS} סבבים בעונה הזאת כדי להפעיל (${caps}/${GOLD_ROUNDS})`)),
         h('div', { class: 'tk-bar' }, h('i', { style: { width: Math.min(100, caps / g.need * 100) + '%' } })));
@@ -182,7 +195,7 @@ export function renderTrack(v, sc) {
         ms && !claimed && h('div', { class: 'ribbon' }, track === 'gold' ? 'אבן דרך זהב!' : 'אבן דרך!'),
         can ? h('button', { class: 'btn claim', onclick: () => doClaim(track, t) }, 'קבל')
           : claimed ? h('span', { class: 'chk' }, '✓')
-            : (lockedGold ? h('span', { class: 'lk' }, '🔒 צריך כרטיס זהב') : t > tier ? h('span', { class: 'lk dim' }, `🔒 דרגה ${t}`) : null));
+            : (lockedGold ? h('span', { class: 'lk' }, '🔒 צריך כרטיס זהב') : t > tier ? h('span', { class: 'lk dim' }, `🔒 דרגה ${t}`) : (track === 'gold' && P.gold && rs.length && t > goldRel() ? h('span', { class: 'lk' }, '🔓 נפתח אחרי סבב') : null)));
     }
   }
 
@@ -214,7 +227,7 @@ export function renderTrack(v, sc) {
       row('⭐', 'דרגות', 'כל סבב נותן XP. כל 60 XP = דרגה חדשה, ובכל דרגה מחכה לך פרס.'),
       row('✅', 'לאסוף פרסים', 'כשפרס זוהר בירוק – לוחצים „קבל". רק פרס שנאסף אפשר ללבוש.'),
       row('📄', 'דפים', 'הדרגות מחולקות לדפים של 5. הנקודה האדומה מראה באיזה דף מחכה לך פרס.'),
-      row('🎫', 'כרטיס זהב', `בעונה 1: כובשים ${GOLD_ZONES} מתוך ${N_UNITS} אזורים. בעונות הבאות: משחקים ${GOLD_ROUNDS} סבבים. מפעילים אותו – ואז נפתחים פרסי הזהב (הטור השמאלי).`),
+      row('🎫', 'כרטיס זהב', `בעונה 1: כובשים ${GOLD_ZONES} מתוך ${N_UNITS} אזורים. בעונות הבאות: משחקים ${GOLD_ROUNDS} סבבים. מפעילים אותו – ואז נפתחים פרסי הזהב (הטור השמאלי), 2–3 פרסים בכל סבב שמסיימים.`),
       row('🎁', 'קופסת מסתורין', 'נפתחת ומגלה פריט שעוד אין לך.'),
       row('🏁', 'סוף עונה', 'כשמגיעים לדרגה 20 מסיימים את העונה: מחכה הפתעה ענקית, ומתחילה עונה חדשה עם פרסים חדשים.'),
       ...Object.values(POWER).map(p => row(p.icon, `כוח: ${p.name}`, p.desc)),
@@ -257,7 +270,7 @@ export function renderTrack(v, sc) {
   function onActivate() {
     if (!activateGold()) return;
     sfx.capture();
-    const m = modal([h('div', { class: 'cap-big' }, '🎫'), h('h3', {}, 'כרטיס הזהב הופעל!'), h('p', {}, 'עכשיו אפשר לאסוף את פרסי הזהב של כל הדרגות שכבר עברת.'),
+    const m = modal([h('div', { class: 'cap-big' }, '🎫'), h('h3', {}, 'כרטיס הזהב הופעל!'), h('p', {}, 'הפרסים הראשונים נפתחו עכשיו, ובכל סבב שתסיים ייפתחו עוד 2–3 פרסי זהב.'),
       h('button', { class: 'btn primary', onclick: () => m.close() }, 'יאללה')], { cls: 'celebrate', onClose: refresh });
     burst(m.box, 36);
   }
