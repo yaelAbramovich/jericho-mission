@@ -761,6 +761,13 @@ await test('מתג פיתוח: ‎?subject=science‎ בכתובת טוען את
   await page.goto(BASE + '/?subject=nonsense'); await page.waitForSelector('.map'); eq(await id(), 'science', 'ערך לא מוכר צריך להתעלם');
   await page.goto(BASE + '/?subject=joshua'); await page.waitForSelector('.map'); eq(await id(), 'joshua', 'חזרה ליהושע'); eq(await page.locator('.zone').count(), 5, 'אזורי יהושע');
 }));
+await test('בורר המקצועות: גם כשבכתובת יש ‎?subject=math‎ בחירה בבורר מחליפה מקצוע (הפרמטר לא גובר עליה)', () => withPage(async page => {
+  const id = () => page.evaluate(() => import('/js/subjects/index.js').then(m => m.PACK.id));
+  await page.goto(BASE + '/?subject=math'); await page.waitForSelector('.map'); eq(await id(), 'math', 'עם ?subject=math');
+  await page.click('.subj-chip'); await page.waitForSelector('.pkinds');
+  await Promise.all([page.waitForNavigation({ waitUntil: 'load' }), page.locator('.pkinds .tile', { hasText: 'גיאומטריה' }).click()]); await page.waitForSelector('.map');
+  eq(await id(), 'geometry', 'אחרי בחירה בבורר'); ok(!page.url().includes('subject='), 'הפרמטר הוסר מהכתובת: ' + page.url());
+}));
 await test('שמירה ישנה (אזורים ברמה העליונה) עוברת בבטחה למקצוע יהושע; אפשר להחליף מקצוע וההתקדמות נשמרת לכל אחד', () => withPage(async page => {
   const r1 = await page.evaluate(async () => { const S = await import('/js/state.js'); return { sub: S.subjectId(), c: S.capturedCount(), legacy: ['zone', 'storySeen', 'examDone'].filter(k => k in S.get()), stories: Object.keys(S.sub().storySeen).length, exam: S.sub().examDone }; });
   eq(r1.sub, 'joshua', 'מקצוע ברירת מחדל'); eq(r1.c, 2, 'אזורים שנכבשו הועברו'); eq(r1.legacy.length, 0, 'שדות ישנים נשארו: ' + r1.legacy); eq(r1.stories, 1, 'התקדמות סיפור הועברה'); eq(r1.exam, true, 'מבחן הסיכום הועבר');
@@ -973,8 +980,9 @@ await test('גיאומטריה: מיון גופים בגרירה אמיתית �
   await page.evaluate(() => import('/js/app.js').then(m => m.go('lesson', { id: 'polyhedron', topic: 'geo-1' }))); await page.waitForSelector('.lesson-stage .step');
   await page.evaluate(() => document.querySelector('.lesson-stage').__solve()); await page.click('.lesson-ctrl .nav.primary'); await page.waitForSelector('.so-card');
   eq(await page.locator('.so-tray .so-card').count(), 6, 'גופים במגש');
-  for (let i = 0; i < 6; i++) {
-    const c = page.locator('.so-tray .so-card').nth(i % Math.max(1, await page.locator('.so-tray .so-card').count())), t = page.locator('.so-bucket[data-b="y"]'), cb = await c.boundingBox(), tb = await t.boundingBox();
+  const ids = await page.locator('.so-tray .so-card').evaluateAll(a => a.map(e => e.dataset.id));
+  for (const id of ids) {
+    const c = page.locator(`.so-card[data-id="${id}"]`), t = page.locator('.so-bucket[data-b="y"]'), cb = await c.boundingBox(), tb = await t.boundingBox();
     await page.mouse.move(cb.x + cb.width / 2, cb.y + cb.height / 2); await page.mouse.down(); await page.mouse.move(tb.x + tb.width / 2, tb.y + tb.height / 2, { steps: 8 }); await page.mouse.up(); await page.waitForTimeout(80);
   }
   eq(await page.locator('.so-bucket[data-b="y"] .so-card').count(), 3, 'פאונים בקבוצה "פאון"'); eq(await page.locator('.so-tray .so-card').count(), 3, 'גופים שחזרו למגש');

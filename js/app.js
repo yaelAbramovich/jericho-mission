@@ -80,7 +80,7 @@ function subjectChip() {
 }
 function openSubjects() {
   const m = modal([h('h3', {}, 'איזה מבחן לומדים?'), h('p', { class: 'sub' }, 'הפרסים, הדרגות והעונות משותפים לכל המקצועות. האזורים נשמרים לכל מקצוע בנפרד.'),
-    h('div', { class: 'pkinds' }, VISIBLE_SUBJECTS.map(r => h('button', { class: 'tile pkind' + (r.id === PACK.id ? ' rec' : ''), onclick: () => { if (r.id === PACK.id) return m.close(); State.setSubject(r.id); location.reload(); } },
+    h('div', { class: 'pkinds' }, VISIBLE_SUBJECTS.map(r => h('button', { class: 'tile pkind' + (r.id === PACK.id ? ' rec' : ''), onclick: () => { if (r.id === PACK.id) return m.close(); State.setSubject(r.id); const u = new URL(location.href); u.searchParams.delete('subject'); location.href = u.href; } },
       h('span', { class: 'ti' }, r.icon), h('span', { class: 'tn' }, r.name), r.desc && h('small', {}, r.desc), r.id === PACK.id && h('em', {}, 'פעיל'))))]);
 }
 function mapScreen(v) {
