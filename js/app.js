@@ -110,7 +110,7 @@ function mapScreen(v) {
     </g>`;
   }).join('');
   const route = UNIT_NUMS.map((n, i) => (i ? 'L' : 'M') + POS[n][0] + ' ' + POS[n][1]).join('');
-  const svg = `<svg viewBox="0 0 360 520" class="map" xmlns="http://www.w3.org/2000/svg">${PACK.map.background}
+  const svg = `<svg viewBox="0 0 360 ${PACK.map.height || 520}" class="map" xmlns="http://www.w3.org/2000/svg">${PACK.map.background}
     <path d="${route}" fill="none" stroke="#2effd2" stroke-width="2" stroke-dasharray="3 7" stroke-linecap="round" opacity=".6"/>
     ${zones}</svg>`;
   const wrap = h('div', { class: 'map-wrap', html: svg });

@@ -566,3 +566,27 @@ body.quake #app { animation: fxquake .15s linear 11; } @keyframes fxquake { 25% 
 .fc-bar.prod[data-cat="lt"] i { background: linear-gradient(90deg, var(--pink), #ff7ab0); } .fc-bar.prod[data-cat="eq"] i { background: linear-gradient(90deg, var(--yel), #ffb347); } .fc-bar.prod[data-cat="gt"] i { background: linear-gradient(90deg, var(--grn), #17c8a0); } .fc-bar b { font-size: 22px; direction: ltr; text-align: right; }
 .fc-chip { min-width: 72px; background: #1a2a66; border-color: #5f78c8; }
 .step > * { min-width: 0; max-width: 100%; } .rv-pre { font-size: 20px; }
+
+/* ===== גיאומטריה: גופים, פריסות, בונה גופים, מיון ===== */
+.geo-fig { display: flex; justify-content: center; gap: 8px; } .geo-cell { width: min(100%, 190px); } .geo-fig.multi .geo-cell { width: 48%; } .geo-cell.isnet { width: min(100%, 230px); }
+.geo-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.geo-svg .gf { fill: #7f93ff; fill-opacity: .13; stroke: none; transition: fill .35s, fill-opacity .35s; } .geo-svg .gf.gback { display: none; }
+.geo-svg .ge { stroke: #b9c6ff; stroke-width: 2.2; stroke-linecap: round; transition: stroke .3s, stroke-width .3s; } .geo-svg .ge.hid { stroke-dasharray: 4 5; opacity: .7; }
+.geo-svg .gv { fill: transparent; transition: fill .3s; }
+.geo-stage[data-mode="faces"] .gf.lit { fill: var(--fc); fill-opacity: .75; }
+.geo-stage[data-mode="edges"] .ge.lit { stroke: var(--red); stroke-width: 5; opacity: 1; }
+.geo-stage[data-mode="verts"] .gv.lit { fill: var(--neon); }
+.geo-svg .gr { fill: #7f93ff22; stroke: #b9c6ff; stroke-width: 2.2; } .geo-svg .gr.hid { fill: none; stroke-dasharray: 4 5; opacity: .7; }
+.geo-svg .nf { fill: #7f93ff33; stroke: #b9c6ff; stroke-width: 1.4; animation: nfin .5s both; } .geo-svg .nf.base { fill: #ffd24a55; } .geo-svg .nf.lat { fill: #35b8ff44; } @keyframes nfin { from { opacity: 0; } }
+.geo-stage { width: min(100%, 250px); margin: 0 auto; } .geo-stage.gpop { animation: stepin .35s; } .geo-stage.big { width: min(100%, 260px); }
+.geo-count { text-align: center; font-size: 22px; font-weight: 800; min-height: 70px; } .geo-count b { color: var(--yel); } .geo-count small { display: block; margin-top: 6px; font-size: 15px; font-weight: 500; color: var(--dim); }
+.geo-chip { min-width: 0; flex: 1 1 90px; font-size: 18px; }
+.bd-ctl { display: flex; align-items: center; justify-content: center; gap: 14px; } .bd-step { min-width: 60px; font-size: 30px; } .bd-n { text-align: center; } .bd-n b { display: block; font-size: 44px; color: var(--yel); line-height: 1; } .bd-n small { color: var(--dim); font-size: 13px; }
+.bd-name { text-align: center; } .bd-net { justify-self: center; }
+.bd-tbl { display: grid; gap: 6px; } .bd-row { display: flex; justify-content: space-between; padding: 8px 14px; border-radius: 10px; background: var(--panel2); border: 1px solid var(--line); } .bd-row b { color: var(--neon); font-size: 18px; }
+.so-tray { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; min-height: 40px; } .so-card { width: 92px; padding: 4px; border-radius: 14px; background: var(--panel2); border: 2px solid var(--line); touch-action: none; user-select: none; cursor: grab; }
+.so-card.sel { border-color: var(--yel); box-shadow: 0 0 12px #ffe14a66; } .so-card.drag { z-index: 30; position: relative; opacity: .92; } .so-card.placed { width: 66px; cursor: default; border-color: var(--grn); } .so-card.shake { animation: soshake .4s; }
+@keyframes soshake { 25% { translate: -6px 0; } 75% { translate: 6px 0; } }
+.so-buckets { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; } .so-bucket { border: 2px dashed var(--line); border-radius: 14px; padding: 8px; text-align: center; min-height: 100px; background: #0a1228; } .so-bucket > b { color: var(--neon); font-size: 16px; } .so-in { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-top: 6px; }
+.qz-opt.withfig { display: flex; flex-direction: column; align-items: center; gap: 4px; } .qz-fig { width: 84px; display: block; }
+.so-card { height: 94px; overflow: hidden; display: block; } .so-card .geo-svg { height: 84px; overflow: hidden; } .so-card.placed { height: 70px; } .so-card.placed .geo-svg { height: 58px; } .so-tray { margin-bottom: 4px; }

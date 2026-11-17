@@ -744,7 +744,7 @@ await test('בורר המקצועות: שני מקצועות בבורר, מעב�
   const info = () => page.evaluate(async () => { const { PACK } = await import('/js/subjects/index.js'); return { id: PACK.id, zones: document.querySelectorAll('.zone').length, title: document.title, date: PACK.testDate, days: document.querySelector('.test-count') && document.querySelector('.test-count').innerText }; });
   let r = await info(); eq(r.id, 'joshua', 'מקצוע התחלתי'); eq(r.zones, 5, 'אזורי יהושע'); ok(r.title.includes('יריחו'), 'כותרת יהושע: ' + r.title);
   await page.click('.subj-chip'); await page.waitForSelector('.pkinds');
-  const opts = await page.locator('.pkinds .tile').allInnerTexts(); ok(opts.length === 3 && opts.some(o => o.includes('תנ״ך') && o.includes('יהושע א׳–ה׳')) && opts.some(o => o.includes('מדעים') && o.includes('מערכות טכנולוגיות')) && opts.some(o => o.includes('מתמטיקה') && o.includes('אחוזים')), 'בבורר: ' + opts.join('|'));
+  const opts = await page.locator('.pkinds .tile').allInnerTexts(); ok(opts.length === 4 && opts.some(o => o.includes('גיאומטריה') && o.includes('פאון')) && opts.some(o => o.includes('תנ״ך') && o.includes('יהושע א׳–ה׳')) && opts.some(o => o.includes('מדעים') && o.includes('מערכות טכנולוגיות')) && opts.some(o => o.includes('מתמטיקה') && o.includes('אחוזים')), 'בבורר: ' + opts.join('|'));
   await Promise.all([page.waitForNavigation({ waitUntil: 'load' }), page.locator('.pkinds .tile', { hasText: 'מדע' }).click()]); await page.waitForSelector('.map');
   r = await info(); eq(r.id, 'science', 'אחרי מעבר'); eq(r.zones, 5, 'אזורי מדע וטכנולוגיה'); eq(r.date, '2026-11-17', 'תאריך המבחן'); ok(r.title.includes('טכנולוגיה'), 'כותרת: ' + r.title); ok(!!r.days, 'ספירה לאחור למבחן');
   await page.evaluate(async () => { const S = await import('/js/state.js'); S.setObjective(1, 'story'); S.setObjective(1, 'hunter'); S.setObjective(1, 'other'); });   // כובשים אזור במדע
@@ -906,6 +906,79 @@ await test('שיעור: טבלת המקום מציגה כל כפל וחילוק 
   }
   }
 }, { storage: seed(MATH) }));
+
+// ===== 12. מקצוע גיאומטריה =====
+console.log('גיאומטריה');
+const GEO = { subject: 'geometry' };
+await test('גיאומטריה: מודל הגופים מתאים לנוסחאות (פאות/צלעות/קודקודים), הציורים והפריסות תקינים (בלי NaN)', () => withPage(async page => {
+  const bad = await page.evaluate(async () => {
+    const G = await import('/js/subjects/math/geo.js'), out = [];
+    for (const type of ['prism', 'pyramid']) for (let n = 3; n <= 8; n++) {
+      const M = G.model(type, n), C = G.counts(type, n), E = new Set();
+      M.f.forEach(f => f.forEach((a, i) => { const b = f[(i + 1) % f.length]; E.add(Math.min(a, b) + '-' + Math.max(a, b)); }));
+      if (M.v.length !== C.verts || M.f.length !== C.faces || E.size !== C.edges) out.push(`${type} ${n}: ${M.v.length}/${M.f.length}/${E.size} מול ${C.verts}/${C.faces}/${C.edges}`);
+      const svg = G.solidSVG(type, n), d = document.createElement('div'); d.innerHTML = svg;
+      if (/NaN|undefined/.test(svg)) out.push(`NaN בציור ${type} ${n}`);
+      if (d.querySelectorAll('.gf').length !== C.faces || d.querySelectorAll('.ge').length !== C.edges || d.querySelectorAll('.gv').length !== C.verts) out.push(`ספירת אלמנטים בציור ${type} ${n}`);
+      if (!d.querySelector('.ge.hid')) out.push(`אין צלעות מקווקוות ב-${type} ${n}`);
+      const net = G.netSVG(type, n), e = document.createElement('div'); e.innerHTML = net;
+      if (/NaN|undefined/.test(net)) out.push(`NaN בפריסה ${type} ${n}`);
+      if (e.querySelectorAll('polygon').length !== C.faces) out.push(`פריסה ${type} ${n}: ${e.querySelectorAll('polygon').length} מצולעים, צריך ${C.faces}`);
+    }
+    for (const s of [G.solidSVG('box'), G.roundSVG('cylinder'), G.roundSVG('cone'), G.roundSVG('sphere'), G.netSVG('cylinder')]) if (/NaN|undefined/.test(s)) out.push('NaN בציור גוף');
+    return out;
+  });
+  ok(!bad.length, bad.slice(0, 6).join('\n'));
+}, { storage: seed(GEO) }));
+await test('גיאומטריה: כל המסכים נפתחים, 3 אזורים, 4 נושאים, בלי הפניות למקצועות אחרים', () => withPage(async page => {
+  const go = (name, params = {}) => page.evaluate(([n, p]) => import('/js/app.js').then(m => m.go(n, p)), [name, params]);
+  const texts = [], filled = async what => { await page.waitForFunction(() => (document.querySelector('.view') || { innerText: '' }).innerText.trim().length > 5, null, { timeout: 4000 }).catch(() => { throw new Error('מסך ריק: ' + what); }); texts.push(await page.locator('.view').innerText()); };
+  await go('map'); await filled('מפה'); eq(await page.locator('.zone').count(), 3, 'אזורים במפה'); eq(await page.title(), 'מבצע הגופים', 'כותרת הדף');
+  for (let ch = 1; ch <= 3; ch++) { await go('zone', { ch }); await filled('אזור ' + ch); await go('story', { ch }); await page.waitForTimeout(150); await filled('תדריך ' + ch); }
+  await go('focus'); await filled('למבחן'); eq(await page.locator('.topic-btn').count(), 4, 'נושאי למבחן'); await go('topic', { id: 'geo-1' }); await filled('נושא'); eq(await page.locator('.lesson-cta').count(), 1, 'כפתור שיעור');
+  await go('games'); await filled('משחקים'); await go('profile'); await filled('פרופיל'); await go('pass'); await page.waitForSelector('.passv');
+  const hit = /יהושע|יריחו|עשרוני|הירדן|טכנולוגי|קלט|פלט/.exec(texts.join('\n')); ok(!hit, `מסכי גיאומטריה מזכירים מקצוע אחר: "${hit && hit[0]}"`);
+}, { storage: seed(GEO) }));
+const geoCases = [];
+for (const ch of [0, 1, 2, 3]) { const label = ch ? `נושא ${ch}` : 'כל הנושאים'; geoCases.push([`גיאומטריה · פנדלים · ${label}`, 'hunter', { chapter: ch, mode: 'trivia', count: 2 }], [`גיאומטריה · הסערה · ${label}`, 'swipe', { chapter: ch, duration: 3 }], [`גיאומטריה · בונים את הקו · ${label}`, 'order', { chapter: ch, count: 1 }]); }
+geoCases.push(['גיאומטריה · מבחן הסיכום', 'exam', { swipeSeconds: 3 }], ['גיאומטריה · דו-קרב משפחתי', 'duel', { topic: 'g1' }]);
+await pool(geoCases, 4, async ([name, key, opts]) => {
+  const t0 = Date.now();
+  try {
+    await withPage(async page => {
+      await page.evaluate(([k, o]) => import('/js/app.js').then(m => m.startGame(k, o)), [key, opts]); await playToEnd(page, key === 'exam' ? 120000 : 60000);
+      const st = await page.evaluate(() => JSON.parse(localStorage.getItem('jericho.v1'))); ok(st.rounds === 1, `rounds=${st.rounds}`); eq(st.subject, 'geometry', 'המקצוע הפעיל');
+    }, { storage: seed(GEO) });
+    results.push({ name, ok: true }); console.log(`  ✓ ${name} (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
+  } catch (e) { results.push({ name, ok: false, e }); console.log(`  ✗ ${name}\n      ${String(e.message).split('\n').join('\n      ')}`); }
+});
+await test('גיאומטריה: ארבעת השיעורים נפתרים עד הסוף, אין גלישה ב-320px, XP פעם אחת', () => withPage(async page => {
+  const go = (name, params = {}) => page.evaluate(([n, p]) => import('/js/app.js').then(m => m.go(n, p)), [name, params]);
+  const xp = () => page.evaluate(() => JSON.parse(localStorage.getItem('jericho.v1')).xp), x0 = await xp();
+  await page.setViewportSize({ width: 320, height: 640 });
+  for (const [id, topic] of [['polyhedron', 'geo-1'], ['pyramid', 'geo-2'], ['prism', 'geo-3'], ['nets', 'geo-4']]) {
+    await go('lesson', { id, topic }); await page.waitForSelector('.lesson-stage .step'); const n = await page.locator('.dots i').count();
+    for (let i = 0; i < n; i++) {
+      const over = await page.evaluate(() => { const d = document.documentElement, s = document.querySelector('.lesson-stage'); return d.scrollWidth - d.clientWidth + s.scrollWidth - s.clientWidth; });
+      ok(over <= 2, `גלישה אופקית בשיעור ${id} שלב ${i}: ${over}`);
+      await page.evaluate(() => document.querySelector('.lesson-stage').__solve());
+      await page.waitForFunction(() => { const b = document.querySelector('.lesson-ctrl .nav.primary'); return b && !b.disabled; }, null, { timeout: 5000 }).catch(() => { throw new Error(`שיעור ${id}: שלב ${i} לא נפתח להמשך`); });
+      await page.click('.lesson-ctrl .nav.primary'); await page.waitForTimeout(100);
+    }
+    await page.waitForSelector('.lesson-end');
+  }
+  eq(await xp() - x0, 160, 'XP אחרי ארבעה שיעורים');
+}, { storage: seed(GEO) }));
+await test('גיאומטריה: מיון גופים בגרירה אמיתית – נכון נשאר בקבוצה, שגוי חוזר למגש', () => withPage(async page => {
+  await page.evaluate(() => import('/js/app.js').then(m => m.go('lesson', { id: 'polyhedron', topic: 'geo-1' }))); await page.waitForSelector('.lesson-stage .step');
+  await page.evaluate(() => document.querySelector('.lesson-stage').__solve()); await page.click('.lesson-ctrl .nav.primary'); await page.waitForSelector('.so-card');
+  eq(await page.locator('.so-tray .so-card').count(), 6, 'גופים במגש');
+  for (let i = 0; i < 6; i++) {
+    const c = page.locator('.so-tray .so-card').nth(i % Math.max(1, await page.locator('.so-tray .so-card').count())), t = page.locator('.so-bucket[data-b="y"]'), cb = await c.boundingBox(), tb = await t.boundingBox();
+    await page.mouse.move(cb.x + cb.width / 2, cb.y + cb.height / 2); await page.mouse.down(); await page.mouse.move(tb.x + tb.width / 2, tb.y + tb.height / 2, { steps: 8 }); await page.mouse.up(); await page.waitForTimeout(80);
+  }
+  eq(await page.locator('.so-bucket[data-b="y"] .so-card').count(), 3, 'פאונים בקבוצה "פאון"'); eq(await page.locator('.so-tray .so-card').count(), 3, 'גופים שחזרו למגש');
+}, { storage: seed(GEO) }));
 
 // ===== סיכום =====
 

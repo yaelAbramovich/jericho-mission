@@ -4,6 +4,7 @@ import { h, shuffle } from '../../ui.js';
 import { sfx } from '../../audio.js';
 import { celebrate } from '../../react.js';
 import { shiftStr, ltr, powName, mulStr, divStr, decimals } from './numbers.js';
+import { GEO_KINDS, figure, shapeSVG } from './geo.js';
 
 const bold = s => { const f = document.createDocumentFragment(); String(s).split('**').forEach((p, i) => { if (p) f.append(i % 2 ? h('b', {}, p) : p); }); return f; };
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -203,7 +204,7 @@ export function quiz(step, api) {
     const eqEl = q.eq ? h('div', { class: 'qz-eq', dir: 'ltr' }, ...q.eq.split('□').flatMap((part, k, a) => k < a.length - 1 ? [part, blank] : [part])) : null;
     const fb = h('div', { class: 'qz-fb' });
     const next = h('button', { class: 'btn primary glow', style: { display: 'none' } }, i === qs.length - 1 ? 'סיימתי ✓' : 'השאלה הבאה ◀');
-    const btns = opts.map(o => h('button', { class: 'qz-opt', onclick: () => pick(o, btns[opts.indexOf(o)]) }, o));
+    const btns = opts.map(o => h('button', { class: 'qz-opt' + (q.optFig ? ' withfig' : ''), onclick: () => pick(o, btns[opts.indexOf(o)]) }, q.optFig && q.optFig[o] && h('span', { class: 'qz-fig', html: shapeSVG(q.optFig[o], 110) }), o));
     function pick(o, b) {
       if (b.disabled) return;
       if (o === q.a) {
@@ -217,7 +218,7 @@ export function quiz(step, api) {
     }
     next.addEventListener('click', () => { sfx.tap(); if (++i < qs.length) show(); else api.done(); });
     body.replaceChildren(
-      ...[h('small', { class: 'qz-n' }, `שאלה ${i + 1} מתוך ${qs.length}`), q.q && h('p', { class: 'qz-q' }, bold(q.q)), eqEl,
+      ...[h('small', { class: 'qz-n' }, `שאלה ${i + 1} מתוך ${qs.length}`), q.q && h('p', { class: 'qz-q' }, bold(q.q)), q.fig && figure(q.fig), eqEl,
         h('div', { class: 'qz-opts' + (q.opts.length > 3 ? ' grid' : ''), dir: q.fixed ? 'ltr' : null }, btns), fb, next].filter(Boolean));
     body.__btns = btns;
   }
@@ -304,7 +305,7 @@ export function chain(step, api) {
 export function say(step, api) {
   const el = h('div', { class: 'step say-step' },
     step.hero && h('div', { class: 'lhero' }, step.hero), step.title && h('h3', {}, step.title),
-    step.text && h('p', { class: 'say' }, bold(step.text)),
+    step.text && h('p', { class: 'say' }, bold(step.text)), step.fig && figure(step.fig),
     step.rules && h('div', { class: 'lrules' }, step.rules.map(([a, b], i) => h('div', { class: 'lrule', style: { animationDelay: i * 0.35 + 's' } }, h('b', { dir: 'ltr' }, a), h('span', {}, bold(b))))),
     step.ex && h('div', { class: 'ex-card' }, step.ex.map(x => h('div', { dir: 'ltr' }, ltr(x)))),
     step.note && h('div', { class: 'doc-note' }, bold(step.note)));
@@ -382,5 +383,5 @@ export function factor(step, api) {
   return el;
 }
 
-export const KINDS = { say, board, place, quiz, tenths, chain, scale, reveal, factor };
+export const KINDS = { say, board, place, quiz, tenths, chain, scale, reveal, factor, ...GEO_KINDS };
 
