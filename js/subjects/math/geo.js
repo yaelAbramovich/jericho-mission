@@ -67,8 +67,8 @@ export function solidSVG(type, n = 4, { size = 200 } = {}) {
 }
 
 // גופים עגולים (לא פאונים)
-export function roundSVG(type, size = 200) {
-  const c = size / 2, e = (cx, cy, rx, ry, cls = '') => `<ellipse class="gr ${cls}" cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}"/>`;
+export function roundSVG(type) {
+  const size = 200, c = 100, e = (cx, cy, rx, ry, cls = '') => `<ellipse class="gr ${cls}" cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}"/>`;
   let body = '';
   if (type === 'cylinder') body = `${e(c, 150, 52, 16, 'hid')}<path class="gr" d="M${c - 52} 50 V150 A52 16 0 0 0 ${c + 52} 150 V50"/>${e(c, 50, 52, 16)}`;
   else if (type === 'cone') body = `${e(c, 150, 62, 18, 'hid')}<path class="gr" d="M${c - 62} 150 L${c} 28 L${c + 62} 150 A62 18 0 0 1 ${c - 62} 150"/>`;
