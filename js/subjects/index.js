@@ -28,3 +28,5 @@ export const N_UNITS = UNITS.length;
 export const unitLabel = n => PACK.labels.unit(n);     // "פרק ב׳"
 export const unitZone = n => (UNITS.find(u => u.n === n) || {}).zone || '';
 export const hasGame = (key, mode) => !!PACK.games[key] && (!mode || !PACK.games[key].modes || PACK.games[key].modes.includes(mode));
+// משחק שמתאים רק לחלק מהיחידות מצהיר על כך בחבילה: games: { point: { units: [1, 2] } }. בלי units – מתאים לכל היחידות.
+export const gameInUnit = (key, n) => hasGame(key) && (!PACK.games[key].units || PACK.games[key].units.includes(n));

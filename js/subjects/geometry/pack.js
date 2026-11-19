@@ -12,7 +12,7 @@ export default {
   statements: C.STATEMENTS, sequences: C.SEQUENCES, boss: null, quotes: [], who: {}, refText: () => '',
   lessons: LESSONS, lessonKit: 'math/kit.js',
   map: MAP,
-  games: { hunter: { modes: ['trivia'] }, swipe: {}, order: {}, duel: {} },
+  games: { hunter: { modes: ['trivia'] }, swipe: {}, order: {}, gmemory: {}, gmore: {}, gwork: {}, duel: {} },
   labels: {
     unit: n => `נושא ${hebNum(n)}׳`, unitShort: n => hebNum(n) + '׳', nodeLabel: n => hebNum(n),
     zoneHead: n => `אזור ${hebNum(n)}׳ · נושא ${hebNum(n)}`, allUnits: 'כל הנושאים', pickUnit: 'איזה נושא?', unitsWord: 'נושאים',

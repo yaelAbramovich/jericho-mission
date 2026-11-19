@@ -1,6 +1,6 @@
 // Service Worker: שומר את כל הקבצים כדי שהאפליקציה תעבוד בלי אינטרנט.
 // כשמשנים קבצים – מעלים את מספר הגרסה כאן.
-const VERSION = 'jericho-v25';
+const VERSION = 'jericho-v28';
 const FILES = [
   './',
   'index.html',
@@ -54,13 +54,23 @@ const FILES = [
   'js/games/swipe.js',
   'js/games/who.js',
   'js/games/order.js',
+  'js/games/memory.js',
+  'js/games/point.js',
+  'js/games/numline.js',
+  'js/games/bigsmall.js',
+  'js/games/shop.js',
+  'js/games/memory-core.js',
+  'js/games/numpad.js',
+  'js/games/gmemory.js',
+  'js/games/gmore.js',
+  'js/games/gwork.js',
   'js/games/boss.js',
   'js/games/exam.js', 'js/games/diagram.js',
   'js/hebrew.js',
   'js/subjects/index.js',
   'js/subjects/joshua/pack.js',
   'js/subjects/joshua/map.js', 'js/subjects/science/pack.js', 'js/subjects/science/content.js', 'js/subjects/science/map.js',
-  'js/lesson.js', 'js/subjects/math/pack.js', 'js/subjects/math/content.js', 'js/subjects/math/content-b.js', 'js/subjects/math/map.js', 'js/subjects/math/numbers.js', 'js/subjects/math/kit.js', 'js/subjects/math/lessons.js', 'js/subjects/math/geo.js', 'js/subjects/geometry/pack.js', 'js/subjects/geometry/content.js', 'js/subjects/geometry/lessons.js', 'js/subjects/geometry/map.js',
+  'js/lesson.js', 'js/subjects/math/pack.js', 'js/subjects/math/content.js', 'js/subjects/math/content-b.js', 'js/subjects/math/map.js', 'js/subjects/math/numbers.js', 'js/subjects/math/gen.js', 'js/subjects/math/word.js', 'js/subjects/geometry/solids.js', 'js/subjects/math/kit.js', 'js/subjects/math/lessons.js', 'js/subjects/math/geo.js', 'js/subjects/geometry/pack.js', 'js/subjects/geometry/content.js', 'js/subjects/geometry/lessons.js', 'js/subjects/geometry/map.js',
 ];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));

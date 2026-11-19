@@ -2,7 +2,7 @@
 import * as State from './state.js';
 import { sfx, unlock } from './audio.js';
 import { h, $, createScope, modal, toast, burst } from './ui.js';
-import { PACK, UNITS, UNIT_NUMS, N_UNITS, hasGame, REGISTRY } from './subjects/index.js';
+import { PACK, UNITS, UNIT_NUMS, N_UNITS, hasGame, gameInUnit, REGISTRY } from './subjects/index.js';
 import { hebNum } from './hebrew.js';
 const CHAPTERS = UNITS, OVERVIEW = PACK.overview, TEST_DATE = PACK.testDate, L = PACK.labels;   // (שמות ישנים: היחידות הן הפרקים/הנושאים של המקצוע הפעיל)
 import { TIER_XP, MAX_TIER, ITEMS, TYPE_LABEL, TYPE_ICON, art, itemById, setCustomJersey } from './rewards.js';
@@ -23,6 +23,14 @@ const ALL_GAMES = {
   swipe: { name: 'הסערה מתקרבת', icon: '🌀', desc: '60 שניות של אמת או שקר' },
   who: { name: 'מי אמר?', icon: '🎙️', desc: 'מי אמר את הציטוט?' },
   order: { name: 'בונים את הקו', icon: '🧩', desc: 'סדר את האירועים' },
+  memory: { name: 'זיכרון עשרוני', icon: '🧠', desc: 'זוגות ושלישיות של תרגילים ותוצאות' },
+  point: { name: 'הנקודה זזה', icon: '🔴', desc: 'כפל וחילוק ב־10, 100, 1,000' },
+  numline: { name: 'קו מספרים', icon: '📏', desc: 'המקום של מספר עשרוני על הקו' },
+  bigsmall: { name: 'גדול או קטן?', icon: '⚖️', desc: 'בלי לחשב: התוצאה גדולה או קטנה?' },
+  shop: { name: 'החנות', icon: '🛒', desc: 'בעיות מילוליות: מחירים ועודף' },
+  gmemory: { name: 'זיכרון גיאומטרי', icon: '🧊', desc: 'גופים, פריסות, שמות וספירות' },
+  gmore: { name: 'יותר או פחות?', icon: '🔺', desc: 'השוו פאות, צלעות וקודקודים' },
+  gwork: { name: 'הסדנה', icon: '🛠️', desc: 'בונים שלדים: כמה מקלות וכדורים?' },
   diagram: { name: 'בונים תרשים', icon: '🧱', desc: 'מסווגים קלט, תהליך ופלט' },
   boss: { name: 'המעגל האחרון', icon: '👑', desc: PACK.boss ? PACK.boss.title : '', fixedChapter: PACK.games.boss && PACK.games.boss.unit },
 };
@@ -158,6 +166,14 @@ function zoneScreen(v, { ch }) {
     hasGame('swipe') && tile('', '🌀', 'הסערה מתקרבת', 'אמת או שקר', () => startGame('swipe', { chapter: ch }), next === 'other'),
     hasGame('who') && tile('', '🎙️', 'מי אמר?', 'ציטוט ודובר', () => startGame('who', { chapter: ch })),
     hasGame('order') && tile('', '🧩', 'בונים את הקו', 'סדר אירועים', () => startGame('order', { chapter: ch })),
+    gameInUnit('memory', ch) && tile('', '🧠', 'זיכרון עשרוני', 'זוגות ושלישיות', () => startGame('memory', { chapter: ch })),
+    gameInUnit('point', ch) && tile('', '🔴', 'הנקודה זזה', 'הזזת הנקודה העשרונית', () => startGame('point', { chapter: ch })),
+    gameInUnit('numline', ch) && tile('', '📏', 'קו מספרים', 'גרירה וקריאה', () => startGame('numline', { chapter: ch })),
+    gameInUnit('bigsmall', ch) && tile('', '⚖️', 'גדול או קטן?', 'בלי לחשב', () => startGame('bigsmall', { chapter: ch })),
+    gameInUnit('shop', ch) && tile('', '🛒', 'החנות', 'מחירים ועודף', () => startGame('shop', { chapter: ch })),
+    gameInUnit('gmemory', ch) && tile('', '🧊', 'זיכרון גיאומטרי', 'גופים, פריסות ושמות', () => startGame('gmemory', { chapter: ch })),
+    gameInUnit('gmore', ch) && tile('', '🔺', 'יותר או פחות?', 'בלי לספור', () => startGame('gmore', { chapter: ch })),
+    gameInUnit('gwork', ch) && tile('', '🛠️', 'הסדנה', 'מקלות וכדורי פלסטלינה', () => startGame('gwork', { chapter: ch })),
     hasGame('diagram') && tile('', '🧱', 'בונים תרשים', 'קלט · תהליך · פלט', () => startGame('diagram', { chapter: ch })),
     hasGame('boss') && ch === PACK.games.boss.unit && tile('boss', '👑', 'המעגל האחרון', PACK.boss.title, () => startGame('boss', { chapter: ch })),
   );
@@ -192,7 +208,7 @@ function pickScope(key) {
   const box = h('div', { class: 'chips' });
   const m = modal([h('h3', {}, g.name), g.modes && modeChips(g.modes, v => { mode = v; }), h('p', { class: 'sub' }, L.pickUnit), box]);
   const chip = (label, ch) => h('button', { class: 'chip', onclick: () => { m.close(); startGame(key, { chapter: ch, mode }); } }, label);
-  box.append(chip('הכול', 0), ...CHAPTERS.map(c => chip(PACK.labels.unit(c.n), c.n)));
+  box.append(chip('הכול', 0), ...CHAPTERS.filter(c => gameInUnit(key, c.n)).map(c => chip(PACK.labels.unit(c.n), c.n)));
 }
 function modeChips(modes, onSel) {
   const row = h('div', { class: 'chips mode' });
