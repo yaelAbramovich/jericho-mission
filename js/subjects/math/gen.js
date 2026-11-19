@@ -136,9 +136,31 @@ function triple(topic, level) {
 export const rich = t => String(t).replace(/\d+(?:[.,]\d+)?(?:(?:\s*[×=≈÷+−]\s*|\s+[:-]\s+)\d+(?:[.,]\d+)?)+/g, s => `\u2066${s}\u2069`);
 export const ltrText = s => `\u2066${s}\u2069`;
 
+// "bigger or smaller than where we started?" questions
+export function bigSmall(level, ops = ['×', ':']) {
+  const BIG = level === 1 ? ['2', '3', '10', '100', '1.5', '5'] : ['1.1', '1.01', '1.5', '2.3', '10', '1.25', '100'];
+  const SMALL = level === 1 ? ['0.5', '0.1', '0.2', '0.25', '0.01'] : ['0.9', '0.99', '0.5', '0.75', '0.01', '0.1', '0.25'];
+  const kinds = level === 3 ? ['big', 'small', 'one', 'big', 'small'] : ['big', 'small'];
+  const kind = pick(kinds), op = pick(ops);
+  const b = kind === 'one' ? pick(['1', '1.0', '1.00']) : kind === 'big' ? pick(BIG) : pick(SMALL);
+  const a = fmt(level === 1 ? D(R(2, 9), 0) : rdec(R(0, 2), R(2, 3)));
+  const bv = num(parse(b));
+  let ans;
+  if (bv === 1) ans = 'same';
+  else if (op === '×') ans = bv > 1 ? 'bigger' : 'smaller';
+  else ans = bv > 1 ? 'smaller' : 'bigger';
+  const word = ans === 'same' ? 'שווה למספר' : ans === 'bigger' ? 'גדולה מהמספר' : 'קטנה מהמספר';
+  const why = bv === 1 ? `${op === '×' ? 'כפל' : 'חילוק'} ב־1 לא משנה את המספר.`
+    : op === '×' ? (bv > 1 ? `כפל במספר גדול מ־1 ⇒ התוצאה גדולה מ־${a}.` : `כפל במספר קטן מ־1 ⇒ התוצאה קטנה מ־${a}.`)
+      : (bv > 1 ? `חילוק במספר גדול מ־1 ⇒ התוצאה קטנה מ־${a}.` : `חילוק במספר קטן מ־1 ⇒ התוצאה גדולה מ־${a}.`);
+  return { a, b, op, ans, why, word };
+}
+
 // ---- אילו נושאים שייכים לאיזה אזור (נושא) של המקצוע ----
 export const CHAPTER_TOPICS = { 1: ['mul10', 'place'], 2: ['div10', 'place'], 3: ['mulDec'], 4: ['mulDec', 'estimate'], 5: ['divDec'] };
 export const topicsFor = ch => (ch && CHAPTER_TOPICS[ch]) || Object.keys(GEN);          // ch = 0 → כל האזורים
+// אזור 4 = כפל (כפל בקטן/גדול מ-1), אזור 5 = חילוק; בלי אזור – שניהם
+export const bigSmallOps = ch => (ch === 4 ? ['×'] : ch === 5 ? [':'] : ['×', ':']);
 export const TRIPLE_TOPICS = ['mul10', 'div10', 'estimate'];                              // נושאים שיש להם "שלישייה": תרגיל · כלל/הערכה · תוצאה
 export const tripleTopicsFor = ch => topicsFor(ch).filter(t => TRIPLE_TOPICS.includes(t));
 

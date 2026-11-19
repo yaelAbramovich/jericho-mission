@@ -13,7 +13,7 @@ export default {
   statements: [...C.STATEMENTS, ...B.STATEMENTS_B], sequences: [...C.SEQUENCES, ...B.SEQUENCES_B], boss: null, quotes: [], who: {}, refText: () => '',
   lessons: LESSONS, lessonKit: 'math/kit.js',   // נתוני השיעורים; קובץ הרכיבים (kit.js) נטען רק כשפותחים שיעור
   map: MAP,
-  games: { hunter: { modes: ['trivia'] }, swipe: {}, order: {}, memory: {}, point: { units: [1, 2] }, duel: {} },
+  games: { hunter: { modes: ['trivia'] }, swipe: {}, order: {}, memory: {}, point: { units: [1, 2] }, numline: { units: [1, 2] }, bigsmall: { units: [4, 5] }, shop: { units: [3, 4, 5] }, duel: {} },
   labels: {
     unit: n => `נושא ${hebNum(n)}׳`, unitShort: n => hebNum(n) + '׳', nodeLabel: n => hebNum(n),
     zoneHead: n => `אזור ${hebNum(n)}׳ · נושא ${hebNum(n)}`, allUnits: 'כל הנושאים', pickUnit: 'איזה נושא?', unitsWord: 'נושאים',

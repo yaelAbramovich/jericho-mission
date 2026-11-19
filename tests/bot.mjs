@@ -6,6 +6,7 @@ const CLICKS = [
   '.duel-setup .btn.primary',                       // דו-קרב: התחלה
   '.mem-setup ~ .btn.primary',                      // זיכרון עשרוני: התחלה
   '.pt-actions .btn.primary',                       // הנקודה זזה: בדיקה (מסתיים אחרי שתי טעויות) / הבא
+  '.shop-actions .btn.primary',                     // החנות: בדיקה (אחרי שתי טעויות נחשפת התשובה) / הבא
   '.stage-splash .btn.primary',                     // מבחן הסיכום: מעבר בין שלבים
   '.idea-card ~ .btn.primary',                      // דו-קרב: כרטיס נושא
   '.side-btns .side.yes',                           // בוס: בחירת עמדה
@@ -48,6 +49,14 @@ export async function playToEnd(page, timeoutMs = 90000) {
       for (const i of idx) await tryClick(page, `.mcard[data-i="${i}"]`);
       await page.waitForTimeout(60);
       continue;
+    }
+    // החנות: בלי ספרה לא נבדק – מקלידים 1 (התשובה כנראה שגויה, ואחרי שני ניסיונות הסבב ממשיך)
+    if (await page.locator('.shop-keys').count() && !(await page.locator('.shop-entry .val').innerText().catch(() => '')).trim()) await tryClick(page, '.skey[data-k="1"]');
+    // קו מספרים (גרירה): נוגעים באמצע הקו כדי לפתוח את "בדיקה"
+    if (await page.locator('.nl-check').count()) {
+      const bb = await page.locator('.nl-track').first().boundingBox().catch(() => null);
+      if (bb) await page.mouse.click(bb.x + bb.width * 0.5, bb.y + 10);
+      await tryClick(page, '.nl-check'); continue;
     }
     let clicked = false;
     for (const sel of CLICKS) { if (await tryClick(page, sel).catch(() => false)) { clicked = true; break; } }

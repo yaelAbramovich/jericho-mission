@@ -838,7 +838,9 @@ for (const ch of [0, 1, 2, 3, 4, 5]) {
   mathCases.push([`חשבון · הסערה · ${label}`, 'swipe', { chapter: ch, duration: 3 }]);
   mathCases.push([`חשבון · בונים את הקו · ${label}`, 'order', { chapter: ch, count: 1 }]);
   mathCases.push([`חשבון · זיכרון עשרוני · ${label}`, 'memory', { chapter: ch, cfg: { size: '4x4', level: '2', players: '1' } }]);
-  if (ch <= 2) mathCases.push([`חשבון · הנקודה זזה · ${label}`, 'point', { chapter: ch }]);
+  if (ch <= 2) mathCases.push([`חשבון · הנקודה זזה · ${label}`, 'point', { chapter: ch }], [`חשבון · קו מספרים · ${label}`, 'numline', { chapter: ch }]);
+  if (ch === 0 || ch >= 4) mathCases.push([`חשבון · גדול או קטן · ${label}`, 'bigsmall', { chapter: ch }]);
+  if (ch === 0 || ch >= 3) mathCases.push([`חשבון · החנות · ${label}`, 'shop', { chapter: ch }]);
 }
 mathCases.push(['חשבון · זיכרון · מסך ההגדרות (בלי cfg) · נושא 1', 'memory', { chapter: 1 }],
   ['חשבון · זיכרון · שלישיות · נושא 1', 'memory', { chapter: 1, cfg: { mode: 'triples', size: '3x4', level: '1', players: '1' } }],
@@ -887,11 +889,18 @@ await test('חשבון: זיכרון עשרוני בכל האזורים, והנ�
     await go('zone', { ch }); await page.waitForSelector('.tiles .tn'); const tiles = await page.locator('.tiles .tn').allInnerTexts();
     ok(tiles.includes('זיכרון עשרוני'), `אזור ${ch}: חסר זיכרון עשרוני (${tiles.join('|')})`);
     eq(tiles.includes('הנקודה זזה'), ch <= 2, `אזור ${ch}: הנקודה זזה`);
+    eq(tiles.includes('קו מספרים'), ch <= 2, `אזור ${ch}: קו מספרים`);
+    eq(tiles.includes('גדול או קטן?'), ch >= 4, `אזור ${ch}: גדול או קטן`);
+    eq(tiles.includes('החנות'), ch >= 3, `אזור ${ch}: החנות`);
   }
   await go('games'); await page.waitForSelector('.tiles .tn');
   await page.locator('.tile', { hasText: 'הנקודה זזה' }).click(); eq(await page.locator('.modal .chip').count(), 3, 'הנקודה זזה: "הכול" + שני אזורים');
   await page.evaluate(() => { document.getElementById('overlay').innerHTML = ''; });
   await page.locator('.tile', { hasText: 'זיכרון עשרוני' }).click(); eq(await page.locator('.modal .chip').count(), 6, 'זיכרון: "הכול" + חמישה אזורים');
+  for (const [name, n] of [['קו מספרים', 3], ['גדול או קטן?', 3], ['החנות', 4]]) {
+    await page.evaluate(() => { document.getElementById('overlay').innerHTML = ''; });
+    await page.locator('.tile', { hasText: name }).click(); eq(await page.locator('.modal .chip').count(), n, `${name}: מספר אפשרויות בבורר`);
+  }
 }, { storage: seed(MATH) }));
 await test('הנקודה זזה: משחקים נכון עד הסוף (כל סבב מוכר), XP נצבר, האזור מסמן "משחק נוסף", ושתי טעויות חושפות את התשובה', () => withPage(async page => {
   await page.evaluate(() => import('/js/app.js').then(m => m.startGame('point', { chapter: 1 })));
@@ -935,6 +944,98 @@ await test('זיכרון עשרוני: קלף שלא מתאים מתהפך חז�
   for (const s of sets.slice(1)) for (const i of s) await page.locator(`.mcard[data-i="${i}"]`).click();
   await page.waitForSelector('.end-card', { timeout: 8000 }); ok(/ניצח|תיקו/.test(await page.locator('.end-title').innerText()), 'התוצאה צריכה להכריז על מנצח או תיקו');
 }, { storage: seed(MATH) }));
+await test('גדול או קטן + החנות: כל בעיה מחושבת מחדש בחישוב עצמאי, הסיפור מכיל את המספרים, והמין הדקדוקי נכון', () => withPage(async page => {
+  const bad = await page.evaluate(async () => {
+    const G = await import('/js/subjects/math/gen.js'), W = await import('/js/subjects/math/word.js'), out = [];
+    const rat = s => { const [i, f = ''] = s.split('.'); return { n: BigInt(i + f), d: 10n ** BigInt(f.length) }; };
+    const req = (a, b) => a.n * b.d === b.n * a.d, rmul = (a, b) => ({ n: a.n * b.n, d: a.d * b.d }), rsub = (a, b) => ({ n: a.n * b.d - b.n * a.d, d: a.d * b.d });
+    for (const level of [1, 2, 3]) for (const ops of [['×', ':'], ['×'], [':']]) for (let i = 0; i < 700; i++) {
+      const b = G.bigSmall(level, ops), A = G.parse(b.a), B = G.parse(b.b);
+      if (!ops.includes(b.op)) { out.push(`bigSmall: פעולה ${b.op} לא ב-${ops}`); continue; }
+      const res = b.op === '×' ? G.num(A) * G.num(B) : G.num(A) / G.num(B), a = G.num(A), truth = Math.abs(res - a) < 1e-12 ? 'same' : res > a ? 'bigger' : 'smaller';
+      if (truth !== b.ans) out.push(`bigSmall ${b.a} ${b.op} ${b.b} -> ${b.ans} (אמת ${truth})`);
+    }
+    const seen = new Set();
+    for (const type of ['total', 'unit', 'route', 'kg', 'change']) for (const level of [1, 2, 3]) for (let i = 0; i < 500; i++) {
+      const p = W.shopProblem(type, level), eqs = p.why.split(' ; '), tag = `${type} L${level}: ${p.text} ← ${p.why}`;
+      const parse = e => { const m = e.match(/^(\S+) ([×:−]) (\S+) = (\S+)$/); return m && { x: rat(m[1]), op: m[2], y: rat(m[3]), r: rat(m[4]), s: m.slice(1) }; };
+      const E = eqs.map(parse); if (E.some(e => !e)) { out.push('משוואה לא תקינה ' + tag); continue; }
+      for (const e of E) { const calc = e.op === '×' ? rmul(e.x, e.y) : e.op === '−' ? rsub(e.x, e.y) : null; if (e.op === ':' ? !req(rmul(e.r, e.y), e.x) : !req(calc, e.r)) out.push('חישוב שגוי ' + tag); }
+      const last = E[E.length - 1]; if (!req(last.r, rat(G.fmt(p.ans)))) out.push('התשובה לא תואמת לחישוב ' + tag);
+      for (const tok of [E[0].s[0], E[0].s[2]]) if (!p.text.includes(tok)) out.push(`הסיפור לא מכיל ${tok}: ` + tag);
+      const g = p.text.match(/(?:מחיר|מה מחיר) (\S+) (אחת|אחד)/); if (g) seen.add(g[1] + ' ' + g[2]);
+    }
+    const FEM = new Set(['מחברת', 'סוכריה', 'מדבקה', 'לחמנייה', 'ממחטה']);
+    for (const s of seen) { const [w, num] = s.split(' '); if (FEM.has(w) !== (num === 'אחת')) out.push('מין דקדוקי שגוי: ' + s); }
+    if (seen.size < 6) out.push('נראו מעט מדי פריטים: ' + [...seen].join('|'));
+    return out.slice(0, 8);
+  });
+  ok(!bad.length, bad.join('\n'));
+}, { storage: seed(MATH) }));
+await test('גדול או קטן: משחקים נכון עד הסוף – אזור 4 רק כפל, אזור 5 רק חילוק, תשובה שגויה נצבעת ומוסברת', () => withPage(async page => {
+  const hook = f => page.evaluate(fn => import('/js/games/bigsmall.js').then(m => eval('(' + fn + ')')(m.__test)), f);
+  for (const [ch, want] of [[4, '×'], [5, ':']]) {
+    await page.evaluate(c => { document.getElementById('overlay').innerHTML = ''; return import('/js/app.js').then(m => m.startGame('bigsmall', { chapter: c })); }, ch); await page.waitForSelector('.bs-opts');
+    for (let r = 0; r < 12; r++) {
+      const q = await hook('t => ({ op: t.q.op, ans: t.q.ans })'); eq(q.op, want, `אזור ${ch}: סוג הפעולה`);
+      if (ch === 4 && r === 0) { const wrong = ['bigger', 'same', 'smaller'].find(a => a !== q.ans); await page.locator(`.bs-opt[data-a="${wrong}"]`).click(); await page.waitForSelector('.bs-fb.bad');
+        ok(await page.locator('.bs-opt.wrong').count() === 1 && await page.locator('.bs-opt.right').count() === 1, 'תשובה שגויה צריכה להיצבע, והנכונה להיחשף'); }
+      else { await page.locator(`.bs-opt[data-a="${q.ans}"]`).click(); await page.waitForSelector('.bs-fb.good', { timeout: 3000 }); }
+      await page.locator('.btn.primary', { hasText: /הבא|לתוצאות/ }).click();
+    }
+    await page.waitForSelector('.end-card');
+  }
+}, { storage: seed(MATH) }));
+await test('קו מספרים: משחקים נכון עד הסוף (עשיריות, מאיות וזום), הסמן נראה רק אחרי נגיעה, והחץ מציג מספרים שונים', () => withPage(async page => {
+  await page.evaluate(() => import('/js/app.js').then(m => m.startGame('numline', { chapter: 0 }))); await page.waitForSelector('.nl');
+  let sawZoom = false, reads = 0;
+  for (let r = 0; r < 8; r++) {
+    for (let g = 0; g < 4 && !(await page.locator('.fb').count()); g++) {
+      const cur = await page.evaluate(() => import('/js/games/numline.js').then(m => m.__test.cur));
+      if (cur.kind === 'read') { reads++; eq(await page.locator('.nl-mc .opt').count(), 4, 'ארבע תשובות'); eq(await new Set(await page.locator('.nl-mc .opt').evaluateAll(b => b.map(x => x.dataset.v))).size, 4, 'ארבע תשובות שונות'); await page.locator(`.nl-mc .opt[data-v="${cur.target}"]`).click(); }
+      else {
+        eq(await page.locator('.nl-check').isDisabled(), true, 'בדיקה סגורה לפני נגיעה'); eq(await page.locator('.nl-pin').isHidden(), true, 'הסמן מוסתר לפני נגיעה');
+        if (cur.kind === 'zoom') sawZoom = true;
+        const bb = await page.locator('.nl-track').boundingBox(), x = bb.x + bb.width * (cur.k + (cur.coarse ? 0.5 : 0)) / 10;
+        await page.mouse.move(x, bb.y + 10); await page.mouse.down(); await page.mouse.move(x + 20, bb.y + 10); await page.mouse.move(x, bb.y + 10); await page.mouse.up();   // גוררים ומתקנים
+        await page.locator('.nl-check').click(); await page.waitForTimeout(60);
+      }
+    }
+    await page.waitForSelector('.fb.good', { timeout: 3000 }); await page.locator('.btn.primary', { hasText: /הבא|לתוצאות/ }).click();
+  }
+  await page.waitForSelector('.end-card'); ok(sawZoom && reads >= 2, `זום=${sawZoom} קריאות=${reads}`);
+}, { storage: seed(MATH) }));
+await test('החנות: מקלדת על המסך – נכון עד הסוף בכל האזורים, טעות ראשונה מנקה ומאפשרת רמז, טעות שנייה חושפת תשובה', () => withPage(async page => {
+  for (const ch of [3, 4, 5]) {
+    await page.evaluate(c => { document.getElementById('overlay').innerHTML = ''; return import('/js/app.js').then(m => m.startGame('shop', { chapter: c })); }, ch); await page.waitForSelector('.shop-keys');
+    for (let r = 0; r < 8; r++) {
+      const ans = await page.evaluate(() => Promise.all([import('/js/games/shop.js'), import('/js/subjects/math/gen.js')]).then(([s, G]) => G.fmt(s.__test.q.ans)));
+      for (const c of ans) await page.locator(`.skey[data-k="${c}"]`).click();
+      eq((await page.locator('.shop-entry .val').innerText()).trim(), ans, 'הערך שהוקלד מוצג');
+      await page.locator('.shop-actions .btn.primary').click(); await page.waitForSelector('.shop-fb.good', { timeout: 3000 });
+      await page.locator('.shop-actions .btn.primary').click();
+    }
+    await page.waitForSelector('.end-card');
+  }
+  await page.evaluate(() => { document.getElementById('overlay').innerHTML = ''; return import('/js/app.js').then(m => m.startGame('shop', { chapter: 5 })); }); await page.waitForSelector('.shop-keys');
+  await page.locator('.skey[data-k="9"]').click(); await page.locator('.skey[data-k="⌫"]').click(); eq((await page.locator('.shop-entry .val').innerText()).trim(), '', 'מחיקה');
+  await page.locator('.skey[data-k="."]').click(); await page.locator('.skey[data-k="."]').click(); eq((await page.locator('.shop-entry .val').innerText()).trim(), '0.', 'נקודה אחת בלבד, עם 0 לפניה');
+  await page.locator('.skey[data-k="⌫"]').click(); await page.locator('.skey[data-k="⌫"]').click();
+  await page.locator('.shop-actions .btn.primary').click(); ok((await page.locator('.toast, #toast').allInnerTexts()).join('').includes('הקלידו'), 'בדיקה בלי ספרות מבקשת להקליד מספר');
+  await page.locator('.skey[data-k="9"]').click(); await page.locator('.shop-actions .btn.primary').click(); await page.waitForSelector('.shop-fb.bad');
+  eq((await page.locator('.shop-entry .val').innerText()).trim(), '', 'אחרי טעות ראשונה הערך מתנקה'); await page.locator('.shop-actions .btn.ghost').click(); ok(await page.locator('.shop-fb.hint').count() === 1 && (await page.locator('.shop-fb.hint').innerText()).includes('💡'), 'רמז מוצג');
+  await page.locator('.skey[data-k="9"]').click(); await page.locator('.shop-actions .btn.primary').click(); await page.waitForFunction(() => /התשובה:/.test(document.querySelector('.shop-fb').innerText));
+}, { storage: seed(MATH) }));
+await test('משחקי החשבון החדשים: אין גלישה אופקית במסך קטן (320×568), והמקלדת והסמן נגישים', () => withPage(async page => {
+  const bad = [];
+  for (const [key, opts, wait] of [['numline', { chapter: 0 }, '.nl'], ['bigsmall', { chapter: 0 }, '.bs-opts'], ['shop', { chapter: 3 }, '.shop-keys'], ['point', { chapter: 0 }, '.pt-strip'], ['memory', { chapter: 0, cfg: { size: '4x6' } }, '.mem-board']]) {
+    await page.evaluate(([k, o]) => { document.getElementById('overlay').innerHTML = ''; return import('/js/app.js').then(m => m.startGame(k, o)); }, [key, opts]);
+    await page.waitForSelector(wait); await page.waitForTimeout(150);
+    const r = await page.evaluate(() => ({ over: document.documentElement.scrollWidth > innerWidth + 1 || document.querySelector('#screen').scrollWidth > document.querySelector('#screen').clientWidth + 1 }));
+    if (r.over) bad.push(key + ': גלישה אופקית');
+  }
+  ok(!bad.length, bad.join('\n'));
+}, { storage: seed(MATH), viewport: { width: 320, height: 568 } }));
 await test('שיעורים אינטראקטיביים: כל שבעת השיעורים נפתרים עד הסוף, XP רק בפעם הראשונה, וההתקדמות נשמרת', () => withPage(async page => {
   const go = (name, params = {}) => page.evaluate(([n, p]) => import('/js/app.js').then(m => m.go(n, p)), [name, params]);
   const xp = () => page.evaluate(() => JSON.parse(localStorage.getItem('jericho.v1')).xp);
