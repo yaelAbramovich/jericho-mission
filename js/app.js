@@ -28,6 +28,9 @@ const ALL_GAMES = {
   numline: { name: 'קו מספרים', icon: '📏', desc: 'המקום של מספר עשרוני על הקו' },
   bigsmall: { name: 'גדול או קטן?', icon: '⚖️', desc: 'בלי לחשב: התוצאה גדולה או קטנה?' },
   shop: { name: 'החנות', icon: '🛒', desc: 'בעיות מילוליות: מחירים ועודף' },
+  gmemory: { name: 'זיכרון גיאומטרי', icon: '🧊', desc: 'גופים, פריסות, שמות וספירות' },
+  gmore: { name: 'יותר או פחות?', icon: '🔺', desc: 'השוו פאות, צלעות וקודקודים' },
+  gwork: { name: 'הסדנה', icon: '🛠️', desc: 'בונים שלדים: כמה מקלות וכדורים?' },
   diagram: { name: 'בונים תרשים', icon: '🧱', desc: 'מסווגים קלט, תהליך ופלט' },
   boss: { name: 'המעגל האחרון', icon: '👑', desc: PACK.boss ? PACK.boss.title : '', fixedChapter: PACK.games.boss && PACK.games.boss.unit },
 };
@@ -168,6 +171,9 @@ function zoneScreen(v, { ch }) {
     gameInUnit('numline', ch) && tile('', '📏', 'קו מספרים', 'גרירה וקריאה', () => startGame('numline', { chapter: ch })),
     gameInUnit('bigsmall', ch) && tile('', '⚖️', 'גדול או קטן?', 'בלי לחשב', () => startGame('bigsmall', { chapter: ch })),
     gameInUnit('shop', ch) && tile('', '🛒', 'החנות', 'מחירים ועודף', () => startGame('shop', { chapter: ch })),
+    gameInUnit('gmemory', ch) && tile('', '🧊', 'זיכרון גיאומטרי', 'גופים, פריסות ושמות', () => startGame('gmemory', { chapter: ch })),
+    gameInUnit('gmore', ch) && tile('', '🔺', 'יותר או פחות?', 'בלי לספור', () => startGame('gmore', { chapter: ch })),
+    gameInUnit('gwork', ch) && tile('', '🛠️', 'הסדנה', 'מקלות וכדורי פלסטלינה', () => startGame('gwork', { chapter: ch })),
     hasGame('diagram') && tile('', '🧱', 'בונים תרשים', 'קלט · תהליך · פלט', () => startGame('diagram', { chapter: ch })),
     hasGame('boss') && ch === PACK.games.boss.unit && tile('boss', '👑', 'המעגל האחרון', PACK.boss.title, () => startGame('boss', { chapter: ch })),
   );

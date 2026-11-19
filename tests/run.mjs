@@ -1133,8 +1133,156 @@ await test('גיאומטריה: כל המסכים נפתחים, 3 אזורים, 
   await go('games'); await filled('משחקים'); await go('profile'); await filled('פרופיל'); await go('pass'); await page.waitForSelector('.passv');
   const hit = /יהושע|יריחו|עשרוני|הירדן|טכנולוגי|קלט|פלט/.exec(texts.join('\n')); ok(!hit, `מסכי גיאומטריה מזכירים מקצוע אחר: "${hit && hit[0]}"`);
 }, { storage: seed(GEO) }));
+// ---- משחקי הגיאומטריה: זיכרון גיאומטרי, יותר או פחות?, הסדנה ----
+await test('גיאומטריה (משחקים): כל קלף, שאלה ובעיה מחושבים מחדש מהמודל התלת-ממדי (ספירה ישירה של פאות/צלעות/קודקודים)', () => withPage(async page => {
+  const bad = await page.evaluate(async () => {
+    const Geo = await import('/js/subjects/math/geo.js'), S = await import('/js/subjects/geometry/solids.js'), out = [];
+    const mc = (type, n) => { const M = Geo.model(type, n), E = new Set(); M.f.forEach(f => f.forEach((a, i) => { const b = f[(i + 1) % f.length]; E.add(Math.min(a, b) + '-' + Math.max(a, b)); })); return { faces: M.f.length, verts: M.v.length, edges: E.size }; };
+    const nm = (type, n) => `${type === 'prism' ? 'מנסרה' : 'פירמידה'} ${Geo.ADJ[n]}`;
+    const txt = c => `${c.faces} פאות\n${c.edges} צלעות\n${c.verts} קודקודים`;
+    // 1) קלפי זיכרון
+    for (let i = 0; i < 60; i++) for (const ch of [0, 1, 2, 3]) {
+      const tri = S.memorySets({ mode: 'triples', count: 12, chapter: ch });
+      if (tri.length !== 12 || new Set(tri.map(x => x.meta.type + x.meta.n)).size !== 12) out.push('שלישיות: לא 12 גופים שונים');
+      for (const st of tri) { const { type, n } = st.meta, c = mc(type, n);
+        if (st.cards[0].svg !== Geo.solidSVG(type, n, { size: 120 })) out.push(`ציור שגוי ${type} ${n}`);
+        if (st.cards[1].t !== nm(type, n)) out.push(`שם שגוי ${type} ${n}: ${st.cards[1].t}`);
+        if (st.cards[2].t !== txt(c)) out.push(`ספירה שגויה ${type} ${n}: ${st.cards[2].t} מול ${txt(c)}`); }
+      for (const level of [1, 2, 3]) for (const count of [8, 10, 14]) {
+        const sets = S.memorySets({ mode: 'pairs', count, level, chapter: ch }), texts = sets.flatMap(x => x.cards.map(c => c.t));
+        if (sets.length !== count) out.push(`זוגות: ${sets.length} במקום ${count}`);
+        if (new Set(texts).size !== texts.length) out.push('קלפים כפולים בלוח זוגות');
+        const allowed = level === 1 ? ['dn'] : level === 2 ? ['dn', 'nc'] : ['dn', 'nc', 'net'];
+        for (const st of sets) { const m = st.meta; if (!allowed.includes(m.kind)) out.push(`סוג התאמה ${m.kind} לא מתאים לרמה ${level}`);
+          if (m.shape) { if (st.cards[1].t !== { cylinder: 'גליל', cone: 'חרוט', sphere: 'כדור' }[m.shape]) out.push('שם גוף עגול שגוי ' + m.shape); continue; }
+          const c = mc(m.type, m.n);
+          if (m.kind === 'dn' && (st.cards[0].svg !== Geo.solidSVG(m.type, m.n, { size: 120 }) || st.cards[1].t !== nm(m.type, m.n))) out.push(`dn שגוי ${m.type} ${m.n}`);
+          if (m.kind === 'nc' && (st.cards[0].t !== nm(m.type, m.n) || st.cards[1].t !== txt(c))) out.push(`nc שגוי ${m.type} ${m.n}: ${st.cards[1].t}`);
+          if (m.kind === 'net' && (st.cards[0].svg !== Geo.netSVG(m.type, m.n, { size: 120 }) || st.cards[1].svg !== Geo.solidSVG(m.type, m.n, { size: 120 }))) out.push(`net שגוי ${m.type} ${m.n}`); }
+      }
+      const six = S.memorySets({ mode: 'pairs', count: 6, level: 2, chapter: ch }); if (ch === 2 && !six.every(x => x.meta.type === 'pyramid')) out.push('אזור 2: ששת הזוגות הראשונים צריכים להיות פירמידות'); if (ch === 3 && !six.every(x => x.meta.type === 'prism')) out.push('אזור 3: ששת הזוגות הראשונים צריכים להיות מנסרות');
+    }
+    // 2) יותר או פחות?
+    let ties = 0;
+    for (const level of [1, 2, 3]) for (const ch of [0, 1, 2, 3]) for (let i = 0; i < 400; i++) {
+      const q = S.compareQuestion(level, ch), a = mc(q.A.type, q.A.n)[q.prop], b = mc(q.B.type, q.B.n)[q.prop], want = a > b ? 'more' : a < b ? 'less' : 'same';
+      if (q.ans !== want || q.a !== a || q.b !== b) out.push(`compare ${q.A.name} / ${q.B.name} / ${q.prop}: ${q.ans} (אמת ${want})`);
+      if (level === 1 && !(q.A.n === q.B.n && q.A.type !== q.B.type)) out.push('רמה 1: אותו בסיס וסוג גוף אחר'); if (level === 2 && !(q.A.type === q.B.type && q.A.n !== q.B.n)) out.push('רמה 2: אותו סוג, בסיס אחר');
+      if (ch === 2 && q.A.type !== 'pyramid') out.push('אזור 2: הגוף הראשון פירמידה'); if (ch === 3 && q.A.type !== 'prism') out.push('אזור 3: הגוף הראשון מנסרה');
+      if (q.A.name === q.B.name) out.push('שני גופים זהים'); if (want === 'same') ties++;
+      if (!q.why.includes(String(a)) || !q.why.includes(String(b))) out.push('ההסבר לא מכיל את המספרים: ' + q.why);
+    }
+    if (!ties) out.push('ברמה 3 צריכות להופיע גם שאלות "אותו מספר"');
+    // 3) הסדנה
+    const evalEq = w => { const [l, r] = w.split(' = '), t = l.split(' '); let v = +t[0]; for (let i = 1; i < t.length; i += 2) { const x = +t[i + 1]; v = t[i] === '+' ? v + x : t[i] === '−' ? v - x : t[i] === ':' ? v / x : NaN; } return v === +r ? v : null; };
+    const kinds = new Set();
+    for (const level of [1, 2, 3]) for (const ch of [0, 1, 2, 3]) for (let i = 0; i < 400; i++) {
+      const p = S.workProblem(level, ch), { type, n, kind } = p.meta, c = mc(type, n); kinds.add(kind);
+      const want = { edges: c.edges, verts: c.verts, faces: c.faces, lat: n, revE: n, revF: n, revV: n, euler: c.edges }[kind], tag = `${kind} ${type} ${n}: ${p.text}`;
+      if (p.ans.u !== want || p.ans.d !== 0) out.push(`תשובה שגויה (${p.ans.u} במקום ${want}) ${tag}`);
+      if (ch === 2 && type !== 'pyramid') out.push('אזור 2: פירמידה בלבד'); if (ch === 3 && type !== 'prism') out.push('אזור 3: מנסרה בלבד');
+      if (kind !== 'lat') { const v = evalEq(p.why); if (v !== p.ans.u) out.push(`משוואת ההסבר לא נותנת את התשובה: ${p.why} (${v}) ${tag}`); }
+      if (['edges', 'verts', 'faces', 'lat'].includes(kind) && !p.text.includes(nm(type, n))) out.push('שם הגוף לא בסיפור: ' + tag);
+      if (kind === 'revE' && !p.text.includes(String(c.edges))) out.push('revE: ' + tag); if (kind === 'revF' && !p.text.includes(String(c.faces))) out.push('revF: ' + tag);
+      if (kind === 'revV' && !p.text.includes(String(c.verts))) out.push('revV: ' + tag); if (kind === 'euler' && !(p.text.includes(String(c.faces)) && p.text.includes(String(c.verts)))) out.push('euler: ' + tag);
+      if (kind === 'euler' && c.verts - c.edges + c.faces !== 2) out.push('אוילר לא מתקיים ' + tag);
+    }
+    for (const k of ['edges', 'verts', 'faces', 'lat', 'revE', 'revF', 'revV', 'euler']) if (!kinds.has(k)) out.push('סוג בעיה לא הופיע: ' + k);
+    return [...new Set(out)].slice(0, 8);
+  });
+  ok(!bad.length, bad.join('\n'));
+}, { storage: seed(GEO) }));
+await test('גיאומטריה (משחקים): בכל אחד משלושת האזורים שלושת המשחקים, ובחשבון הם לא מופיעים (ולהפך)', () => withPage(async page => {
+  const go = (name, params = {}) => page.evaluate(([n, p]) => import('/js/app.js').then(m => m.go(n, p)), [name, params]);
+  for (let ch = 1; ch <= 3; ch++) {
+    await go('zone', { ch }); await page.waitForSelector('.tiles .tn'); const tiles = await page.locator('.tiles .tn').allInnerTexts();
+    for (const t of ['זיכרון גיאומטרי', 'יותר או פחות?', 'הסדנה']) ok(tiles.includes(t), `אזור ${ch}: חסר ${t} (${tiles.join('|')})`);
+    ok(!tiles.includes('זיכרון עשרוני') && !tiles.includes('החנות') && !tiles.includes('קו מספרים'), `אזור ${ch}: משחקי חשבון בגיאומטריה`);
+  }
+  await go('games'); await page.waitForSelector('.tiles .tn'); const all = await page.locator('.tiles .tn').allInnerTexts();
+  ok(['זיכרון גיאומטרי', 'יותר או פחות?', 'הסדנה'].every(t => all.includes(t)), 'בורר המשחקים: ' + all.join('|'));
+  await page.locator('.tile', { hasText: 'הסדנה' }).click(); eq(await page.locator('.modal .chip').count(), 4, 'הסדנה: "הכול" + שלושה אזורים');
+}, { storage: seed(GEO) }));
+await test('חשבון: משחקי הגיאומטריה לא מופיעים באזורי החשבון', () => withPage(async page => {
+  for (let ch = 1; ch <= 5; ch++) { await page.evaluate(c => import('/js/app.js').then(m => m.go('zone', { ch: c })), ch); await page.waitForSelector('.tiles .tn'); const tiles = await page.locator('.tiles .tn').allInnerTexts(); ok(!tiles.some(t => ['זיכרון גיאומטרי', 'הסדנה'].includes(t)), `אזור ${ch}: ${tiles.join('|')}`); }
+}, { storage: seed(MATH) }));
+await test('יותר או פחות? + הסדנה: משחקים נכון עד הסוף בכל האזורים; טעות נצבעת ומוסברת; במקלדת הסדנה אין נקודה עשרונית', () => withPage(async page => {
+  const hook = (mod, f) => page.evaluate(([m, fn]) => import('/js/games/' + m + '.js').then(x => eval('(' + fn + ')')(x.__test)), [mod, f]);
+  const startG = (k, o, sel) => page.evaluate(([k, o]) => { document.getElementById('overlay').innerHTML = ''; return import('/js/app.js').then(m => m.startGame(k, o)); }, [k, o]).then(() => page.waitForSelector(sel));
+  for (const ch of [0, 2, 3]) {
+    await startG('gmore', { chapter: ch }, '.bs-opts');
+    for (let r = 0; r < 10; r++) {
+      const q = await hook('gmore', 't => ({ ans: t.q.ans })');
+      if (ch === 0 && r === 0) { const w = ['more', 'same', 'less'].find(a => a !== q.ans); await page.locator(`.bs-opt[data-a="${w}"]`).click(); await page.waitForSelector('.bs-fb.bad'); ok(await page.locator('.bs-opt.wrong').count() === 1 && await page.locator('.bs-opt.right').count() === 1, 'תשובה שגויה נצבעת והנכונה נחשפת'); }
+      else { await page.locator(`.bs-opt[data-a="${q.ans}"]`).click(); await page.waitForSelector('.bs-fb.good', { timeout: 3000 }); }
+      await page.locator('.btn.primary', { hasText: /הבא|לתוצאות/ }).click();
+    }
+    await page.waitForSelector('.end-card');
+    await startG('gwork', { chapter: ch }, '.shop-keys');
+    eq(await page.locator('.skey[data-k="."]').count(), 0, 'בהסדנה אין נקודה עשרונית');
+    for (let r = 0; r < 8; r++) {
+      const ans = await hook('gwork', 't => String(t.q.ans.u)'); for (const c of ans) await page.locator(`.skey[data-k="${c}"]`).click();
+      await page.locator('.shop-actions .btn.primary').click(); await page.waitForSelector('.shop-fb.good', { timeout: 3000 }); await page.locator('.shop-actions .btn.primary').click();
+    }
+    await page.waitForSelector('.end-card');
+  }
+  await startG('gwork', { chapter: 1 }, '.shop-keys');
+  await page.locator('.skey[data-k="9"]').click(); await page.locator('.skey[data-k="9"]').click(); await page.locator('.skey[data-k="9"]').click(); await page.locator('.shop-actions .btn.primary').click(); await page.waitForSelector('.shop-fb.bad');
+  await page.locator('.shop-actions .btn.ghost').click(); ok(await page.locator('.shop-fb.hint').count() === 1, 'רמז מוצג');
+  for (const c of '999') await page.locator(`.skey[data-k="${c}"]`).click(); await page.locator('.shop-actions .btn.primary').click(); await page.waitForFunction(() => /התשובה:/.test(document.querySelector('.shop-fb').innerText));
+}, { storage: seed(GEO) }));
+await test('זיכרון גיאומטרי: זוגות ושלישיות משחקים עד הסוף, שני שחקנים, והציורים נכנסים בקלפים גם בלוחות הגדולים במסך קטן (320×568)', () => withPage(async page => {
+  const bad = [];
+  for (const [mode, size, level, players] of [['pairs', '4x4', '3', '1'], ['pairs', '4x5', '2', '2'], ['triples', '3x4', '2', '1']]) {
+    await page.evaluate(([m, s, l, pl]) => { document.getElementById('overlay').innerHTML = ''; return import('/js/app.js').then(a => a.startGame('gmemory', { chapter: 0, cfg: { mode: m, size: s, level: l, players: pl } })); }, [mode, size, level, players]);
+    await page.waitForSelector('.mcard');
+    const sets = await page.evaluate(() => { const by = {}; document.querySelectorAll('.mcard').forEach((c, i) => (by[c.dataset.set] = by[c.dataset.set] || []).push(i)); return Object.values(by); });
+    if (!sets.every(x => x.length === (mode === 'triples' ? 3 : 2))) bad.push(`${mode} ${size}: גודל קבוצה`);
+    if (players === '2') { await page.locator(`.mcard[data-i="${sets[0][0]}"]`).click(); await page.locator(`.mcard[data-i="${sets[1][0]}"]`).click(); await page.waitForFunction(() => !document.querySelector('.mcard.open'), null, { timeout: 3000 }); if (!(await page.locator('.mem-pl.p2.on').count())) bad.push('התור לא עבר'); }
+    for (const st of sets) for (const i of st) await page.locator(`.mcard[data-i="${i}"]`).click();
+    await page.waitForSelector('.end-card', { timeout: 10000 });
+  }
+  for (const [mode, size] of [['pairs', '4x7'], ['triples', '3x8']]) {
+    await page.evaluate(([m, s]) => { document.getElementById('overlay').innerHTML = ''; return import('/js/app.js').then(a => a.startGame('gmemory', { chapter: 0, cfg: { mode: m, size: s, level: '3', players: '1' } })); }, [mode, size]);
+    await page.waitForSelector('.mcard'); await page.evaluate(() => document.querySelectorAll('.mcard').forEach(c => c.classList.add('open'))); await page.waitForTimeout(500);
+    const r = await page.evaluate(() => { const bd = document.querySelector('.mem-board').getBoundingClientRect(), sc = document.querySelector('#screen');
+      const outside = [...document.querySelectorAll('.mf.back.svg')].filter(f => { const a = f.getBoundingClientRect(), s = f.querySelector('svg').getBoundingClientRect(); return s.left < a.left - 1 || s.right > a.right + 1 || s.top < a.top - 1 || s.bottom > a.bottom + 1; }).length;
+      return { bottom: Math.round(bd.bottom), vh: innerHeight, scroll: sc.scrollHeight > sc.clientHeight + 1, clipped: [...document.querySelectorAll('.mf.back:not(.svg)')].filter(f => f.scrollWidth > f.clientWidth + 1 || f.scrollHeight > f.clientHeight + 1).length, outside, svgs: document.querySelectorAll('.mf.back.svg').length }; });
+    if (r.scroll || r.bottom > r.vh || r.clipped || r.outside || !r.svgs) bad.push(`${mode} ${size}: ${JSON.stringify(r)}`);
+  }
+  ok(!bad.length, bad.join('\n'));
+}, { storage: seed(GEO), viewport: { width: 320, height: 568 } }));
+await test('זיכרון גיאומטרי: הלוח הענק לשלישיות (4×9) נכנס במסך רגיל, ולא מוצע במסך קטן (מסך הגדרות)', () => withPage(async page => {
+  await page.evaluate(() => import('/js/app.js').then(a => a.startGame('gmemory', { chapter: 0, cfg: { mode: 'triples', size: '4x9', level: '2', players: '1' } })));
+  await page.waitForSelector('.mcard'); await page.evaluate(() => document.querySelectorAll('.mcard').forEach(c => c.classList.add('open'))); await page.waitForTimeout(500);
+  const r = await page.evaluate(() => { const bd = document.querySelector('.mem-board').getBoundingClientRect(), sc = document.querySelector('#screen');
+    return { cards: document.querySelectorAll('.mcard').length, bottom: Math.round(bd.bottom), vh: innerHeight, scroll: sc.scrollHeight > sc.clientHeight + 1, clipped: [...document.querySelectorAll('.mf.back:not(.svg)')].filter(f => f.scrollWidth > f.clientWidth + 1 || f.scrollHeight > f.clientHeight + 1).length }; });
+  ok(r.cards === 36 && !r.scroll && r.bottom <= r.vh && !r.clipped, JSON.stringify(r));
+}, { storage: seed(GEO) }));
+await test('זיכרון גיאומטרי: במסך קטן (568 גובה) מסך ההגדרות לא מציע את הלוח הענק לשלישיות, ובמסך רגיל כן', () => withPage(async page => {
+  const sizes = async () => { await page.evaluate(() => { document.getElementById('overlay').innerHTML = ''; try { localStorage.removeItem('jericho.gmemcfg'); } catch {} return import('/js/app.js').then(a => a.startGame('gmemory', { chapter: 0 })); });
+    await page.waitForSelector('.mem-setup'); await page.locator('.chip[data-k="mode"][data-v="triples"]').click(); return page.locator('.chip[data-k="size"]').evaluateAll(b => b.map(x => x.dataset.v)); };
+  const small = await sizes(); ok(!small.includes('4x9') && small.includes('3x8'), 'מסך קטן: ' + small.join(','));
+  await page.setViewportSize({ width: 390, height: 844 }); const tall = await sizes(); ok(tall.includes('4x9'), 'מסך רגיל: ' + tall.join(','));
+}, { storage: seed(GEO), viewport: { width: 320, height: 568 } }));
+await test('מסכי ההגדרות של משחקי הזיכרון נבנים תקין בכל אזור ובכל מצב (גם כשחלק מהאפשרויות מוסתרות – בלי append(false))', () => withPage(async page => {
+  for (const [game, chs] of [['gmemory', [0, 1, 2, 3]]]) for (const ch of chs) for (const mode of ['pairs', 'triples']) {
+    await page.evaluate(([g, c]) => { document.getElementById('overlay').innerHTML = ''; try { localStorage.removeItem('jericho.gmemcfg'); } catch {} return import('/js/app.js').then(a => a.startGame(g, { chapter: c })); }, [game, ch]);
+    await page.waitForSelector('.mem-setup'); await page.locator(`.chip[data-k="mode"][data-v="${mode}"]`).click();
+    ok(await page.locator('.chip[data-k="size"]').count() >= 3, `${game} אזור ${ch} ${mode}: אין בחירת גודל`); ok(await page.locator('.chip[data-k="players"]').count() === 2, `${game} אזור ${ch} ${mode}: אין בחירת שחקנים`);
+    eq(await page.locator('.chip[data-k="level"]').count(), mode === 'pairs' ? 3 : 0, `${game} ${mode}: בחירת רמה`);
+  }
+}, { storage: seed(GEO) }));
+await test('מסכי ההגדרות של זיכרון עשרוני נבנים תקין באזורים בלי שלישיות (3 ו-5) ועם שלישיות', () => withPage(async page => {
+  for (const ch of [0, 1, 2, 3, 4, 5]) {
+    await page.evaluate(c => { document.getElementById('overlay').innerHTML = ''; try { localStorage.removeItem('jericho.memcfg'); } catch {} return import('/js/app.js').then(a => a.startGame('memory', { chapter: c })); }, ch);
+    await page.waitForSelector('.mem-setup'); const hasTriples = await page.locator('.chip[data-k="mode"]').count() > 0; eq(hasTriples, [0, 1, 2, 4].includes(ch), `אזור ${ch}: בחירת שלישיות`);
+    ok(await page.locator('.chip[data-k="size"]').count() === 4 && await page.locator('.chip[data-k="level"]').count() === 3, `אזור ${ch}: גודל/רמה`);
+  }
+}, { storage: seed(MATH) }));
 const geoCases = [];
-for (const ch of [0, 1, 2, 3]) { const label = ch ? `נושא ${ch}` : 'כל הנושאים'; geoCases.push([`גיאומטריה · פנדלים · ${label}`, 'hunter', { chapter: ch, mode: 'trivia', count: 2 }], [`גיאומטריה · הסערה · ${label}`, 'swipe', { chapter: ch, duration: 3 }], [`גיאומטריה · בונים את הקו · ${label}`, 'order', { chapter: ch, count: 1 }]); }
+for (const ch of [0, 1, 2, 3]) { const label = ch ? `נושא ${ch}` : 'כל הנושאים'; geoCases.push([`גיאומטריה · זיכרון גיאומטרי · ${label}`, 'gmemory', { chapter: ch, cfg: { mode: 'pairs', size: '4x4', level: '3', players: '1' } }], [`גיאומטריה · יותר או פחות · ${label}`, 'gmore', { chapter: ch }], [`גיאומטריה · הסדנה · ${label}`, 'gwork', { chapter: ch }], [`גיאומטריה · פנדלים · ${label}`, 'hunter', { chapter: ch, mode: 'trivia', count: 2 }], [`גיאומטריה · הסערה · ${label}`, 'swipe', { chapter: ch, duration: 3 }], [`גיאומטריה · בונים את הקו · ${label}`, 'order', { chapter: ch, count: 1 }]); }
+geoCases.push(['גיאומטריה · זיכרון · מסך ההגדרות (בלי cfg)', 'gmemory', { chapter: 1 }], ['גיאומטריה · זיכרון · שלישיות', 'gmemory', { chapter: 0, cfg: { mode: 'triples', size: '3x4', level: '2', players: '1' } }], ['גיאומטריה · זיכרון · שני שחקנים', 'gmemory', { chapter: 0, cfg: { mode: 'pairs', size: '4x5', level: '2', players: '2' } }]);
 geoCases.push(['גיאומטריה · מבחן הסיכום', 'exam', { swipeSeconds: 3 }], ['גיאומטריה · דו-קרב משפחתי', 'duel', { topic: 'g1' }]);
 await pool(geoCases, 4, async ([name, key, opts]) => {
   const t0 = Date.now();

@@ -21,7 +21,7 @@ export async function run(el, { chapter = 0 }, sc) {
     const btns = CHOICES.map(([k, sym, label]) => h('button', { class: 'opt bs-opt', 'data-a': k }, h('span', { class: 'let' }, sym), label));
     const fb = h('div', { class: 'bs-fb' });
     el.innerHTML = '';
-    el.append(h('div', { class: 'h-head' }, h('b', {}, `${n + 1} / ${ROUNDS}`), T.el),
+    el.append(h('div', { class: 'h-head' }, h('b', {}, G.ltrText(`${n + 1} / ${ROUNDS}`)), T.el),
       h('div', { class: 'bs-card' },
         h('p', { class: 'sub' }, 'התחלנו מהמספר'), h('div', { class: 'bs-a' }, G.ltrText(q.a)),
         h('p', { class: 'sub' }, q.op === '×' ? 'הכפלנו ב־' : 'חילקנו ב־', h('b', { class: 'bs-b' }, G.ltrText(q.b))),

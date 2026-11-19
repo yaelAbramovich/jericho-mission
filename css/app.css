@@ -664,3 +664,10 @@ body.quake #app { animation: fxquake .15s linear 11; } @keyframes fxquake { 25% 
 .skey:active { background: #26407a; transform: scale(.96); } .skey.del { color: var(--red); }
 .shop-actions { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; margin-top: 12px; } .shop-actions .btn:only-child { grid-column: 1 / -1; }
 @media (max-height: 700px) { .skey { min-height: 46px; font-size: 22px; } .shop-entry { min-height: 52px; font-size: 32px; } .bs-a { font-size: 44px; } }
+.mf.back.svg { display: block; padding: 0; background: #0f173a; } .mf.back.svg .geo-svg { position: absolute; inset: 3px; width: calc(100% - 6px); height: calc(100% - 6px); }
+.mcard.done .mf.back.svg { background: #0f3a33; }
+.mf.back.he { white-space: pre-line; }
+.gm-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 6px 0; }
+.gm-cell { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 8px 6px; text-align: center; }
+.gm-cell .geo-svg { width: 100%; max-width: 150px; height: auto; } .gm-cell b { display: block; font-size: 15px; margin-top: 2px; }
+@media (max-height: 700px) { .gm-cell .geo-svg { max-width: 110px; } }
