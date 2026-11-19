@@ -1,6 +1,9 @@
 // עזרים כלליים: בניית אלמנטים, תזמון עם ניקוי, חלוניות, אפקטים.
 import { PACK } from './subjects/index.js';
 import { sfx } from './audio.js';
+import { hasFrac, fracFragment } from './frac-dom.js';
+const FRACS = PACK.id === 'fractions';                    // במקצוע שברים: "2/5" ו-"1 1/5" בטקסט הופכים לשברים בנויים
+const textNode = s => (FRACS && hasFrac(s) ? fracFragment(s) : document.createTextNode(s));
 
 export function h(tag, attrs, ...kids) {
   const el = document.createElement(tag);
@@ -15,7 +18,7 @@ export function h(tag, attrs, ...kids) {
     else if (k.startsWith('on')) el.addEventListener(k.slice(2).toLowerCase(), v);
     else el.setAttribute(k, v === true ? '' : v);
   }
-  for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid.nodeType ? kid : document.createTextNode(kid));
+  for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid.nodeType ? kid : textNode(String(kid)));
   return el;
 }
 // רשת ביטחון: append(false / null / undefined) מדפיס את המילה "false" / "null" על המסך (קרה כבר כמה פעמים:
@@ -27,6 +30,7 @@ if (typeof Element !== 'undefined') {
     const orig = proto[fn];
     proto[fn] = function (...kids) {
       if (kids.some(bad)) { if (window.__strictAppend) throw new Error(`${fn}() קיבל ${String(kids.find(bad))} במקום אלמנט`); kids = kids.filter(k => !bad(k)); }
+      if (FRACS) kids = kids.map(k => (typeof k === 'string' && hasFrac(k) ? fracFragment(k) : k));
       return orig.apply(this, kids);
     };
   }

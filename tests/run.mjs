@@ -744,7 +744,7 @@ await test('בורר המקצועות: שני מקצועות בבורר, מעב�
   const info = () => page.evaluate(async () => { const { PACK } = await import('/js/subjects/index.js'); return { id: PACK.id, zones: document.querySelectorAll('.zone').length, title: document.title, date: PACK.testDate, days: document.querySelector('.test-count') && document.querySelector('.test-count').innerText }; });
   let r = await info(); eq(r.id, 'joshua', 'מקצוע התחלתי'); eq(r.zones, 5, 'אזורי יהושע'); ok(r.title.includes('יריחו'), 'כותרת יהושע: ' + r.title);
   await page.click('.subj-chip'); await page.waitForSelector('.pkinds');
-  const opts = await page.locator('.pkinds .tile').allInnerTexts(); ok(opts.length === 4 && opts.some(o => o.includes('גיאומטריה') && o.includes('פאון')) && opts.some(o => o.includes('תנ״ך') && o.includes('יהושע א׳–ה׳')) && opts.some(o => o.includes('מדעים') && o.includes('מערכות טכנולוגיות')) && opts.some(o => o.includes('מתמטיקה') && o.includes('אחוזים')), 'בבורר: ' + opts.join('|'));
+  const opts = await page.locator('.pkinds .tile').allInnerTexts(); ok(opts.length === 5 && opts.some(o => o.includes('שברים') && o.includes('מספר מעורב')) && opts.some(o => o.includes('גיאומטריה') && o.includes('פאון')) && opts.some(o => o.includes('תנ״ך') && o.includes('יהושע א׳–ה׳')) && opts.some(o => o.includes('מדעים') && o.includes('מערכות טכנולוגיות')) && opts.some(o => o.includes('מתמטיקה') && o.includes('אחוזים')), 'בבורר: ' + opts.join('|'));
   await Promise.all([page.waitForNavigation({ waitUntil: 'load' }), page.locator('.pkinds .tile', { hasText: 'מדע' }).click()]); await page.waitForSelector('.map');
   r = await info(); eq(r.id, 'science', 'אחרי מעבר'); eq(r.zones, 5, 'אזורי מדע וטכנולוגיה'); eq(r.date, '2026-11-17', 'תאריך המבחן'); ok(r.title.includes('טכנולוגיה'), 'כותרת: ' + r.title); ok(!!r.days, 'ספירה לאחור למבחן');
   await page.evaluate(async () => { const S = await import('/js/state.js'); S.setObjective(1, 'story'); S.setObjective(1, 'hunter'); S.setObjective(1, 'other'); });   // כובשים אזור במדע
@@ -1322,6 +1322,230 @@ await test('גיאומטריה: מיון גופים בגרירה אמיתית �
   }
   eq(await page.locator('.so-bucket[data-b="y"] .so-card').count(), 3, 'פאונים בקבוצה "פאון"'); eq(await page.locator('.so-tray .so-card').count(), 3, 'גופים שחזרו למגש');
 }, { storage: seed(GEO) }));
+
+// ===== 13. מקצוע שברים: כפל שלם בשבר, וכפל שלם במספר מעורב =====
+console.log('שברים');
+const FRAC = { subject: 'fractions' };
+await test('שברים: כל משוואה בתוכן (תדריך, משפטים, סידור, שאלות, שיעורים, חומר למבחן) נכונה – מחושבת מחדש, ושאלות הדו-קרב מתאימות לתשובה', () => withPage(async page => {
+  const bad = await page.evaluate(async () => {
+    const { PACK } = await import('/js/subjects/index.js'), Fr = await import('/js/subjects/fractions/frac.js'), out = [], SL = '⁄'; let checked = 0, stmts = 0, qsChecked = 0;
+    const NUM = `\\d+(?: \\d+${SL}\\d+|${SL}\\d+)?`;
+    const val = s => Fr.parse(String(s).trim());
+    const expr = s => { let total = Fr.F(0, 1); for (const term of s.split(' + ')) { let acc = Fr.F(1, 1); for (const f of term.split(' × ')) { const v = val(f); if (!v) return null; acc = Fr.F(acc.n * v.n, acc.d * v.d); } total = Fr.add(total, acc); } return total; };
+    const CHAIN = new RegExp(`${NUM}(?: [×+] ${NUM})*(?: = ${NUM}(?: [×+] ${NUM})*)+`, 'g');
+    const neutral = t => String(t).replace(/\d+(?: \d+⁄\d+)? : \d+/g, 'X');            // "14 : 5" (חילוק עם שארית) לא נבדק כמשוואת כפל
+    const chains = t => [...neutral(t).matchAll(CHAIN)].map(m => m[0]);
+    const check = (t, where) => { for (const c of chains(t)) { const sides = c.split(' = ').map(expr); if (sides.some(x => !x)) { out.push(`${where}: לא נקרא "${c}"`); continue; } checked++; if (!sides.every(x => Fr.eq(x, sides[0]))) out.push(`${where}: משוואה שגויה "${c}"`); } };
+    // 1) תדריכים, סידור, חומר למבחן, מילון
+    for (const u of PACK.units) u.story.forEach((s, i) => check(s.text, `תדריך ${u.n}.${i}`));
+    for (const q of PACK.sequences) { check(q.title, q.id); q.items.forEach(x => check(x, q.id)); }
+    for (const t of PACK.topics) for (const b of t.blocks) check(JSON.stringify(Object.values(b)).replace(/[\[\]"]/g, ' ').replace(/\*\*/g, '').replace(/,/g, ' , '), t.id);
+    for (const g of Object.values(PACK.glossary)) check(g.text, 'מילון');
+    // 2) אמת/שקר: משפט שכולו משוואה – האמת צריכה להתאים לערך שלו; וההסבר נכון
+    for (const [u, t, v, why] of PACK.statements) {
+      check(why, 'הסבר: ' + t);
+      if (/^[\d ⁄×+=]+$/.test(t)) { const sides = t.split(' = ').map(expr); if (sides.some(x => !x)) { out.push('משפט לא נקרא: ' + t); continue; } const truth = sides.every(x => Fr.eq(x, sides[0])); stmts++; if (truth !== v) out.push(`משפט "${t}" מסומן ${v}, אבל הוא ${truth}`); }
+      else check(t, 'משפט');
+    }
+    // 3) דו-קרב: כל שאלה מחושבת מחדש לפי הסוג שלה
+    const aVal = a => { const m = String(a).match(new RegExp(`^(${NUM})`)); return m ? val(m[1]) : null; };
+    const D = PACK.duels.f1;
+    for (const idea of D.ideas) for (const q of idea.qs) {
+      const tag = `${idea.title}: ${q.q}`; check(q.why, 'הסבר: ' + tag); check(q.q, tag);
+      if (new Set([q.a, ...q.w]).size !== 4) out.push('אפשרויות לא שונות: ' + tag);
+      let m; const A = aVal(q.a);
+      if ((m = q.q.match(/^כמה זה (.+)\?$/))) { const e = expr(m[1]); qsChecked++; if (!e || !A || !Fr.eq(e, A)) out.push(`${tag} ← ${q.a} (צריך ${e && Fr.imp(e)})`); }
+      else if ((m = q.q.match(new RegExp(`^כתבו את (${NUM}) כמספר מעורב$`)))) { qsChecked++; if (!Fr.eq(val(m[1]), A) || !/^\d+ \d+⁄\d+/.test(q.a)) out.push(`${tag} ← ${q.a}`); }
+      else if ((m = q.q.match(new RegExp(`^כתבו את (${NUM}) כשבר מדומה$`)))) { qsChecked++; if (!Fr.eq(val(m[1]), A) || /^\d+ /.test(q.a)) out.push(`${tag} ← ${q.a}`); }
+      else if ((m = q.q.match(/^איזה תרגיל כפל שווה ל-(.+)\?$/))) { qsChecked++; const s = m[1].split(' + ').map(val).reduce((a, b) => Fr.add(a, b)), e = expr(q.a); if (!e || !Fr.eq(s, e)) out.push(`${tag} ← ${q.a}`); for (const w of q.w) { const x = expr(w); if (x && Fr.eq(x, e)) out.push(`${tag}: שגויה "${w}" שווה לנכונה`); } }
+      else if ((m = q.q.match(new RegExp(`^בלי לחשב: המכפלה (\\d+) × (${NUM}) היא\\.\\.\\.$`)))) { qsChecked++; const c = Fr.cmp(val(m[2]), Fr.F(1, 1)), want = c === 0 ? `שווה ל-${m[1]}` : c > 0 ? `גדול מ-${m[1]}` : `קטן מ-${m[1]}`; if (q.a !== want) out.push(`${tag} ← ${q.a} (צריך ${want})`); }
+      else if ((m = q.q.match(new RegExp(`^(\\d+) × (${NUM}) קרוב ל\\.\\.\\.$`)))) { qsChecked++; const exact = Fr.num(expr(`${m[1]} × ${m[2]}`)), est = +q.a; if (Math.abs(exact - est) > 0.6) out.push(`${tag}: הערכה רחוקה (${exact} מול ${est})`); for (const w of q.w) if (Math.abs(+w - est) < 2) out.push(`${tag}: מסיח קרוב מדי ${w}`); }
+      else if ((m = q.q.match(new RegExp(`^בלי לחשב: איזו מכפלה גדולה יותר, (\\d+) × (${NUM}) או (\\d+) × (${NUM})\\?$`)))) { qsChecked++; const c = Fr.cmp(expr(`${m[1]} × ${m[2]}`), expr(`${m[3]} × ${m[4]}`)), want = c > 0 ? 'הראשונה גדולה' : c < 0 ? 'השנייה גדולה' : 'המכפלות שוות'; if (q.a !== want) out.push(`${tag} ← ${q.a} (צריך ${want})`); }
+      else if (A && chains(q.why).length) { qsChecked++; if (!chains(q.why).some(c => c.split(' = ').map(expr).some(x => x && Fr.eq(x, A)))) out.push(`${tag}: התשובה ${q.a} לא מופיעה במשוואת ההסבר`); }
+    }
+    // 4) שיעורים: כל שאלה – התשובה בין האפשרויות, ההסבר והמשוואה נכונים
+    for (const [id, L] of Object.entries(PACK.lessons)) for (const st of L.steps) {
+      if (st.kind === 'say') { (st.rules || []).forEach(([a, b]) => { check(a + ' = ' + b, id); }); check(st.text || '', id); check(st.note || '', id); }
+      if (st.kind === 'quiz') for (const q of st.qs) {
+        if (!q.opts.includes(q.a) || new Set(q.opts).size !== q.opts.length) out.push(`${id}: ${q.q || q.eq} – תשובה/אפשרויות`);
+        check(q.why, id + ' הסבר'); if (q.eq) check(q.eq.replace('□', q.a), id + ' משוואה');
+        let m; const A = aVal(q.a);
+        if (q.q && (m = q.q.match(/^כמה זה (.+?)\??$/)) && A) { const e = expr(m[1].replace(/\?$/, '')); if (e && !Fr.eq(e, A)) out.push(`${id}: ${q.q} ← ${q.a}`); else if (e) qsChecked++; }
+        else if (q.q && (m = q.q.match(new RegExp(`^כתבו את (${NUM}) כ(?:מספר מעורב|שבר מדומה)\\.$`)))) { qsChecked++; if (!Fr.eq(val(m[1]), A)) out.push(`${id}: ${q.q} ← ${q.a}`); }
+      }
+    }
+    if (checked < 100) out.push(`נבדקו רק ${checked} משוואות (בזמן כתיבה: 107)`); if (stmts < 14) out.push(`נבדקו רק ${stmts} משפטים`); if (qsChecked < 40) out.push(`נבדקו רק ${qsChecked} שאלות`);
+    return [...new Set(out)].slice(0, 8);
+  });
+  ok(!bad.length, bad.join('\n'));
+}, { storage: seed(FRAC) }));
+await test('שברים: מחוללי התרגילים והבעיות המילוליות מדויקים – כל תרגיל מחושב מחדש מהטקסט, בלי ערכים כפולים בלוח, והסיפור מכיל את המספרים', () => withPage(async page => {
+  const bad = await page.evaluate(async () => {
+    const G = await import('/js/subjects/fractions/fgen.js'), W = await import('/js/subjects/fractions/fword.js'), Fr = await import('/js/subjects/fractions/frac.js'), M = await import('/js/games/fmemory.js'), out = [], SL = '⁄';
+    const NUM = `\\d+(?: \\d+${SL}\\d+|${SL}\\d+)?`, val = s => Fr.parse(s);
+    const expr = s => { let total = Fr.F(0, 1); for (const term of s.split(' + ')) { let acc = Fr.F(1, 1); for (const f of term.split(' × ')) { const v = val(f); if (!v) return null; acc = Fr.F(acc.n * v.n, acc.d * v.d); } total = Fr.add(total, acc); } return total; };
+    for (const topic of ['wf', 'wm']) for (const level of [1, 2, 3]) for (let i = 0; i < 400; i++) {
+      const it = G.GEN[topic](level), e = expr(it.q), A = val(it.a), tag = `${topic} L${level}: ${it.q} = ${it.a}`;
+      if (!e || !A || !Fr.eq(e, A) || !Fr.eq(e, it.res)) out.push('תוצאה שגויה ' + tag);
+      if (topic === 'wf' && !/^\d+ × \d+⁄\d+$/.test(it.q)) out.push('צורה ' + tag);
+      if (topic === 'wm' && !/^\d+ × \d+ \d+⁄\d+$/.test(it.q)) out.push('צורה ' + tag);
+      const m = it.why.match(new RegExp(`${NUM}(?: [×+] ${NUM})*(?: = ${NUM}(?: [×+] ${NUM})*)+`, 'g')) || []; if (!m.length || m.some(c => { const s = c.split(' = ').map(expr); return s.some(x => !x) || !s.every(x => Fr.eq(x, s[0])); })) out.push('הסבר שגוי ' + tag + ' | ' + it.why);
+    }
+    for (const level of [1, 2, 3]) for (const n of [8, 16, 20]) { const its = G.items(n, ['wf', 'wm'], level); if (its.length !== n) out.push(`items(${n}) L${level}: ${its.length}`); for (let a = 0; a < its.length; a++) for (let b = a + 1; b < its.length; b++) if (Fr.eq(its[a].res, its[b].res)) out.push(`ערכים שווים בלוח: ${its[a].q} ו-${its[b].q}`); }
+    for (let i = 0; i < 1500; i++) for (const ch of [0, 1, 2]) {
+      const b = G.bigSmall(1 + (i % 3), ch), f = val(b.b), c = Fr.cmp(f, Fr.F(1, 1)), want = c === 0 ? 'same' : c > 0 ? 'bigger' : 'smaller';
+      if (!f || want !== b.ans) out.push(`bigSmall ${b.n} × ${b.b}: ${b.ans} (אמת ${want})`); if (ch === 2 && c <= 0 && i % 3 === 2) { /* אזור 2 יכול לכלול גם "שווה" */ }
+    }
+    const seenKinds = new Set(); for (let i = 0; i < 600; i++) { const b = G.bigSmall(3, 2); seenKinds.add(b.ans); } if (seenKinds.size < 2) out.push('אזור 2: חסר גיוון ב-bigSmall');
+    for (const ch of [0, 1, 2]) for (const level of [1, 2, 3]) for (let i = 0; i < 500; i++) {
+      const p = W.problemFor(ch, level), eqs = p.why.match(new RegExp(`${NUM}(?: [×+] ${NUM})*(?: = ${NUM}(?: [×+] ${NUM})*)+`, 'g')) || [], tag = `${p.type}: ${p.text} ← ${p.why}`;
+      if (!eqs.length) { out.push('אין משוואה: ' + tag); continue; }
+      const last = eqs[eqs.length - 1].split(' = ').map(expr); if (last.some(x => !x) || !last.every(x => Fr.eq(x, last[0])) || !Fr.eq(last[0], p.ans)) out.push('תשובה ≠ משוואה: ' + tag);
+      const nums = [...p.text.matchAll(new RegExp(NUM, 'g'))].map(x => val(x[0])).filter(Boolean), first = eqs[0].split(' = ')[0].split(/ [×+] /).map(val);
+      if (p.type === 'wf' && ch === 2) out.push('אזור 2 צריך מספרים מעורבים'); if (p.type === 'wm' && ch === 1) out.push('אזור 1 צריך שלם × שבר');
+      const mixedInText = /\d+ \d+⁄\d+/.test(p.text); if (p.type === 'wm' && !mixedInText) out.push('wm בלי מספר מעורב בסיפור: ' + p.text); if (p.type === 'wf' && mixedInText) out.push('wf עם מספר מעורב: ' + p.text);
+      const fm = p.text.match(new RegExp(`(\\d+(?: \\d+)?${SL}\\d+|\\d+ \\d+${SL}\\d+)`)); if (!fm) out.push('אין שבר בסיפור: ' + p.text);
+    }
+    // זיכרון: בכל לוח אין שני תרגילים שווים בערך, כל קלף ייחודי, ושלישייה = תרגיל · שלב ביניים · תוצאה שווה בערך
+    for (const mode of ['pairs', 'triples']) for (const level of [1, 2, 3]) for (const ch of [0, 1, 2]) for (let i = 0; i < 30; i++) {
+      const sets = M.buildSets({ mode, count: mode === 'pairs' ? 14 : 8, level, chapter: ch }), texts = sets.flatMap(s => s.cards.map(c => c.t));
+      if (sets.length < (mode === 'pairs' ? 14 : 8)) out.push(`${mode}: רק ${sets.length} קבוצות`); if (new Set(texts).size !== texts.length) out.push('קלפים כפולים');
+      for (let a = 0; a < sets.length; a++) for (let b = a + 1; b < sets.length; b++) if (Fr.eq(val(sets[a].cards.at(-1).t), val(sets[b].cards.at(-1).t))) out.push('תוצאות שוות בלוח');
+      for (const s of sets) { const v = expr(s.cards[0].t), last = val(s.cards.at(-1).t); if (!v || !last || !Fr.eq(v, last)) out.push(`התאמה שגויה: ${s.cards.map(c => c.t).join(' ↔ ')}`); if (mode === 'triples') { const mid = expr(s.cards[1].t); if (!mid || !Fr.eq(mid, v)) out.push(`שלב ביניים שגוי: ${s.cards.map(c => c.t).join(' ↔ ')}`); } }
+    }
+    return [...new Set(out)].slice(0, 8);
+  });
+  ok(!bad.length, bad.join('\n'));
+}, { storage: seed(FRAC) }));
+await test('שברים: ספרות/שברים בנויים רק במקצוע שברים – "2⁄5" מוצג כשבר בנוי, ואילו מונים כמו 0/60 נשארים טקסט רגיל (ובמקצועות אחרים אין המרה)', () => withPage(async page => {
+  const r = await page.evaluate(async () => { const { h } = await import('/js/ui.js'); const a = h('p', {}, 'שלושה × 2⁄8 = 6⁄8'), b = h('p', {}, 'XP 0/60'); return { frac: a.querySelectorAll('.fr').length, eqs: a.querySelectorAll('.fm').length, plain: b.querySelectorAll('.fr').length }; });
+  eq(r.frac, 2, 'שברים בנויים בטקסט'); eq(r.eqs, 1, 'משוואה אחת מבודדת משמאל לימין'); eq(r.plain, 0, '"0/60" לא אמור להפוך לשבר');
+  await page.evaluate(() => import('/js/app.js').then(m => m.go('story', { ch: 1 }))); await page.waitForSelector('.story-text, .view'); await page.waitForTimeout(300);
+  ok(await page.locator('.view .fr').count() > 0, 'בתדריך אמורים להיות שברים בנויים'); eq(await page.locator('#topbar .fr').count(), 0, 'בסרגל העליון (XP) אין שברים בנויים');
+}, { storage: seed(FRAC) }));
+await test('חשבון: במקצוע אחר ("2⁄5") לא הופך לשבר בנוי', () => withPage(async page => {
+  eq(await page.evaluate(async () => (await import('/js/ui.js')).h('p', {}, '2⁄5').querySelectorAll('.fr').length), 0, 'המרה במקצוע חשבון');
+}, { storage: seed(MATH) }));
+await test('שברים: כל המסכים נפתחים, 2 אזורים, 2 נושאים, ארבעת משחקי השברים בכל אזור (ורק הם), ובלי הפניות למקצועות אחרים', () => withPage(async page => {
+  const go = (name, params = {}) => page.evaluate(([n, p]) => import('/js/app.js').then(m => m.go(n, p)), [name, params]);
+  const texts = [], filled = async what => { await page.waitForFunction(() => (document.querySelector('.view') || { innerText: '' }).innerText.trim().length > 5, null, { timeout: 4000 }).catch(() => { throw new Error('מסך ריק: ' + what); }); texts.push(await page.locator('.view').innerText()); };
+  await go('map'); await filled('מפה'); eq(await page.locator('.zone').count(), 2, 'אזורים במפה'); eq(await page.title(), 'מבצע השברים', 'כותרת הדף');
+  for (let ch = 1; ch <= 2; ch++) {
+    await go('zone', { ch }); await filled('אזור ' + ch); const tiles = await page.locator('.tiles .tn').allInnerTexts();
+    for (const t of ['זיכרון שברים', 'גדול או קטן?', 'חנות השברים', 'קו השברים', 'הסערה מתקרבת', 'בונים את הקו']) ok(tiles.includes(t), `אזור ${ch}: חסר ${t} (${tiles.join('|')})`);
+    ok(!tiles.some(t => ['זיכרון עשרוני', 'הנקודה זזה', 'קו מספרים', 'החנות', 'זיכרון גיאומטרי', 'הסדנה', 'מי אמר?', 'בונים תרשים'].includes(t)), `אזור ${ch}: משחק של מקצוע אחר: ${tiles.join('|')}`);
+    await go('story', { ch }); await page.waitForTimeout(150); await filled('תדריך ' + ch);
+  }
+  await go('focus'); await filled('למבחן'); eq(await page.locator('.topic-btn').count(), 2, 'נושאי למבחן'); await go('topic', { id: 'fr-1' }); await filled('נושא'); eq(await page.locator('.lesson-cta').count(), 1, 'כפתור שיעור');
+  await go('games'); await filled('משחקים'); const names = await page.locator('.tiles .tn').allInnerTexts(); ok(['זיכרון שברים', 'גדול או קטן?', 'חנות השברים', 'קו השברים'].every(n => names.includes(n)), 'בורר המשחקים: ' + names.join('|'));
+  await go('profile'); await filled('פרופיל'); await go('pass'); await page.waitForSelector('.passv');
+  const hit = /יהושע|יריחו|עשרוני|גיאומטר|הירדן|טכנולוגי|פאון/.exec(texts.join('\n')); ok(!hit, `מסכי שברים מזכירים מקצוע אחר: "${hit && hit[0]}"`);
+}, { storage: seed(FRAC) }));
+await test('שברים: שני השיעורים נפתרים עד הסוף (אוספים פרוסות, מפרקים שלמים, שאלות), XP פעם אחת, וההתקדמות נשמרת', () => withPage(async page => {
+  const go = (name, params = {}) => page.evaluate(([n, p]) => import('/js/app.js').then(m => m.go(n, p)), [name, params]);
+  const xp = () => page.evaluate(() => JSON.parse(localStorage.getItem('jericho.v1')).xp);
+  const play = async (id, topic) => {
+    await go('lesson', { id, topic }); await page.waitForSelector('.lesson-stage .step'); const n = await page.locator('.dots i').count(), kinds = [];
+    for (let i = 0; i < n; i++) {
+      eq(await page.locator('.lesson-stage .step').count(), 1, `שלב ${i} של ${id} לא נטען`); kinds.push(await page.evaluate(() => document.querySelector('.lesson-stage .step').className.split(' ').find(c => /-step$/.test(c))));
+      await page.evaluate(() => document.querySelector('.lesson-stage').__solve());
+      await page.waitForFunction(() => { const b = document.querySelector('.lesson-ctrl .nav.primary'); return b && !b.disabled; }, null, { timeout: 8000 }).catch(() => { throw new Error(`שיעור ${id}: שלב ${i} לא נפתח להמשך אחרי פתרון`); });
+      await page.click('.lesson-ctrl .nav.primary'); await page.waitForTimeout(120);
+    }
+    await page.waitForSelector('.lesson-end'); return kinds;
+  };
+  const x0 = await xp(), k1 = await play('wf', 'fr-1'), k2 = await play('wm', 'fr-2');
+  ok(k1.includes('fbars-step') && k2.includes('fsplit-step'), 'רכיבי השברים לא הופיעו: ' + k1 + ' | ' + k2); eq(await xp() - x0, 80, 'XP אחרי שני שיעורים');
+  await play('wf', 'fr-1'); eq(await xp() - x0, 80, 'XP לא אמור לגדול בשיעור שכבר הושלם');
+  const st = await page.evaluate(() => JSON.parse(localStorage.getItem('jericho.v1'))); ok(st.subject === 'fractions', 'המקצוע הפעיל');
+}, { storage: seed(FRAC) }));
+await test('שברים: "אוספים פרוסות" – 7 × 2⁄5 ממלא שני פסים שלמים ועוד 4⁄5 ומציג 2 4⁄5, ו"מפרקים שלמים" נותן 9⁄4 מ-2 1⁄4', () => withPage(async page => {
+  await page.evaluate(() => import('/js/app.js').then(m => m.go('lesson', { id: 'wf', topic: 'fr-1' }))); await page.waitForSelector('.lesson-stage .step');
+  for (let i = 0; i < 4; i++) { await page.evaluate(() => document.querySelector('.lesson-stage').__solve()); await page.waitForFunction(() => { const b = document.querySelector('.lesson-ctrl .nav.primary'); return b && !b.disabled; }); await page.click('.lesson-ctrl .nav.primary'); await page.waitForTimeout(100); }
+  await page.waitForSelector('.fbars-step');                       // שלב 3: n=7, a=2, b=5
+  for (const b of await page.locator('.fb-bar').all()) await b.click();
+  const tray = await page.evaluate(() => [...document.querySelectorAll('.fb-tray svg')].map(s => [...s.querySelectorAll('rect')].length + ':' + [...s.querySelectorAll('rect.on')].length)[0]);
+  eq(tray, '15:14', 'המגש: 15 חלקים (3 פסים של 5), 14 צבועים'); const eqt = await page.locator('.fb-eq').innerText(); ok(/7/.test(eqt) && /14/.test(eqt), 'משוואה: ' + eqt);
+  await page.evaluate(() => import('/js/app.js').then(m => m.go('lesson', { id: 'wm', topic: 'fr-2' }))); await page.waitForSelector('.lesson-stage .step');
+  await page.evaluate(() => document.querySelector('.lesson-stage').__solve()); await page.click('.lesson-ctrl .nav.primary'); await page.waitForSelector('.fsplit-step');
+  const first = page.locator('.fb-bar:not(.static)').first(); await first.click(); ok(await page.locator('.fb-count').innerText().then(t => /5/.test(t)), 'אחרי פירוק שלם אחד: 4 + 1 = 5 חלקים');
+}, { storage: seed(FRAC) }));
+await test('שברים – גדול או קטן? / קו השברים / חנות השברים: משחקים נכון עד הסוף בשני האזורים; חצי-ריק מתנקה; קלט חלקי מתבקש להשלמה; טעות שנייה חושפת תשובה', () => withPage(async page => {
+  const hook = (mod, f) => page.evaluate(([m, fn]) => import('/js/games/' + m + '.js').then(x => eval('(' + fn + ')')(x.__test)), [mod, f]);
+  const startG = (k, o, sel) => page.evaluate(([k, o]) => { document.getElementById('overlay').innerHTML = ''; return import('/js/app.js').then(m => m.startGame(k, o)); }, [k, o]).then(() => page.waitForSelector(sel));
+  const next = () => page.locator('.btn.primary', { hasText: /הבא|לתוצאות/ }).click();
+  for (const ch of [0, 1, 2]) {
+    await startG('fmore', { chapter: ch }, '.bs-opts');
+    for (let r = 0; r < 12; r++) {
+      const q = await hook('fmore', 't => ({ ans: t.q.ans })');
+      if (ch === 1 && r === 0) { const w = ['bigger', 'same', 'smaller'].find(a => a !== q.ans); await page.locator(`.bs-opt[data-a="${w}"]`).click(); await page.waitForSelector('.bs-fb.bad'); ok(await page.locator('.bs-opt.wrong').count() === 1 && await page.locator('.bs-opt.right').count() === 1, 'תשובה שגויה נצבעת והנכונה נחשפת'); }
+      else { await page.locator(`.bs-opt[data-a="${q.ans}"]`).click(); await page.waitForSelector('.bs-fb.good', { timeout: 3000 }); }
+      await next();
+    }
+    await page.waitForSelector('.end-card');
+    await startG('fline', { chapter: ch }, '.nl');
+    for (let r = 0; r < 8; r++) {
+      const cur = await hook('fline', 't => t.cur');
+      if (cur.kind === 'read') { eq(await page.locator('.nl-mc .opt').count(), 4, 'ארבע תשובות'); await page.locator('.nl-mc .opt').evaluateAll((bs, t) => bs.find(b => b.dataset.v === t).click(), cur.target); }
+      else { eq(await page.locator('.nl-check').isDisabled(), true, 'בדיקה סגורה לפני נגיעה'); const bb = await page.locator('.nl-track').boundingBox(), x = bb.x + bb.width * cur.k / cur.steps; await page.mouse.move(x, bb.y + 10); await page.mouse.down(); await page.mouse.move(x + 14, bb.y + 10); await page.mouse.move(x, bb.y + 10); await page.mouse.up(); await page.locator('.nl-check').click(); }
+      await page.waitForSelector('.fb.good', { timeout: 3000 }); await next();
+    }
+    await page.waitForSelector('.end-card');
+    await startG('fshop', { chapter: ch }, '.ff');
+    for (let r = 0; r < 8; r++) {
+      const a = await hook('fshop', 't => ({ n: t.q.ans.n, d: t.q.ans.d })'), w = Math.floor(a.n / a.d), rem = a.n % a.d;
+      const typ = async (box, s) => { await page.locator(`.ff[data-f="${box}"]`).click(); for (const c of s) await page.locator(`.skey[data-k="${c}"]`).click(); };
+      if (w || !rem) await typ('w', String(w)); if (rem) { await typ('n', String(rem * 2)); await typ('d', String(a.d * 2)); }        // שבר שווה (לא מצומצם) – מתקבל
+      await page.locator('.shop-actions .btn.primary').click(); await page.waitForSelector('.shop-fb.good', { timeout: 3000 }); await page.locator('.shop-actions .btn.primary').click();
+    }
+    await page.waitForSelector('.end-card');
+  }
+  await startG('fshop', { chapter: 1 }, '.ff');
+  await page.locator('.ff[data-f="n"]').click(); await page.locator('.skey[data-k="3"]').click(); await page.locator('.shop-actions .btn.primary').click(); ok((await page.locator('.toast').allInnerTexts()).join('').includes('מונה וגם מכנה'), 'קלט חלקי מבקש להשלים');
+  await page.locator('.ff[data-f="d"]').click(); await page.locator('.skey[data-k="0"]').click(); await page.locator('.shop-actions .btn.primary').click(); ok((await page.locator('.toast').allInnerTexts()).join('').includes('מונה וגם מכנה'), 'מכנה 0 לא מתקבל');
+  await page.locator('.skey[data-k="⌫"]').click(); await page.locator('.skey[data-k="7"]').click(); await page.locator('.shop-actions .btn.primary').click(); await page.waitForSelector('.shop-fb.bad');
+  eq((await page.locator('.ff-w .val').innerText()).trim(), '', 'אחרי טעות ראשונה התאים מתנקים'); await page.locator('.shop-actions .btn.ghost').click(); ok(await page.locator('.shop-fb.hint').count() === 1, 'רמז מוצג');
+  await page.locator('.skey[data-k="9"]').click(); await page.locator('.shop-actions .btn.primary').click(); await page.waitForFunction(() => /התשובה:/.test(document.querySelector('.shop-fb').innerText));
+}, { storage: seed(FRAC) }));
+await test('זיכרון שברים: זוגות ושלישיות משחקים עד הסוף, שני שחקנים, ובמסך קטן (320×568) לא מוצעים לוחות גדולים שבהם הטקסט נחתך', () => withPage(async page => {
+  const bad = [];
+  for (const [mode, size, level, players] of [['pairs', '4x4', '3', '1'], ['pairs', '4x6', '2', '2'], ['triples', '3x4', '2', '1'], ['triples', '3x6', '3', '1']]) {
+    await page.evaluate(([m, s, l, pl]) => { document.getElementById('overlay').innerHTML = ''; return import('/js/app.js').then(a => a.startGame('fmemory', { chapter: 0, cfg: { mode: m, size: s, level: l, players: pl } })); }, [mode, size, level, players]);
+    await page.waitForSelector('.mcard');
+    const sets = await page.evaluate(() => { const by = {}; document.querySelectorAll('.mcard').forEach((c, i) => (by[c.dataset.set] = by[c.dataset.set] || []).push(i)); return Object.values(by); });
+    if (!sets.every(x => x.length === (mode === 'triples' ? 3 : 2))) bad.push(`${mode} ${size}: גודל קבוצה`);
+    await page.evaluate(() => document.querySelectorAll('.mcard').forEach(c => c.classList.add('open'))); await page.waitForTimeout(450);
+    const r = await page.evaluate(() => { const bd = document.querySelector('.mem-board').getBoundingClientRect(), sc = document.querySelector('#screen'); return { scroll: sc.scrollHeight > sc.clientHeight + 1, bottom: Math.round(bd.bottom), vh: innerHeight, clipped: [...document.querySelectorAll('.mf.back')].filter(f => f.scrollWidth > f.clientWidth + 1 || f.scrollHeight > f.clientHeight + 1).length }; });
+    if (r.scroll || r.bottom > r.vh || r.clipped) bad.push(`${mode} ${size}: ${JSON.stringify(r)}`);
+    await page.evaluate(() => document.querySelectorAll('.mcard').forEach(c => c.classList.remove('open'))); await page.waitForTimeout(450);
+    if (players === '2') { await page.locator(`.mcard[data-i="${sets[0][0]}"]`).click(); await page.locator(`.mcard[data-i="${sets[1][0]}"]`).click(); await page.waitForFunction(() => !document.querySelector('.mcard.open'), null, { timeout: 3000 }); if (!(await page.locator('.mem-pl.p2.on').count())) bad.push('התור לא עבר'); }
+    for (const st of sets) for (const i of st) await page.locator(`.mcard[data-i="${i}"]`).click();
+    await page.waitForSelector('.end-card', { timeout: 10000 });
+  }
+  const sizes = async () => { await page.evaluate(() => { document.getElementById('overlay').innerHTML = ''; try { localStorage.removeItem('jericho.fmemcfg'); } catch {} return import('/js/app.js').then(a => a.startGame('fmemory', { chapter: 0 })); }); await page.waitForSelector('.mem-setup'); return page.locator('.chip[data-k="size"]').evaluateAll(b => b.map(x => x.dataset.v)); };
+  const small = await sizes(); if (small.some(s => ['4x8', '5x8'].includes(s))) bad.push('מסך קטן מציע לוח גדול: ' + small.join(','));
+  await page.setViewportSize({ width: 390, height: 844 }); const tall = await sizes(); if (!['4x8', '5x8'].every(s => tall.includes(s))) bad.push('מסך רגיל לא מציע לוחות גדולים: ' + tall.join(','));
+  ok(!bad.length, bad.join('\n'));
+}, { storage: seed(FRAC), viewport: { width: 320, height: 568 } }));
+const fracCases = [];
+for (const ch of [0, 1, 2]) {
+  const label = ch ? `נושא ${ch}` : 'כל הנושאים';
+  fracCases.push([`שברים · פנדלים טריוויה · ${label}`, 'hunter', { chapter: ch, mode: 'trivia', count: 2 }], [`שברים · הסערה · ${label}`, 'swipe', { chapter: ch, duration: 3 }], [`שברים · בונים את הקו · ${label}`, 'order', { chapter: ch, count: 1 }],
+    [`שברים · זיכרון שברים · ${label}`, 'fmemory', { chapter: ch, cfg: { mode: 'pairs', size: '4x4', level: '2', players: '1' } }], [`שברים · גדול או קטן · ${label}`, 'fmore', { chapter: ch }],
+    [`שברים · חנות השברים · ${label}`, 'fshop', { chapter: ch }], [`שברים · קו השברים · ${label}`, 'fline', { chapter: ch }]);
+}
+fracCases.push(['שברים · זיכרון · מסך ההגדרות (בלי cfg)', 'fmemory', { chapter: 1 }], ['שברים · זיכרון · שלישיות', 'fmemory', { chapter: 0, cfg: { mode: 'triples', size: '3x4', level: '2', players: '1' } }],
+  ['שברים · זיכרון · שני שחקנים', 'fmemory', { chapter: 0, cfg: { mode: 'pairs', size: '4x4', level: '2', players: '2' } }], ['שברים · מבחן הסיכום', 'exam', { swipeSeconds: 3 }], ['שברים · דו-קרב משפחתי', 'duel', { topic: 'f1' }]);
+await pool(fracCases, 4, async ([name, key, opts]) => {
+  const t0 = Date.now();
+  try {
+    await withPage(async page => {
+      await page.evaluate(([k, o]) => import('/js/app.js').then(m => m.startGame(k, o)), [key, opts]); await playToEnd(page, key === 'exam' ? 120000 : 60000);
+      const st = await page.evaluate(() => JSON.parse(localStorage.getItem('jericho.v1'))); ok(st.rounds === 1, `rounds=${st.rounds}`); eq(st.subject, 'fractions', 'המקצוע הפעיל');
+    }, { storage: seed(FRAC) });
+    results.push({ name, ok: true }); console.log(`  ✓ ${name} (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
+  } catch (e) { results.push({ name, ok: false, e }); console.log(`  ✗ ${name}\n      ${String(e.message).split('\n').join('\n      ')}`); }
+});
 
 // ===== סיכום =====
 

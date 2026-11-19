@@ -1,6 +1,6 @@
 // Service Worker: שומר את כל הקבצים כדי שהאפליקציה תעבוד בלי אינטרנט.
 // כשמשנים קבצים – מעלים את מספר הגרסה כאן.
-const VERSION = 'jericho-v28';
+const VERSION = 'jericho-v30';
 const FILES = [
   './',
   'index.html',
@@ -17,6 +17,7 @@ const FILES = [
   'js/audio.js',
   'js/db.js',
   'js/ui.js',
+  'js/frac-dom.js',
   'js/rewards.js',
   'js/subjects/joshua/content.js',
   'js/story.js',
@@ -64,13 +65,18 @@ const FILES = [
   'js/games/gmemory.js',
   'js/games/gmore.js',
   'js/games/gwork.js',
+  'js/games/fnumpad.js',
+  'js/games/fmemory.js',
+  'js/games/fmore.js',
+  'js/games/fshop.js',
+  'js/games/fline.js',
   'js/games/boss.js',
   'js/games/exam.js', 'js/games/diagram.js',
   'js/hebrew.js',
   'js/subjects/index.js',
   'js/subjects/joshua/pack.js',
   'js/subjects/joshua/map.js', 'js/subjects/science/pack.js', 'js/subjects/science/content.js', 'js/subjects/science/map.js',
-  'js/lesson.js', 'js/subjects/math/pack.js', 'js/subjects/math/content.js', 'js/subjects/math/content-b.js', 'js/subjects/math/map.js', 'js/subjects/math/numbers.js', 'js/subjects/math/gen.js', 'js/subjects/math/word.js', 'js/subjects/geometry/solids.js', 'js/subjects/math/kit.js', 'js/subjects/math/lessons.js', 'js/subjects/math/geo.js', 'js/subjects/geometry/pack.js', 'js/subjects/geometry/content.js', 'js/subjects/geometry/lessons.js', 'js/subjects/geometry/map.js',
+  'js/lesson.js', 'js/subjects/math/pack.js', 'js/subjects/math/content.js', 'js/subjects/math/content-b.js', 'js/subjects/math/map.js', 'js/subjects/math/numbers.js', 'js/subjects/math/gen.js', 'js/subjects/math/word.js', 'js/subjects/geometry/solids.js', 'js/subjects/fractions/pack.js', 'js/subjects/fractions/content.js', 'js/subjects/fractions/map.js', 'js/subjects/fractions/lessons.js', 'js/subjects/fractions/kit.js', 'js/subjects/fractions/frac.js', 'js/subjects/fractions/fgen.js', 'js/subjects/fractions/fword.js', 'js/subjects/math/kit.js', 'js/subjects/math/lessons.js', 'js/subjects/math/geo.js', 'js/subjects/geometry/pack.js', 'js/subjects/geometry/content.js', 'js/subjects/geometry/lessons.js', 'js/subjects/geometry/map.js',
 ];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));

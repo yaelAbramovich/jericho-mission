@@ -31,6 +31,10 @@ const ALL_GAMES = {
   gmemory: { name: 'זיכרון גיאומטרי', icon: '🧊', desc: 'גופים, פריסות, שמות וספירות' },
   gmore: { name: 'יותר או פחות?', icon: '🔺', desc: 'השוו פאות, צלעות וקודקודים' },
   gwork: { name: 'הסדנה', icon: '🛠️', desc: 'בונים שלדים: כמה מקלות וכדורים?' },
+  fmemory: { name: 'זיכרון שברים', icon: '🍕', desc: 'תרגילים, שלבי ביניים ותוצאות' },
+  fmore: { name: 'גדול או קטן?', icon: '⚖️', desc: 'בלי לחשב: המכפלה גדולה או קטנה?' },
+  fshop: { name: 'חנות השברים', icon: '🛒', desc: 'בעיות מילוליות עם שברים' },
+  fline: { name: 'קו השברים', icon: '📏', desc: 'המקום של שבר על הקו' },
   diagram: { name: 'בונים תרשים', icon: '🧱', desc: 'מסווגים קלט, תהליך ופלט' },
   boss: { name: 'המעגל האחרון', icon: '👑', desc: PACK.boss ? PACK.boss.title : '', fixedChapter: PACK.games.boss && PACK.games.boss.unit },
 };
@@ -174,6 +178,10 @@ function zoneScreen(v, { ch }) {
     gameInUnit('gmemory', ch) && tile('', '🧊', 'זיכרון גיאומטרי', 'גופים, פריסות ושמות', () => startGame('gmemory', { chapter: ch })),
     gameInUnit('gmore', ch) && tile('', '🔺', 'יותר או פחות?', 'בלי לספור', () => startGame('gmore', { chapter: ch })),
     gameInUnit('gwork', ch) && tile('', '🛠️', 'הסדנה', 'מקלות וכדורי פלסטלינה', () => startGame('gwork', { chapter: ch })),
+    gameInUnit('fmemory', ch) && tile('', '🍕', 'זיכרון שברים', 'תרגילים ותוצאות', () => startGame('fmemory', { chapter: ch })),
+    gameInUnit('fmore', ch) && tile('', '⚖️', 'גדול או קטן?', 'בלי לחשב', () => startGame('fmore', { chapter: ch })),
+    gameInUnit('fshop', ch) && tile('', '🛒', 'חנות השברים', 'בעיות מילוליות', () => startGame('fshop', { chapter: ch })),
+    gameInUnit('fline', ch) && tile('', '📏', 'קו השברים', 'גרירה וקריאה', () => startGame('fline', { chapter: ch })),
     hasGame('diagram') && tile('', '🧱', 'בונים תרשים', 'קלט · תהליך · פלט', () => startGame('diagram', { chapter: ch })),
     hasGame('boss') && ch === PACK.games.boss.unit && tile('boss', '👑', 'המעגל האחרון', PACK.boss.title, () => startGame('boss', { chapter: ch })),
   );
