@@ -671,3 +671,30 @@ body.quake #app { animation: fxquake .15s linear 11; } @keyframes fxquake { 25% 
 .gm-cell { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 8px 6px; text-align: center; }
 .gm-cell .geo-svg { width: 100%; max-width: 150px; height: auto; } .gm-cell b { display: block; font-size: 15px; margin-top: 2px; }
 @media (max-height: 700px) { .gm-cell .geo-svg { max-width: 110px; } }
+
+/* ===== שברים בנויים (מקצוע שברים): מספר מעורב = שלם + מונה מעל מכנה ===== */
+.fm { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+.fr { display: inline-flex; align-items: center; vertical-align: middle; gap: 2px; direction: ltr; unicode-bidi: isolate; margin: 0 1px; }
+.fw { font-weight: inherit; }
+.fq { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.02; font-size: .78em; }
+.fq i { font-style: normal; padding: 0 3px; min-width: 1em; text-align: center; }
+.fq i:first-child { border-bottom: .09em solid currentColor; }
+.geo-svg.geo-frac { margin: 0 auto; } .geo-svg .fp { fill: #7f93ff22; stroke: #b9c6ff; stroke-width: .9; } .geo-svg .fp.on { fill: #ffd24acc; }
+
+/* ===== שיעורי שברים: אוספים פרוסות / מפרקים שלמים ===== */
+.fbs { display: grid; gap: 10px; justify-items: center; }
+.fb-bars { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; direction: ltr; }
+.fb-bar { display: grid; justify-items: center; gap: 2px; padding: 8px 10px; background: var(--panel2); border: 2px solid var(--line); border-radius: 14px; min-width: 96px; }
+.fb-bar small { color: var(--dim); font-size: 11px; } .fb-bar .geo-svg { width: 100px; }
+.fb-bar:active { transform: scale(.96); } .fb-bar.used { opacity: .45; } .fb-bar.static { background: transparent; border-style: dashed; }
+.fb-arrow { font-size: 22px; color: var(--dim); }
+.fb-tray { padding: 8px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; width: 100%; max-width: 280px; }
+.fb-eq { font-size: 26px; font-weight: 900; text-align: center; min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 4px; flex-wrap: wrap; }
+.fb-count { color: var(--dim); font-size: 14px; }
+
+/* ===== חנות השברים: תשובה בשלושה תאים (שלם · מונה · מכנה) ===== */
+.ff-entry { gap: 12px; align-items: center; }
+.ff { min-width: 54px; min-height: 52px; border: 2px solid var(--line); border-radius: 12px; background: var(--panel2); font-size: 30px; font-weight: 900; display: grid; place-items: center; }
+.ff-w { min-width: 64px; min-height: 76px; } .ff.on { border-color: var(--neon); box-shadow: 0 0 10px #2effd255; }
+.ff-frac { display: grid; justify-items: stretch; gap: 3px; } .ff-bar { display: block; height: 3px; background: var(--txt); border-radius: 2px; }
+.skey.nx { color: var(--neon); font-size: 24px; }

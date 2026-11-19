@@ -101,8 +101,22 @@ export function netSVG(type, n = 4, { size = 260 } = {}) {
   return `<svg class="geo-svg geo-netsvg" viewBox="${f1(x0)} ${f1(y0)} ${f1(w)} ${f1(hh)}" xmlns="http://www.w3.org/2000/svg" role="img" style="aspect-ratio:${f1(w)}/${f1(hh)}">${body}</svg>`;
 }
 
+// ---------- פסי שברים (שיעורי שברים) ----------
+// spec: { bars: [{ b: חלקים, a: צבועים }] } או { n, b, a } = n פסים זהים. כל פס מחולק ל-b חלקים שווים, ו-a מהם צבועים.
+export function fracSVG(spec, size = 170) {
+  const bars = spec.bars || Array.from({ length: spec.n || 1 }, () => ({ b: spec.b, a: spec.a }));
+  const perRow = bars.length > 4 ? Math.ceil(bars.length / 2) : bars.length, rows = Math.ceil(bars.length / perRow), gap = 10;
+  const W = Math.min(76, (size - gap * (perRow - 1)) / perRow), H = 26, vw = perRow * W + (perRow - 1) * gap, vh = rows * H + (rows - 1) * gap;
+  const body = bars.map((bar, i) => {
+    const x0 = (i % perRow) * (W + gap), y0 = Math.floor(i / perRow) * (H + gap), pw = W / bar.b;
+    return Array.from({ length: bar.b }, (_, k) => `<rect class="fp${k < bar.a ? ' on' : ''}" x="${f1(x0 + k * pw)}" y="${y0}" width="${f1(pw)}" height="${H}"/>`).join('');
+  }).join('');
+  return `<svg class="geo-svg geo-frac" viewBox="0 0 ${f1(vw)} ${f1(vh)}" xmlns="http://www.w3.org/2000/svg" role="img" style="max-width:${Math.round(vw * 2.2)}px">${body}</svg>`;
+}
+
 // spec: {shape:'prism'|'pyramid'|'box'|'cylinder'|'cone'|'sphere', n} או {net:'prism'|'pyramid'|'cylinder', n}
 export function shapeSVG(spec, size) {
+  if (spec.frac) return fracSVG(spec.frac, size);
   if (spec.net) return netSVG(spec.net, spec.n, { size });
   return ['cylinder', 'cone', 'sphere'].includes(spec.shape) ? roundSVG(spec.shape, size) : solidSVG(spec.shape, spec.n, { size });
 }
