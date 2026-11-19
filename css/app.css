@@ -592,3 +592,39 @@ body.quake #app { animation: fxquake .15s linear 11; } @keyframes fxquake { 25% 
 .so-card { height: 94px; overflow: hidden; display: block; } .so-card .geo-svg { height: 84px; overflow: hidden; } .so-card.placed { height: 70px; } .so-card.placed .geo-svg { height: 58px; } .so-tray { margin-bottom: 4px; }
 
 .lrule > span { flex: 1; min-width: 0; } .lrule > span b { color: var(--yel); }
+
+/* ===== משחקי חשבון: זיכרון עשרוני והנקודה זזה ===== */
+.mem-h { margin: 12px 0 6px; font-size: 14px; color: var(--dim); font-weight: 700; }
+.mem-setup { margin-bottom: 14px; }
+.mem-head { display: flex; gap: 8px; margin-bottom: 8px; }
+.mem-pl { flex: 1; text-align: center; padding: 6px 4px; border-radius: 12px; background: var(--panel2); border: 1px solid var(--line); font-size: 14px; color: var(--dim); }
+.mem-pl b { color: var(--txt); }
+.mem-pl.on { border-color: var(--neon); color: var(--txt); box-shadow: 0 0 12px #2effd244; }
+.mem-pl.p2.on { border-color: var(--yel); box-shadow: 0 0 12px #ffe14a44; }
+.mem-board { display: grid; gap: 7px; }
+.mcard { perspective: 700px; -webkit-perspective: 700px; min-width: 0; min-height: 0; padding: 0; }
+.mcard .min { position: relative; display: block; width: 100%; height: 100%; transform-style: preserve-3d; -webkit-transform-style: preserve-3d; transition: transform .35s; }
+.mcard.open .min, .mcard.done .min { transform: rotateY(180deg); }
+.mf { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 12px; backface-visibility: hidden; -webkit-backface-visibility: hidden; overflow: hidden; }
+.mf.front { background: linear-gradient(145deg, #1d3a8a, #5b3bd0); border: 1px solid var(--line); color: var(--neon); font-size: 24px; font-weight: 900; text-shadow: 0 0 10px var(--neon); }
+.mf.back { transform: rotateY(180deg); background: var(--panel2); border: 2px solid var(--line); color: var(--txt); font-weight: 800; text-align: center; padding: 2px; line-height: 1.15; word-break: normal; overflow-wrap: normal; }
+.mcard.done .mf.back { background: #0f5a49; border-color: var(--neon); }
+.mem-why { position: fixed; inset-inline: 14px; bottom: calc(var(--sab) + 12px); z-index: 20; max-width: 532px; margin: 0 auto; font-size: 14.5px; text-align: start; }
+.mem-why[hidden] { display: none; }
+
+.pt-task { font-size: 40px; font-weight: 900; text-align: center; margin: 6px 0 0; color: var(--yel); }
+.pt-how { text-align: center; }
+.pt-strip { display: flex; justify-content: center; align-items: flex-start; gap: 3px; margin: 8px -4px 4px; min-height: 86px; }
+.pt-dg { flex: 1 1 0; min-width: 0; max-width: 46px; text-align: center; }
+.pt-n { display: block; font-size: 30px; font-weight: 900; background: var(--panel2); border: 2px solid var(--line); border-radius: 10px; padding: 6px 0; color: var(--txt); }
+.pt-dg.lead .pt-n { opacity: .35; }
+.pt-dg small { display: block; color: var(--dim); font-size: 8.5px; line-height: 1.1; margin-top: 4px; min-height: 20px; overflow-wrap: anywhere; }
+.pt-dot { flex: none; width: 16px; text-align: center; color: var(--yel); font-size: 26px; line-height: 1; margin-top: 13px; text-shadow: 0 0 10px var(--yel); }
+.pt-moves { display: flex; justify-content: center; align-items: center; gap: 16px; margin: 20px 0 6px; }
+.pt-mv { width: 96px; min-height: 66px; font-size: 28px; }
+.pt-count { min-width: 64px; text-align: center; } .pt-count b { font-size: 26px; display: block; line-height: 1; } .pt-count small { color: var(--dim); font-size: 12px; }
+.pt-fb { border-radius: 16px; padding: 10px 14px; margin: 10px 0; text-align: center; font-size: 15px; }
+.pt-fb:empty { display: none; } .pt-fb.good { background: #0f5a4966; border: 1px solid var(--neon); } .pt-fb.bad { background: #5a142066; border: 1px solid var(--red); } .pt-fb b { display: block; font-size: 17px; }
+.pt-actions { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; margin-top: 8px; } .pt-actions .btn:only-child { grid-column: 1 / -1; }
+.btn.ghost.hint { color: var(--yel); border-color: var(--yel); }
+@media (max-height: 700px) { .pt-task { font-size: 34px; } .pt-moves { margin-top: 12px; } }

@@ -837,7 +837,14 @@ for (const ch of [0, 1, 2, 3, 4, 5]) {
   mathCases.push([`חשבון · פנדלים טריוויה · ${label}`, 'hunter', { chapter: ch, mode: 'trivia', count: 2 }]);
   mathCases.push([`חשבון · הסערה · ${label}`, 'swipe', { chapter: ch, duration: 3 }]);
   mathCases.push([`חשבון · בונים את הקו · ${label}`, 'order', { chapter: ch, count: 1 }]);
+  mathCases.push([`חשבון · זיכרון עשרוני · ${label}`, 'memory', { chapter: ch, cfg: { size: '4x4', level: '2', players: '1' } }]);
+  if (ch <= 2) mathCases.push([`חשבון · הנקודה זזה · ${label}`, 'point', { chapter: ch }]);
 }
+mathCases.push(['חשבון · זיכרון · מסך ההגדרות (בלי cfg) · נושא 1', 'memory', { chapter: 1 }],
+  ['חשבון · זיכרון · שלישיות · נושא 1', 'memory', { chapter: 1, cfg: { mode: 'triples', size: '3x4', level: '1', players: '1' } }],
+  ['חשבון · זיכרון · שלישיות · נושא 4', 'memory', { chapter: 4, cfg: { mode: 'triples', size: '3x4', level: '3', players: '1' } }],
+  ['חשבון · זיכרון · שני שחקנים · כל הנושאים', 'memory', { chapter: 0, cfg: { mode: 'pairs', size: '4x6', level: '3', players: '2' } }],
+  ['חשבון · זיכרון · לוח ענק 5×8', 'memory', { chapter: 0, cfg: { mode: 'pairs', size: '5x8', level: '2', players: '1' } }]);
 mathCases.push(['חשבון · מבחן הסיכום', 'exam', { swipeSeconds: 3 }], ['חשבון · דו-קרב משפחתי א', 'duel', { topic: 'm1' }], ['חשבון · דו-קרב משפחתי ב', 'duel', { topic: 'm2' }]);
 await pool(mathCases, 4, async ([name, key, opts]) => {
   const t0 = Date.now();
@@ -849,6 +856,85 @@ await pool(mathCases, 4, async ([name, key, opts]) => {
     results.push({ name, ok: true }); console.log(`  ✓ ${name} (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
   } catch (e) { results.push({ name, ok: false, e }); console.log(`  ✗ ${name}\n      ${String(e.message).split('\n').join('\n      ')}`); }
 });
+// ---- משחקי חשבון חדשים: זיכרון עשרוני והנקודה זזה ----
+await test('מחוללי התרגילים של משחקי החשבון (gen.js): כל תרגיל מחושב מחדש בחישוב עצמאי (BigInt), בלי כפילויות בלוח', () => withPage(async page => {
+  const bad = await page.evaluate(async () => {
+    const G = await import('/js/subjects/math/gen.js'), out = [];
+    const rat = s => { const [i, f = ''] = s.split('.'); return { n: BigInt(i + f), d: 10n ** BigInt(f.length) }; };
+    const req = (a, b) => a.n * b.d === b.n * a.d, rmul = (a, b) => ({ n: a.n * b.n, d: a.d * b.d });
+    for (const topic of Object.keys(G.GEN)) for (const level of [1, 2, 3]) for (let i = 0; i < 600; i++) {
+      const it = G.GEN[topic](level), tag = `${topic} L${level}: ${it.q} = ${it.a}`;
+      if (!/^\d+(\.\d+)?$/.test(it.a) || /\.\d*0$/.test(it.a)) { out.push('פורמט תשובה ' + tag); continue; }
+      if (topic === 'place') { const [n, unit] = it.q.split(' '), k = { 'עשיריות': 1, 'מאיות': 2, 'אלפיות': 3 }[unit]; if (!req(rat(it.a), { n: BigInt(n), d: 10n ** BigInt(k) })) out.push(tag); }
+      else { const [x, y] = it.q.split(/ [×:] /).map(rat); if (it.q.includes(' × ') ? !req(rat(it.a), rmul(x, y)) : !req(rmul(rat(it.a), y), x)) out.push(tag); }
+      if (topic === 'estimate' && !(it.est !== it.a && Math.abs(parseFloat(it.est) - parseFloat(it.a)) / parseFloat(it.a) < 0.35)) out.push('הערכה רחוקה ' + tag + ' ≈' + it.est);
+      if ((topic === 'mul10' || topic === 'div10') && !it.ruleShort) out.push('חסר ruleShort ' + tag);
+    }
+    for (const level of [1, 2, 3]) for (const n of [8, 16, 20]) {
+      const its = G.items(n, Object.keys(G.GEN), level);
+      if (its.length !== n || new Set(its.map(x => x.a)).size !== n || new Set(its.map(x => x.q)).size !== n) out.push(`items(${n}) L${level}: לא ייחודיים`);
+    }
+    for (const ch of [1, 2, 3, 4, 5]) for (const t of G.topicsFor(ch)) if (!G.GEN[t]) out.push(`אזור ${ch}: נושא לא קיים ${t}`);
+    for (const t of ['mul10', 'div10', 'estimate']) for (let i = 0; i < 100; i++) { const r = G.triple(t, 2); if (r.cards.length !== 3 || new Set(r.cards.map(c => c.t)).size !== 3) out.push('שלישייה לא תקינה ' + t); }
+    const r = G.rich('36×2=72. פי 10: 13.5 : 0.3 = 135 : 3 = 45.'); if (!r.includes('⁦36×2=72⁩') || !r.includes('⁦13.5 : 0.3 = 135 : 3 = 45⁩')) out.push('rich() לא עוטף משוואות: ' + r);
+    return out.slice(0, 8);
+  });
+  ok(!bad.length, bad.join('\n'));
+}, { storage: seed(MATH) }));
+await test('חשבון: זיכרון עשרוני בכל האזורים, והנקודה זזה רק באזורים 1–2 (גם בבורר המשחקים)', () => withPage(async page => {
+  const go = (name, params = {}) => page.evaluate(([n, p]) => import('/js/app.js').then(m => m.go(n, p)), [name, params]);
+  for (let ch = 1; ch <= 5; ch++) {
+    await go('zone', { ch }); await page.waitForSelector('.tiles .tn'); const tiles = await page.locator('.tiles .tn').allInnerTexts();
+    ok(tiles.includes('זיכרון עשרוני'), `אזור ${ch}: חסר זיכרון עשרוני (${tiles.join('|')})`);
+    eq(tiles.includes('הנקודה זזה'), ch <= 2, `אזור ${ch}: הנקודה זזה`);
+  }
+  await go('games'); await page.waitForSelector('.tiles .tn');
+  await page.locator('.tile', { hasText: 'הנקודה זזה' }).click(); eq(await page.locator('.modal .chip').count(), 3, 'הנקודה זזה: "הכול" + שני אזורים');
+  await page.evaluate(() => { document.getElementById('overlay').innerHTML = ''; });
+  await page.locator('.tile', { hasText: 'זיכרון עשרוני' }).click(); eq(await page.locator('.modal .chip').count(), 6, 'זיכרון: "הכול" + חמישה אזורים');
+}, { storage: seed(MATH) }));
+await test('הנקודה זזה: משחקים נכון עד הסוף (כל סבב מוכר), XP נצבר, האזור מסמן "משחק נוסף", ושתי טעויות חושפות את התשובה', () => withPage(async page => {
+  await page.evaluate(() => import('/js/app.js').then(m => m.startGame('point', { chapter: 1 })));
+  for (let r = 0; r < 8; r++) {
+    const q = (await page.locator('.pt-task').textContent()).replace(/[⁦⁩]/g, ''), m = q.match(/^(\S+) ([×:]) (\d+)$/); ok(m, 'תרגיל לא מזוהה: ' + q);
+    ok(m[2] === '×', 'אזור 1 צריך להציג כפל בלבד: ' + q);
+    for (let i = 0; i < Math.round(Math.log10(+m[3])); i++) await page.locator('.pt-mv[aria-label="הנקודה ימינה"]').click();
+    await page.locator('.pt-actions .btn.primary').click(); await page.waitForSelector('.pt-fb.good', { timeout: 3000 });
+    await page.locator('.pt-actions .btn.primary').click();
+  }
+  await page.waitForSelector('.end-card'); const st = await page.evaluate(() => JSON.parse(localStorage.getItem('jericho.v1')));
+  ok(st.xp > 0 && st.rounds === 1, `xp=${st.xp} rounds=${st.rounds}`); ok(st.subjects.math.zone[1].other === true, 'הסבב לא סימן "משחק נוסף" באזור 1');
+  await page.evaluate(() => import('/js/app.js').then(m => m.startGame('point', { chapter: 2 })));
+  const q2 = (await page.locator('.pt-task').textContent()).replace(/[⁦⁩]/g, ''); ok(q2.includes(' : '), 'אזור 2 צריך להציג חילוק בלבד: ' + q2);
+  await page.locator('.pt-actions .btn.primary').click(); await page.waitForSelector('.pt-fb.bad'); eq(await page.locator('.pt-actions .btn.primary').innerText(), 'בדיקה ✓', 'אחרי טעות אחת עדיין אפשר לנסות');
+  await page.locator('.pt-actions .btn.primary').click(); ok((await page.locator('.pt-fb.bad').innerText()).includes('התשובה:'), 'אחרי שתי טעויות מוצגת התשובה');
+}, { storage: seed(MATH) }));
+await test('זיכרון עשרוני: הלוחות הגדולים ביותר נכנסים במסך הקטן (320×568) בלי גלילה ובלי טקסט חתוך', () => withPage(async page => {
+  const bad = [];
+  for (const [mode, size] of [['pairs', '5x8'], ['triples', '4x9'], ['pairs', '4x8']]) {
+    await page.evaluate(([m, s]) => { document.getElementById('overlay').innerHTML = ''; return import('/js/app.js').then(a => a.startGame('memory', { chapter: 0, cfg: { mode: m, size: s, level: '3', players: '1' } })); }, [mode, size]);
+    await page.waitForSelector('.mcard'); await page.evaluate(() => document.querySelectorAll('.mcard').forEach(c => c.classList.add('open'))); await page.waitForTimeout(500);
+    const r = await page.evaluate(() => { const bd = document.querySelector('.mem-board').getBoundingClientRect(), sc = document.querySelector('#screen');
+      return { bottom: Math.round(bd.bottom), vh: innerHeight, scroll: sc.scrollHeight > sc.clientHeight + 1, clipped: [...document.querySelectorAll('.mf.back')].filter(f => f.scrollWidth > f.clientWidth + 1 || f.scrollHeight > f.clientHeight + 1).length }; });
+    if (r.scroll || r.bottom > r.vh || r.clipped) bad.push(`${mode} ${size}: ${JSON.stringify(r)}`);
+  }
+  ok(!bad.length, bad.join('\n'));
+}, { storage: seed(MATH), viewport: { width: 320, height: 568 } }));
+await test('זיכרון עשרוני: קלף שלא מתאים מתהפך חזרה, בשני שחקנים התור עובר, והתוצאה מכריזה על מנצח', () => withPage(async page => {
+  await page.evaluate(() => import('/js/app.js').then(m => m.startGame('memory', { chapter: 1, cfg: { mode: 'pairs', size: '4x4', level: '1', players: '2' } })));
+  await page.waitForSelector('.mcard');
+  const sets = await page.evaluate(() => { const by = {}; document.querySelectorAll('.mcard').forEach((c, i) => (by[c.dataset.set] = by[c.dataset.set] || []).push(i)); return Object.values(by); });
+  eq(await page.locator('.mem-pl.on:not(.p2)').count(), 1, 'שחקן 1 מתחיל');
+  await page.locator(`.mcard[data-i="${sets[0][0]}"]`).click(); await page.locator(`.mcard[data-i="${sets[1][0]}"]`).click();   // התאמה שגויה
+  await page.waitForFunction(() => document.querySelectorAll('.mcard.open').length === 0, null, { timeout: 3000 });
+  eq(await page.locator('.mem-pl.p2.on').count(), 1, 'אחרי טעות התור עובר לשחקן 2');
+  for (const i of sets[0]) await page.locator(`.mcard[data-i="${i}"]`).click();                                                   // התאמה נכונה: אותו שחקן ממשיך
+  eq(await page.locator('.mem-pl.p2.on').count(), 1, 'אחרי התאמה נכונה אותו שחקן ממשיך');
+  ok((await page.locator('.mem-pl.p2').innerText()).includes('1'), 'ההתאמה נרשמה לשחקן 2');
+  ok(await page.locator('.mem-why').isVisible(), 'אחרי התאמה מוצג הסבר');
+  for (const s of sets.slice(1)) for (const i of s) await page.locator(`.mcard[data-i="${i}"]`).click();
+  await page.waitForSelector('.end-card', { timeout: 8000 }); ok(/ניצח|תיקו/.test(await page.locator('.end-title').innerText()), 'התוצאה צריכה להכריז על מנצח או תיקו');
+}, { storage: seed(MATH) }));
 await test('שיעורים אינטראקטיביים: כל שבעת השיעורים נפתרים עד הסוף, XP רק בפעם הראשונה, וההתקדמות נשמרת', () => withPage(async page => {
   const go = (name, params = {}) => page.evaluate(([n, p]) => import('/js/app.js').then(m => m.go(n, p)), [name, params]);
   const xp = () => page.evaluate(() => JSON.parse(localStorage.getItem('jericho.v1')).xp);

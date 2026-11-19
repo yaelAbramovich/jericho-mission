@@ -4,6 +4,8 @@ const CLICKS = [
   '.modal .btn.ghost',                              // חלון "ניסיון נוסף": מוותרים
   '.dg-chip:not(.assigned) .dg-btn[data-k="in"]',  // בונים תרשים: מסווגים כל רכיב (ואז לוחצים "בדוק")
   '.duel-setup .btn.primary',                       // דו-קרב: התחלה
+  '.mem-setup ~ .btn.primary',                      // זיכרון עשרוני: התחלה
+  '.pt-actions .btn.primary',                       // הנקודה זזה: בדיקה (מסתיים אחרי שתי טעויות) / הבא
   '.stage-splash .btn.primary',                     // מבחן הסיכום: מעבר בין שלבים
   '.idea-card ~ .btn.primary',                      // דו-קרב: כרטיס נושא
   '.side-btns .side.yes',                           // בוס: בחירת עמדה
@@ -39,6 +41,13 @@ export async function playToEnd(page, timeoutMs = 90000) {
     // פנדלים – חיפוש: צריך לבחור פרק ופסוק לפני הבעיטה
     if (await page.locator('.kick-btn').count()) {
       if (await tryClick(page, '.pick-row.ch .pk')) { await tryClick(page, '.pick-grid .pk'); await tryClick(page, '.kick-btn:not([disabled])'); continue; }
+    }
+    // זיכרון עשרוני: מוצאים בלוח (לפי data-set) קבוצה שלמה ופותחים אותה, כדי שהסבב יסתיים בלי לנחש
+    if (await page.locator('.mem-board').count()) {
+      const idx = await page.evaluate(() => { const by = {}; document.querySelectorAll('.mcard:not(.done)').forEach(c => (by[c.dataset.set] = by[c.dataset.set] || []).push(+c.dataset.i)); return Object.values(by)[0] || []; });
+      for (const i of idx) await tryClick(page, `.mcard[data-i="${i}"]`);
+      await page.waitForTimeout(60);
+      continue;
     }
     let clicked = false;
     for (const sel of CLICKS) { if (await tryClick(page, sel).catch(() => false)) { clicked = true; break; } }
