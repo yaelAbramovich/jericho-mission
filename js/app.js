@@ -213,10 +213,10 @@ function pickScope(key) {
   const g = GAMES[key];
   if (g.fixedChapter) return startGame(key, { chapter: g.fixedChapter });
   let mode = g.modes ? g.modes[0][0] : null;
-  const box = h('div', { class: 'chips' });
+  const box = h('div', { class: 'chips scope' });
   const m = modal([h('h3', {}, g.name), g.modes && modeChips(g.modes, v => { mode = v; }), h('p', { class: 'sub' }, L.pickUnit), box]);
   const chip = (label, ch) => h('button', { class: 'chip', onclick: () => { m.close(); startGame(key, { chapter: ch, mode }); } }, label);
-  box.append(chip('הכול', 0), ...CHAPTERS.filter(c => gameInUnit(key, c.n)).map(c => chip(PACK.labels.unit(c.n), c.n)));
+  box.append(chip('הכול', 0), ...CHAPTERS.filter(c => gameInUnit(key, c.n)).map(c => chip(`${PACK.labels.unit(c.n)} · ${c.zone}`, c.n)));
 }
 function modeChips(modes, onSel) {
   const row = h('div', { class: 'chips mode' });
