@@ -744,7 +744,7 @@ await test('בורר המקצועות: שני מקצועות בבורר, מעב�
   const info = () => page.evaluate(async () => { const { PACK } = await import('/js/subjects/index.js'); return { id: PACK.id, zones: document.querySelectorAll('.zone').length, title: document.title, date: PACK.testDate, days: document.querySelector('.test-count') && document.querySelector('.test-count').innerText }; });
   let r = await info(); eq(r.id, 'joshua', 'מקצוע התחלתי'); eq(r.zones, 5, 'אזורי יהושע'); ok(r.title.includes('יריחו'), 'כותרת יהושע: ' + r.title);
   await page.click('.subj-chip'); await page.waitForSelector('.pkinds');
-  const opts = await page.locator('.pkinds .tile').allInnerTexts(); ok(opts.length === 5 && opts.some(o => o.includes('שברים') && o.includes('מספר מעורב')) && opts.some(o => o.includes('גיאומטריה') && o.includes('פאון')) && opts.some(o => o.includes('תנ״ך') && o.includes('יהושע א׳–ה׳')) && opts.some(o => o.includes('מדעים') && o.includes('מערכות טכנולוגיות')) && opts.some(o => o.includes('מתמטיקה') && o.includes('אחוזים')), 'בבורר: ' + opts.join('|'));
+  const opts = await page.locator('.pkinds .tile').allInnerTexts(); ok(opts.length === 3 && opts.some(o => o.includes('שברים') && o.includes('מספר מעורב')) && opts.some(o => o.includes('תנ״ך') && o.includes('יהושע א׳–ה׳')) && opts.some(o => o.includes('מדעים') && o.includes('מערכות טכנולוגיות')), 'בבורר: ' + opts.join('|'));
   await Promise.all([page.waitForNavigation({ waitUntil: 'load' }), page.locator('.pkinds .tile', { hasText: 'מדע' }).click()]); await page.waitForSelector('.map');
   r = await info(); eq(r.id, 'science', 'אחרי מעבר'); eq(r.zones, 5, 'אזורי מדע וטכנולוגיה'); eq(r.date, '2026-11-17', 'תאריך המבחן'); ok(r.title.includes('טכנולוגיה'), 'כותרת: ' + r.title); ok(!!r.days, 'ספירה לאחור למבחן');
   await page.evaluate(async () => { const S = await import('/js/state.js'); S.setObjective(1, 'story'); S.setObjective(1, 'hunter'); S.setObjective(1, 'other'); });   // כובשים אזור במדע
@@ -765,8 +765,8 @@ await test('בורר המקצועות: גם כשבכתובת יש ‎?subject=ma
   const id = () => page.evaluate(() => import('/js/subjects/index.js').then(m => m.PACK.id));
   await page.goto(BASE + '/?subject=math'); await page.waitForSelector('.map'); eq(await id(), 'math', 'עם ?subject=math');
   await page.click('.subj-chip'); await page.waitForSelector('.pkinds');
-  await Promise.all([page.waitForNavigation({ waitUntil: 'load' }), page.locator('.pkinds .tile', { hasText: 'גיאומטריה' }).click()]); await page.waitForSelector('.map');
-  eq(await id(), 'geometry', 'אחרי בחירה בבורר'); ok(!page.url().includes('subject='), 'הפרמטר הוסר מהכתובת: ' + page.url());
+  await Promise.all([page.waitForNavigation({ waitUntil: 'load' }), page.locator('.pkinds .tile', { hasText: 'מדע' }).click()]); await page.waitForSelector('.map');
+  eq(await id(), 'science', 'אחרי בחירה בבורר'); ok(!page.url().includes('subject='), 'הפרמטר הוסר מהכתובת: ' + page.url());
 }));
 await test('שמירה ישנה (אזורים ברמה העליונה) עוברת בבטחה למקצוע יהושע; אפשר להחליף מקצוע וההתקדמות נשמרת לכל אחד', () => withPage(async page => {
   const r1 = await page.evaluate(async () => { const S = await import('/js/state.js'); return { sub: S.subjectId(), c: S.capturedCount(), legacy: ['zone', 'storySeen', 'examDone'].filter(k => k in S.get()), stories: Object.keys(S.sub().storySeen).length, exam: S.sub().examDone }; });
