@@ -5,6 +5,7 @@
 export const REGISTRY = [
   { id: 'joshua', name: 'תנ״ך', icon: '📖', desc: 'יהושע א׳–ה׳' },
   { id: 'science', name: 'מדעים', icon: '🔬', desc: 'מערכות טכנולוגיות' },
+  { id: 'history', name: 'היסטוריה', icon: '🏛️', desc: 'יוון העתיקה' },
   { id: 'math', name: 'מתמטיקה', icon: '🧮', desc: 'מספרים עשרוניים, אחוזים וחקר נתונים', hidden: true },
   { id: 'geometry', name: 'גיאומטריה', icon: '📐', desc: 'פאון, פירמידה ומנסרה', hidden: true },
   { id: 'fractions', name: 'שברים', icon: '🍕', desc: 'כפל שלם בשבר ובמספר מעורב', hidden: true },   // hidden: true מסתיר מקצוע מהבורר (למשל כשהתוכן עוד לא מוכן)

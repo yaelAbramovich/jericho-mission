@@ -175,7 +175,7 @@ export function sort(step, api) {
   const items = shuffle(step.items.map((it, i) => ({ ...it, id: i }))); let left = items.length, sel = null, busy = false;
   const fb = h('div', { class: 'qz-fb' }), tray = h('div', { class: 'so-tray' });
   const bk = step.buckets.map(b => ({ ...b, el: h('div', { class: 'so-bucket', 'data-b': b.id }, h('b', {}, b.label), h('div', { class: 'so-in' })) }));
-  const card = it => { const e = h('button', { class: 'so-card', type: 'button', 'data-id': it.id, 'aria-label': 'גוף', html: shapeSVG(it, 110) }); it.el = e; return e; };
+  const card = it => { const e = h('button', { class: 'so-card' + (it.text ? ' txt' : ''), type: 'button', 'data-id': it.id }); if (it.text) e.textContent = it.text; else { e.setAttribute('aria-label', 'גוף'); e.innerHTML = shapeSVG(it, 110); } it.el = e; return e; };
   items.forEach(it => tray.append(card(it)));
   function drop(it, b) {
     if (it.done) return;
