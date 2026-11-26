@@ -1553,10 +1553,10 @@ const HIST = { subject: 'history' };
 await test('היסטוריה: כל המסכים נפתחים, 6 אזורים, 7 נושאים (כולל מבוא TBD), ובלי הפניות למקצועות אחרים', () => withPage(async page => {
   const go = (name, params = {}) => page.evaluate(([n, p]) => import('/js/app.js').then(m => m.go(n, p)), [name, params]);
   const texts = [], filled = async what => { await page.waitForFunction(() => (document.querySelector('.view') || { innerText: '' }).innerText.trim().length > 5, null, { timeout: 4000 }).catch(() => { throw new Error('מסך ריק: ' + what); }); texts.push(await page.locator('.view').innerText()); };
-  await go('map'); await filled('מפה'); eq(await page.locator('.zone').count(), 6, 'אזורים במפה'); eq(await page.title(), 'מבצע יוון', 'כותרת הדף');
-  for (let ch = 1; ch <= 6; ch++) { await go('zone', { ch }); await filled('אזור ' + ch); await go('story', { ch }); await page.waitForTimeout(150); await filled('תדריך ' + ch); }
+  await go('map'); await filled('מפה'); eq(await page.locator('.zone').count(), 7, 'אזורים במפה'); eq(await page.title(), 'מבצע יוון', 'כותרת הדף');
+  for (let ch = 1; ch <= 7; ch++) { await go('zone', { ch }); await filled('אזור ' + ch); await go('story', { ch }); await page.waitForTimeout(150); await filled('תדריך ' + ch); }
   await go('focus'); await filled('למבחן'); eq(await page.locator('.topic-btn').count(), 7, 'נושאי למבחן');
-  await go('topic', { id: 'hist-0' }); await filled('מבוא'); ok((await page.locator('.view').innerText()).includes('TBD'), 'המבוא מסומן TBD');
+  await go('topic', { id: 'hist-0' }); await filled('מבוא'); ok(!(await page.locator('.view').innerText()).includes('TBD'), 'המבוא מלא'); eq(await page.locator('.lesson-cta').count(), 1, 'שיעור במבוא');
   await go('topic', { id: 'hist-3' }); await filled('נושא'); eq(await page.locator('.lesson-cta').count(), 1, 'כפתור שיעור');
   await go('games'); await filled('משחקים'); await go('profile'); await filled('פרופיל'); await go('pass'); await page.waitForSelector('.passv');
   const hit = /יהושע|יריחו|עשרוני|הירדן|טכנולוגי|קלט|פלט|מנסרה/.exec(texts.join('\n')); ok(!hit, `מסכי היסטוריה מזכירים מקצוע אחר: "${hit && hit[0]}"`);
@@ -1566,11 +1566,11 @@ await test('היסטוריה: תאריך המבחן 29.12.2026, ולכל שאל�
     for (const d of Object.values(PACK.duels)) for (const i of d.ideas) for (const q of i.qs) if (new Set([q.a, ...q.w]).size !== 4) bad.push(q.q);
     const units = new Set(Object.values(PACK.duels).flatMap(d => d.ideas.map(i => i.unit)));
     return { date: PACK.testDate, bad, units: [...units].sort().join(), st: PACK.statements.length }; });
-  eq(r.date, '2026-12-29', 'תאריך'); ok(!r.bad.length, 'שאלות עם תשובות כפולות: ' + r.bad.join('|')); eq(r.units, '1,2,3,4,5,6', 'יחידות בדו-קרבים'); ok(r.st >= 60, 'משפטים: ' + r.st);
+  eq(r.date, '2026-12-29', 'תאריך'); ok(!r.bad.length, 'שאלות עם תשובות כפולות: ' + r.bad.join('|')); eq(r.units, '1,2,3,4,5,6,7', 'יחידות בדו-קרבים'); ok(r.st >= 60, 'משפטים: ' + r.st);
 }, { storage: seed(HIST) }));
 const histCases = [];
-for (const ch of [0, 1, 2, 3, 4, 5, 6]) { const label = ch ? `נושא ${ch}` : 'כל הנושאים'; histCases.push([`היסטוריה · פנדלים · ${label}`, 'hunter', { chapter: ch, mode: 'trivia', count: 2 }], [`היסטוריה · הסערה · ${label}`, 'swipe', { chapter: ch, duration: 3 }], [`היסטוריה · בונים את הקו · ${label}`, 'order', { chapter: ch, count: 1 }]); }
-histCases.push(['היסטוריה · מבחן הסיכום', 'exam', { swipeSeconds: 3 }], ['היסטוריה · דו-קרב פרק א', 'duel', { topic: 'h1' }], ['היסטוריה · דו-קרב פרק ב', 'duel', { topic: 'h2' }]);
+for (const ch of [0, 1, 2, 3, 4, 5, 6, 7]) { const label = ch ? `נושא ${ch}` : 'כל הנושאים'; histCases.push([`היסטוריה · פנדלים · ${label}`, 'hunter', { chapter: ch, mode: 'trivia', count: 2 }], [`היסטוריה · הסערה · ${label}`, 'swipe', { chapter: ch, duration: 3 }], [`היסטוריה · בונים את הקו · ${label}`, 'order', { chapter: ch, count: 1 }]); }
+histCases.push(['היסטוריה · מבחן הסיכום', 'exam', { swipeSeconds: 3 }], ['היסטוריה · דו-קרב מבוא', 'duel', { topic: 'h0' }], ['היסטוריה · דו-קרב פרק א', 'duel', { topic: 'h1' }], ['היסטוריה · דו-קרב פרק ב', 'duel', { topic: 'h2' }]);
 await pool(histCases, 4, async ([name, key, opts]) => {
   const t0 = Date.now();
   try {
@@ -1585,7 +1585,7 @@ await test('היסטוריה: ששת השיעורים נפתרים עד הסוף
   const go = (name, params = {}) => page.evaluate(([n, p]) => import('/js/app.js').then(m => m.go(n, p)), [name, params]);
   const xp = () => page.evaluate(() => JSON.parse(localStorage.getItem('jericho.v1')).xp), x0 = await xp();
   await page.setViewportSize({ width: 320, height: 640 });
-  for (const [id, topic] of [['polis', 'hist-1'], ['sparta', 'hist-2'], ['athens', 'hist-3'], ['myth', 'hist-4'], ['olympics', 'hist-5'], ['people', 'hist-6']]) {
+  for (const [id, topic] of [['intro', 'hist-0'], ['polis', 'hist-1'], ['sparta', 'hist-2'], ['athens', 'hist-3'], ['myth', 'hist-4'], ['olympics', 'hist-5'], ['people', 'hist-6']]) {
     await go('lesson', { id, topic }); await page.waitForSelector('.lesson-stage .step'); const n = await page.locator('.dots i').count();
     for (let i = 0; i < n; i++) {
       const over = await page.evaluate(() => { const d = document.documentElement, s = document.querySelector('.lesson-stage'); return d.scrollWidth - d.clientWidth + s.scrollWidth - s.clientWidth; });
@@ -1596,7 +1596,7 @@ await test('היסטוריה: ששת השיעורים נפתרים עד הסוף
     }
     await page.waitForSelector('.lesson-end');
   }
-  eq(await xp() - x0, 240, 'XP אחרי שישה שיעורים');
+  eq(await xp() - x0, 280, 'XP אחרי שבעה שיעורים');
 }, { storage: seed(HIST) }));
 
 // ===== סיכום =====

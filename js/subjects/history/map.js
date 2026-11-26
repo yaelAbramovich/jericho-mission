@@ -1,6 +1,6 @@
 // מפת המשימה של "יוון העתיקה": הים האגאי, איים וקווי חוף. המנוע מצייר מעל הרקע את האזורים ואת המסלול.
 export const MAP = {
-  positions: { 1: [96, 55], 2: [264, 135], 3: [96, 215], 4: [264, 295], 5: [96, 375], 6: [250, 450] },
+  positions: { 1: [96, 45], 2: [264, 115], 3: [96, 185], 4: [264, 255], 5: [96, 325], 6: [264, 395], 7: [96, 465] },
   background: `
     <defs><linearGradient id="hsea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a2a4a"/><stop offset="1" stop-color="#06162e"/></linearGradient>
       <radialGradient id="hglow" cx=".5" cy=".5" r=".6"><stop offset="0" stop-color="#4fc3ff" stop-opacity=".3"/><stop offset="1" stop-color="#4fc3ff" stop-opacity="0"/></radialGradient></defs>

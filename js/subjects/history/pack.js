@@ -1,4 +1,4 @@
-// חבילת המקצוע "היסטוריה": יוון העתיקה (פרק א: העדים ותושביהם, פרק ב: חיי התרבות והחברה). המבוא להיסטוריה – TBD.
+// חבילת המקצוע "היסטוריה": יוון העתיקה (פרק א: העדים ותושביהם, פרק ב: חיי התרבות והחברה). ועוד מבוא להיסטוריה.
 import * as C from './content.js';
 import { MAP } from './map.js';
 import { LESSONS } from './lessons.js';
@@ -8,7 +8,7 @@ export default {
   id: 'history', name: 'היסטוריה', icon: '🏛️', appTitle: 'מבצע יוון',
   testDate: C.TEST_DATE,
   units: C.UNITS, overview: null, glossary: C.GLOSSARY,
-  topics: C.TOPICS, duels: C.DUELS, duelUnits: { h1: [1, 2, 3], h2: [4, 5, 6] },
+  topics: C.TOPICS, duels: C.DUELS, duelUnits: { h0: [7], h1: [1, 2, 3], h2: [4, 5, 6] },
   statements: C.STATEMENTS, sequences: C.SEQUENCES, boss: null, quotes: [], who: {}, refText: () => '',
   lessons: LESSONS, lessonKit: 'history/kit.js',
   map: MAP,
